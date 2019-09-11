@@ -35,6 +35,12 @@
 	    <groupId>com.github.Doomsdayrs</groupId>
 	    <artifactId>Jikan4java</artifactId>
 	    <version>master-SNAPSHOT</version>
-  		</dependency>
+  		</dependency>	
+  		<dependency>
+    <groupId>ch.qos.logback</groupId>
+    <artifactId>logback-classic</artifactId>
+    <version>1.2.3</version>
+</dependency>
+  		
   </dependencies>
 </project>
