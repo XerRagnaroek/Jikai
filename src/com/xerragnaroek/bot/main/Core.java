@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.anime.ALRHManager;
 import com.xerragnaroek.bot.anime.AnimeBase;
-import com.xerragnaroek.bot.commands.CommandHandler;
+import com.xerragnaroek.bot.commands.CommandHandlerManager;
 import com.xerragnaroek.bot.config.ConfigManager;
 
 import net.dv8tion.jda.api.AccountType;
@@ -27,7 +27,7 @@ public class Core {
 		JDABuilder builder = new JDABuilder(AccountType.BOT);
 		//String token = "NjA1MzgzMDU4NDU1MDAzMTU2.XUBVLw.4kUrz7id1T53iqKQar3XbEcpvng";
 		builder.setToken(args[0]);
-		builder.addEventListeners(CommandHandler.getInstance(), new ReactionRoleTest());
+		builder.addEventListeners(new EventListener());
 		jda = builder.build();
 		jda.awaitReady();
 		/*Instant start = Instant.now();
@@ -69,7 +69,7 @@ public class Core {
 	private static void init() {
 		log.info("Initializing");
 		ConfigManager.init();
-		CommandHandler.init();
+		CommandHandlerManager.init();
 		AnimeBase.init();
 		AnimeBase.waitUntilLoaded();
 		ALRHManager.init();

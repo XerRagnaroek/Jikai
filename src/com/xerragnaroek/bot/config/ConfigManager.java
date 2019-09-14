@@ -5,18 +5,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.xerragnaroek.bot.anime.AnimeBase;
 
 import net.dv8tion.jda.api.entities.Guild;
 
@@ -31,6 +33,11 @@ public class ConfigManager {
 	private static final Logger log = LoggerFactory.getLogger(ConfigManager.class);
 	private static final ScheduledExecutorService saver = Executors.newSingleThreadScheduledExecutor();
 	static final Set<ZoneId> usedZones = new HashSet<>();
+	private static Map<ConfigOption, List<Consumer<String>>> consumers = Collections.synchronizedMap(new HashMap<>());
+
+	static {
+		registerOptionChangedConsumerForAllConfigs(ConfigOption.TIMEZONE, ConfigManager::updateTimeZone);
+	}
 
 	/**
 	 * Gets the id's associated config or creates a new one if none is loaded.
@@ -53,6 +60,18 @@ public class ConfigManager {
 
 	public static Config getConfigForGuild(Guild g) {
 		return getConfigForGuild(g.getId());
+	}
+
+	public static void registerOptionChangedConsumerForAllConfigs(ConfigOption co, Consumer<String> con) {
+		consumers.compute(co, (key, list) -> {
+			if (list == null) {
+				list = new LinkedList<>();
+			}
+			list.add(con);
+			return list;
+		});
+		configs.values().forEach(c -> c.registerOptionChangedConsumer(co, con));
+		log.debug("Registered a new universal consumer for {}", co);
 	}
 
 	public static void init() {
@@ -96,7 +115,6 @@ public class ConfigManager {
 	private static void updateTimeZone(String zone) {
 		ZoneId z = ZoneId.of(zone);
 		usedZones.add(z);
-		AnimeBase.addTimeZone(z);
 		log.debug("Added zone {}", zone);
 	}
 
@@ -113,7 +131,7 @@ public class ConfigManager {
 
 	private static Config makeConfigFromId(String id) {
 		Config c = new Config(id);
-		c.registerOptionChangedConsumer(ConfigOption.TIMEZONE, ConfigManager::updateTimeZone);
+		c.setConsumers(consumers);
 		c.initConfig();
 		return c;
 	}
@@ -133,5 +151,9 @@ public class ConfigManager {
 
 	public static Set<ZoneId> getUsedTimeZones() {
 		return new HashSet<>(usedZones);
+	}
+
+	public static Set<String> getGuildIds() {
+		return configs.keySet();
 	}
 }

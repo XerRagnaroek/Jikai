@@ -25,7 +25,7 @@ public class DebugCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String arguments) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments) {
 		log.debug("Checking if user is the author of the bot...");
 		User u = event.getAuthor();
 		//my ID

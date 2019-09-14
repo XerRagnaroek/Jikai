@@ -18,7 +18,7 @@ public class EmbedTestCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String arguments) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments) {
 		EmbedBuilder eb = new EmbedBuilder();
 		/*eb.setTitle("Monday").setColor(Color.red);
 		for (int i = 0; i < 37; i++) {

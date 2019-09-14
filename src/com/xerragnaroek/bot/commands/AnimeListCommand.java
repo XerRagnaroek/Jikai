@@ -17,7 +17,7 @@ public class AnimeListCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String arguments) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments) {
 		ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild()).sendList();
 	}
 

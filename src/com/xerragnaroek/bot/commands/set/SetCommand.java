@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.commands.Command;
+import com.xerragnaroek.bot.commands.CommandHandlerImpl;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
@@ -37,14 +38,14 @@ public class SetCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String arguments) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments) {
 		String[] tmp = arguments.split(" ");
 		if (tmp.length > 1) {
 			Command c;
 			String com = tmp[0].toLowerCase();
 			if ((c = setComs.get(com)) != null) {
 				log.info("Recognized SetCommand '{}'", c.getCommandName());
-				c.executeCommand(event, arguments.substring(com.length()).trim());
+				c.executeCommand(chi, event, arguments.substring(com.length()).trim());
 			}
 		}
 	}

@@ -3,6 +3,7 @@ package com.xerragnaroek.bot.commands.set;
 import java.util.List;
 
 import com.xerragnaroek.bot.commands.Command;
+import com.xerragnaroek.bot.commands.CommandHandlerImpl;
 import com.xerragnaroek.bot.config.ConfigManager;
 import com.xerragnaroek.bot.config.ConfigOption;
 
@@ -31,7 +32,7 @@ public class SetAnimeChannelCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String arguments) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments) {
 		String chan = arguments;
 		Guild g = event.getGuild();
 		List<TextChannel> tc = g.getTextChannelsByName(chan, false);

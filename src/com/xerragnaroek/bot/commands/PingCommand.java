@@ -11,7 +11,7 @@ public class PingCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String content) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String content) {
 		MessageChannel channel = event.getChannel();
 		long time = System.currentTimeMillis();
 		channel.sendMessage("Pong!") /* => RestAction<Message> */

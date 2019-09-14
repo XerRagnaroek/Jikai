@@ -45,7 +45,7 @@ public class ScheduleCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String arguments) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments) {
 		Guild g = event.getGuild();
 		TextChannel channel;
 		if ((channel = g.getTextChannelById(ConfigManager.getConfigForGuild(g.getId()).getOption(ConfigOption.ANIME_CHANNEL))) != null) {

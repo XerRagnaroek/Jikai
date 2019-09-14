@@ -14,15 +14,16 @@ public enum ConfigOption {
 	 * The channel the bot posts the anime list in.
 	 */
 	ROLE_CHANNEL,
-	/**
-	 * The list message's id.
-	 */
-	LIST_MESSAGE_ID,
+
 	/**
 	 * The server's timezone.
 	 */
 	TIMEZONE,
 
+	/**
+	 * The list messages' ids.
+	 */
+	LIST_MESSAGES,
 	/**
 	 * The hash of the latest season search.
 	 */

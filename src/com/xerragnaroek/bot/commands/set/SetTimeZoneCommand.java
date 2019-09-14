@@ -1,6 +1,7 @@
 package com.xerragnaroek.bot.commands.set;
 
 import com.xerragnaroek.bot.commands.Command;
+import com.xerragnaroek.bot.commands.CommandHandlerImpl;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
@@ -18,7 +19,7 @@ public class SetTimeZoneCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String arguments) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments) {
 
 	}
 

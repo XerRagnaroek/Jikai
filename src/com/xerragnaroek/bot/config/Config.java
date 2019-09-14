@@ -139,6 +139,10 @@ public class Config {
 		log.debug("Registered a new consumer for {}", co);
 	}
 
+	void setConsumers(Map<ConfigOption, List<Consumer<String>>> cons) {
+		consumers = cons;
+	}
+
 	private void runConsumers(ConfigOption co, String newVal) {
 		if (consumers.containsKey(co)) {
 			log.debug("Running consumers for {}", co);

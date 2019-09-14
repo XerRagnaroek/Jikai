@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.commands.Command;
+import com.xerragnaroek.bot.commands.CommandHandlerImpl;
 import com.xerragnaroek.bot.config.ConfigManager;
 import com.xerragnaroek.bot.config.ConfigOption;
 
@@ -28,7 +29,7 @@ public class SetTriggerCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String content) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String content) {
 		//only high ranking lads can use this command
 		if (PermissionUtil.checkPermission(event.getMember(), Permission.MANAGE_ROLES)) {
 			//pad it with a whitespace at the end so words can be used better: foo bar instead of foobar

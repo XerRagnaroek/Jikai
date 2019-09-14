@@ -13,8 +13,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -43,7 +41,6 @@ class AnimeBaseImpl {
 	private Map<ZoneId, ZoneAnimeBase> animes = new ConcurrentHashMap<>();
 	private static final Logger log = LoggerFactory.getLogger(AnimeBaseImpl.class);
 	private AtomicBoolean loading = new AtomicBoolean(true);
-	private Executor exec = Executors.newCachedThreadPool();
 
 	AnimeBaseImpl() {}
 
@@ -61,37 +58,35 @@ class AnimeBaseImpl {
 	 * @throws ExecutionException
 	 */
 	public void loadSeason() {
-		exec.execute(() -> {
-			ZonedDateTime zdt = ZonedDateTime.now(jst);
-			loading.set(true);
-			try {
-				SeasonSearch ss = new Connector().seasonSearch(zdt.getYear(), getSeason(zdt)).get();
-				log.info("Retrieving season search for {} {}", ss.season_name, ss.season_year);
-				//compare hashs, so only new data will be used
-				String hash = Objects.requireNonNullElse(ConfigManager.getBotConfig().getOption(ConfigOption.LATEST_SEASON_HASH), "");
-				if (!ss.request_hash.equals(hash) || !animes.get(jst).hasEntries()) {
-					Instant start = Instant.now();
-					List<AnimeDayTime> tmp = ss.animes.stream().map(SeasonSearchAnime::getAnime).map(t -> {
-						try {
-							return t.get();
-						} catch (InterruptedException | ExecutionException e) {
-							log.error("Exception while getting anime", e);
-						}
-						return null;
-					}).filter(Objects::nonNull).filter(a -> a.airing).map(this::makeAnimeDayTime).filter(AnimeDayTime::isKnown).collect(Collectors.toList());
-					//TODO remove limit above for final version!!!
-					animes.get(jst).setAnimeDayTimes(tmp);
-					ConfigManager.getBotConfig().setOption(ConfigOption.LATEST_SEASON_HASH, ss.request_hash);
-					loading.set(false);
-					zoneAnimes(true);
-					log.info("Loaded {} animes in {}ms", tmp.size(), Duration.between(start, Instant.now()).toMillis());
-				} else {
-					log.info("Current schedule is up to date.");
-				}
-			} catch (InterruptedException | ExecutionException e1) {
-				log.error("Error while loading season", e1);
+		ZonedDateTime zdt = ZonedDateTime.now(jst);
+		loading.set(true);
+		try {
+			SeasonSearch ss = new Connector().seasonSearch(zdt.getYear(), getSeason(zdt)).get();
+			log.info("Retrieving season search for {} {}", ss.season_name, ss.season_year);
+			//compare hashs, so only new data will be used
+			String hash = Objects.requireNonNullElse(ConfigManager.getBotConfig().getOption(ConfigOption.LATEST_SEASON_HASH), "");
+			if (!ss.request_hash.equals(hash) || !animes.get(jst).hasEntries()) {
+				Instant start = Instant.now();
+				List<AnimeDayTime> tmp = ss.animes.stream().map(SeasonSearchAnime::getAnime).map(t -> {
+					try {
+						return t.get();
+					} catch (InterruptedException | ExecutionException e) {
+						log.error("Exception while getting anime", e);
+					}
+					return null;
+				}).filter(Objects::nonNull).filter(a -> a.airing).map(this::makeAnimeDayTime).limit(10).filter(AnimeDayTime::isKnown).collect(Collectors.toList());
+				//TODO remove limit above for final version!!!
+				animes.get(jst).setAnimeDayTimes(tmp);
+				ConfigManager.getBotConfig().setOption(ConfigOption.LATEST_SEASON_HASH, ss.request_hash);
+				loading.set(false);
+				zoneAnimes(true);
+				log.info("Loaded {} animes in {}ms", tmp.size(), Duration.between(start, Instant.now()).toMillis());
+			} else {
+				log.info("Current schedule is up to date.");
 			}
-		});
+		} catch (InterruptedException | ExecutionException e1) {
+			log.error("Error while loading season", e1);
+		}
 	}
 
 	private void putInMap(Map<ZoneId, Map<String, AnimeDayTime>> m, AnimeDayTime adt, ZoneId z) {

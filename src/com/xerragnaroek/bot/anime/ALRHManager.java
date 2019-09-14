@@ -14,13 +14,15 @@ import org.slf4j.LoggerFactory;
 
 import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
 
-import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.internal.utils.EncodingUtil;
 
 /**
- * ALRH stands for AnimeListReactionHandler
+ * ALRH stands for AnimeListReactionHandler. Manages ALRH instances. Makes the anime list prefab
+ * messages.
  * 
  * @author XerRagnaroek
  *
@@ -28,26 +30,38 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 public class ALRHManager extends ListenerAdapter {
 
 	private static final Map<String, List<String>> aniAlph = new TreeMap<>();
-	private static final Set<DTO> listMsgs = new TreeSet<>((d1, d2) -> d1.getMessageEmbed().getTitle().compareTo(d2.getMessageEmbed().getTitle()));
-	private static final Logger log = LoggerFactory.getLogger(ALRHManager.class);
 	private static final Map<String, ALRHImpl> impls = Collections.synchronizedMap(new HashMap<>());
+	private static final Set<DTO> listMsgs = new TreeSet<>((d1, d2) -> d1.getMessage().getContentRaw().compareTo(d2.getMessage().getContentRaw()));
+	private static final Logger log = LoggerFactory.getLogger(ALRHManager.class);
+	private static boolean initialized = false;
 
+	public static ALRHImpl getAnimeListReactionHandlerForGuild(Guild g) {
+		return getAnimeListReactionHandlerForGuild(g.getId());
+	}
+
+	/**
+	 * Gets the ALRH associated to the guild or null if none was registered yet.
+	 * 
+	 * @param g
+	 *            - the guild's id
+	 * @return - an ALRH or null
+	 */
+	public static ALRHImpl getAnimeListReactionHandlerForGuild(String g) {
+		assertInitialisation();
+		log.debug("Getting ALRH for guild {}", g);
+		return impls.compute(g, (gid, alrh) -> (alrh = (alrh == null) ? new ALRHImpl(gid) : alrh));
+	}
+
+	/**
+	 * Initialises the manager. Needs to be called prior to any other method calls.
+	 */
 	public static void init() {
-		mapAnimesToStartingLetter();
-	}
-
-	static Map<String, List<String>> getMappedAnimes() {
-		return aniAlph;
-	}
-
-	private static void mapAnimesToStartingLetter() {
-		log.debug("Mapping animes to starting letter");
-		List<Anime> animes = AnimeBase.getSeasonalAnimes();
-		animes.stream().map(a -> a.title).forEach(title -> aniAlph.compute(("" + title.charAt(0)).toUpperCase(), (k, v) -> {
-			v = (v == null) ? new LinkedList<>() : v;
-			v.add(title);
-			return v;
-		}));
+		if (!initialized) {
+			mapAnimesToStartingLetter();
+			initialized = true;
+		} else {
+			throw new IllegalStateException("Already initialized!");
+		}
 	}
 
 	static Set<DTO> getListMessages() {
@@ -59,41 +73,73 @@ public class ALRHManager extends ListenerAdapter {
 		return listMsgs;
 	}
 
+	/**
+	 * Gets the animes' titles mapped to their starting letter
+	 * 
+	 * @return - a map where a letter is mapped to a list of titles.
+	 */
+	static Map<String, List<String>> getMappedAnimes() {
+		return aniAlph;
+	}
+
+	/**
+	 * Creates the list message
+	 * 
+	 * @return - a DataTransferObject (DTO) containing the message and the title mapped to its
+	 *         respective unicode
+	 */
 	private static DTO getLetterListMessage(String letter, List<String> titles) {
 		log.debug("Creating list for letter {} with {} titles", letter, titles.size());
 		Map<String, String> map = new TreeMap<>();
-		EmbedBuilder eb = new EmbedBuilder();
-		eb.setTitle(letter);
+		MessageBuilder mb = new MessageBuilder();
+		mb.append("**" + letter + "**\n");
+		//:regional_indicator_a:
 		int cp = 0x1F1E6;
 		String uni = "";
 		for (String t : titles) {
 			uni = new String(Character.toChars(cp));
-			map.put(uni, t);
-			eb.addField(uni + " " + t, "", false);
+			map.put(EncodingUtil.encodeCodepoints(uni), t);
+			mb.append(uni + " : **" + t + "**\n");
 			cp++;
 		}
-		return new DTO(eb.build(), map);
+		return new DTO(mb.build(), map);
 	}
 
-	public static ALRHImpl getAnimeListReactionHandlerForGuild(Guild g) {
-		return getAnimeListReactionHandlerForGuild(g.getId());
+	/**
+	 * groups all animes by the first letter in their title
+	 */
+	private static void mapAnimesToStartingLetter() {
+		log.debug("Mapping animes to starting letter");
+		List<Anime> animes = AnimeBase.getSeasonalAnimes();
+		animes.stream().map(a -> a.title).forEach(title -> aniAlph.compute(("" + title.charAt(0)).toUpperCase(), (k, v) -> {
+			v = (v == null) ? new LinkedList<>() : v;
+			v.add(title);
+			return v;
+		}));
 	}
 
-	public static ALRHImpl getAnimeListReactionHandlerForGuild(String g) {
-		return impls.compute(g, (gid, alrh) -> (alrh = (alrh == null) ? new ALRHImpl(gid) : alrh));
+	private static void assertInitialisation() {
+		if (!initialized) {
+			log.error("ALRHManager hasn't been initialized yet!");
+			throw new IllegalStateException("ALRHManager hasn't been initialized yet!");
+		}
 	}
+
 }
 
+/**
+ * Utility class for passing a message and a map of titles and unicodes
+ */
 class DTO {
-	MessageEmbed me;
 	Map<String, String> map;
+	Message me;
 
-	DTO(MessageEmbed message, Map<String, String> emojis) {
+	DTO(Message message, Map<String, String> emojis) {
 		me = message;
 		map = emojis;
 	}
 
-	MessageEmbed getMessageEmbed() {
+	Message getMessage() {
 		return me;
 	}
 
