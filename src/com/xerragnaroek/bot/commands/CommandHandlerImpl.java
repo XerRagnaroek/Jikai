@@ -6,9 +6,9 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.bot.config.Config;
-import com.xerragnaroek.bot.config.ConfigManager;
-import com.xerragnaroek.bot.config.ConfigOption;
+import com.xerragnaroek.bot.data.GuildData;
+import com.xerragnaroek.bot.data.GuildDataManager;
+import com.xerragnaroek.bot.data.GuildDataKey;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
@@ -31,9 +31,9 @@ public class CommandHandlerImpl {
 	}
 
 	private void init() {
-		Config c = ConfigManager.getConfigForGuild(gId);
-		setTrigger(c.getOption(ConfigOption.TRIGGER));
-		c.registerOptionChangedConsumer(ConfigOption.TRIGGER, this::setTrigger);
+		GuildData c = GuildDataManager.getDataForGuild(gId);
+		setTrigger(c.get(GuildDataKey.TRIGGER));
+		c.registerDataChangedConsumer(GuildDataKey.TRIGGER, this::setTrigger);
 		commands = CommandHandlerManager.getCommands();
 		log.info("Initialized");
 	}

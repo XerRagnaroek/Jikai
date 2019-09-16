@@ -1,6 +1,6 @@
 package com.xerragnaroek.bot.util;
 
-import com.xerragnaroek.bot.main.Core;
+import com.xerragnaroek.bot.core.Core;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;

@@ -7,16 +7,20 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.bot.config.Config;
-import com.xerragnaroek.bot.config.ConfigManager;
-import com.xerragnaroek.bot.config.ConfigOption;
-import com.xerragnaroek.bot.main.Core;
+import com.xerragnaroek.bot.core.Core;
+import com.xerragnaroek.bot.data.GuildData;
+import com.xerragnaroek.bot.data.GuildDataKey;
+import com.xerragnaroek.bot.data.GuildDataManager;
 import com.xerragnaroek.bot.util.BotUtils;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -37,17 +41,18 @@ import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
  *
  */
 public class ALRHImpl {
-	private final Config config;
+	private final GuildData gData;
 	private final String gId;
 	private final Logger log;
 	private Map<String, Map<String, String>> msgUcTitMap = Collections.synchronizedMap(new HashMap<>()); /*Message Unicode Title Map*/
 	private Map<String, String> roleMap = Collections.synchronizedSortedMap(new TreeMap<>()); /*Title, RoleId*/
 	private String tcId;
 
+	//TODO store the starting letter of the msg too, for finding the correct unicode title list!
 	ALRHImpl(String gId) {
 		this.gId = gId;
 		log = LoggerFactory.getLogger(ALRHImpl.class.getName() + "#" + gId);
-		config = ConfigManager.getConfigForGuild(gId);
+		gData = GuildDataManager.getDataForGuild(gId);
 		init();
 		log.debug("AnimeListReactionHandler initialized", gId);
 	}
@@ -134,16 +139,24 @@ public class ALRHImpl {
 		TextChannel tc = g.getTextChannelById(tcId);
 		log.info("Sending list messages to channel {}", tc.getName() + "#" + tcId);
 		ALRHManager.getListMessages().forEach(dto -> handleDTO(g, tc, dto));
-		config.setOption(ConfigOption.LIST_MESSAGES, tcId + ";" + String.join(";", msgUcTitMap.keySet()));
+		gData.set(GuildDataKey.LIST_MESSAGES, String.join(";", msgUcTitMap.keySet()));
+		gData.set(GuildDataKey.LIST_MESSAGES_TC, tc.getId());
+		gData.set(GuildDataKey.ANIME_ROLES, roleMapString());
+		gData.set(GuildDataKey.LIST_MESSAGES_AB_VERSION, gData.get(GuildDataKey.ANIME_BASE_VERSION));
+	}
+
+	private String roleMapString() {
+		StringBuilder bob = new StringBuilder();
+		roleMap.forEach((k, v) -> bob.append(String.format("[%s:%s]", k, v)));
+		return bob.toString();
 	}
 
 	void init() {
-		setTextChannelId(config.getOption(ConfigOption.ROLE_CHANNEL));
-		List<String> ids = loadIds();
-		if (!ids.isEmpty()) {
-
-		}
-		config.registerOptionChangedConsumer(ConfigOption.ROLE_CHANNEL, this::setTextChannelId);
+		log.debug("Initializing...");
+		setTextChannelId(gData.get(GuildDataKey.ROLE_CHANNEL));
+		loadRoles();
+		loadMessages();
+		gData.registerDataChangedConsumer(GuildDataKey.ROLE_CHANNEL, this::setTextChannelId);
 	}
 
 	private void addReactions(TextChannel tc, String msgId, Collection<String> uniCodes) {
@@ -154,20 +167,26 @@ public class ALRHImpl {
 	private void handleDTO(Guild g, TextChannel tc, DTO dto) {
 		Message me = dto.getMessage();
 		Map<String, String> map = dto.getUnicodeTitleMap();
-		tc.sendMessage(me).queue(m -> {
-			msgUcTitMap.put(m.getId(), map);
-			map.forEach((uni, title) -> {
-				if (!roleExists(g, title)) {
-					log.info("Creating role for {}", title);
-					g.createRole().setName(title).setMentionable(true).setPermissions(0l).queue(r -> roleMap.put(title, r.getId()));
-				}
-				log.debug("Adding reaction {} to message", uni);
-				m.addReaction(uni).queue();
-			});
-		}, e -> log.error("Error occured while setting up the animes role lists", e));
+		log.debug("Sending list message...");
+		try {
+			tc.sendMessage(me).submit().whenComplete((m, e) -> {
+				msgUcTitMap.put(m.getId(), map);
+				map.forEach((uni, title) -> {
+					if (!roleExists(g, title)) {
+						log.info("Creating role for {}", title);
+						g.createRole().setName(title).setMentionable(true).setPermissions(0l).queue(r -> roleMap.put(title, r.getId()));
+					}
+					log.debug("Adding reaction {} to message", uni);
+					m.addReaction(uni).queue();
+				});
+			}).get();
+		} catch (InterruptedException | ExecutionException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private void moveList(String oldTc, String newTc) {
+		log.info("Moving list...");
 		TextChannel tc = Core.getJDA().getGuildById(gId).getTextChannelById(oldTc);
 		new TreeMap<String, Map<String, String>>(msgUcTitMap).keySet().forEach(msg -> {
 			tc.retrieveMessageById(msg).queue(m -> {
@@ -203,6 +222,7 @@ public class ALRHImpl {
 	private void setTextChannelId(String id) {
 		if (tcId == null) {
 			tcId = BotUtils.getChannelOrDefault(id, gId).getId();
+			log.info("Set TextChannelId to {}", tcId);
 		} else {
 			if (!tcId.equals(id)) {
 				moveList(tcId, id);
@@ -210,12 +230,74 @@ public class ALRHImpl {
 		}
 	}
 
-	private List<String> loadIds() {
-		List<String> ids = new LinkedList<>();
-		String raw = config.getOption(ConfigOption.LIST_MESSAGES);
-		if (!raw.isEmpty()) {
-			ids = Arrays.asList(raw.split(";"));
+	private void loadMessages() {
+		log.debug("Loading list messages...");
+		String id = gData.get(GuildDataKey.LIST_MESSAGES_TC);
+		if (id != null) {
+			String raw = gData.get(GuildDataKey.LIST_MESSAGES);
+			if (!raw.isEmpty()) {
+				List<String> ids = new LinkedList<>(Arrays.asList(raw.split(";")));
+				if (haveMessagesChanged(id, ids)) {
+					log.debug("Old messages are invalid, deleting them and posting new ones");
+					ids.forEach(mId -> msgUcTitMap.put(mId, null));
+					moveList(id, tcId);
+				} else {
+					ALRHManager.getListMessages().forEach(dto -> {
+						msgUcTitMap.put(ids.remove(0), dto.getUnicodeTitleMap());
+					});
+					log.info("Succesfully loaded all {} list messages", msgUcTitMap.size());
+				}
+				return;
+			}
 		}
-		return ids;
+		log.info("No stored list messages found");
+	}
+
+	private boolean haveMessagesChanged(String oldTc, List<String> ids) {
+		Set<DTO> amsgs = ALRHManager.getListMessages();
+		TextChannel tc = Core.getJDA().getTextChannelById(oldTc);
+		return ids.size() != amsgs.size() || tc == null || !gData.get(GuildDataKey.ANIME_BASE_VERSION).equals(gData.get(GuildDataKey.LIST_MESSAGES_AB_VERSION)) || !oldTc.equals(tcId);
+	}
+
+	private void loadRoles() {
+		log.debug("Loading roles");
+		String raw = gData.get(GuildDataKey.ANIME_ROLES);
+		if (raw != null) {
+			Guild g = Core.getJDA().getGuildById(gId);
+			Matcher m = Pattern.compile("(?<=\\[).+?(?=\\])").matcher(raw);
+			while (m.find()) {
+				String tmp[] = m.group().split(":");
+				String title = tmp[0];
+				String rId = tmp[1];
+				log.debug("Found role {}:{}", title, rId);
+				roleMap.put(title, rId);
+			}
+			checkForRoleChanges(g);
+		} else {
+			log.debug("No roles found");
+		}
+	}
+
+	private void checkForRoleChanges(Guild g) {
+		log.debug("Checking for any changes to the roles while the bot was offline");
+		roleMap.forEach((title, rId) -> {
+			Role r = g.getRoleById(rId);
+			if (r == null || !r.getName().equals(title)) {
+				log.debug("Role for {} is invalid", title);
+				createRole(g, title);
+			}
+		});
+	}
+
+	private void createRole(Guild g, String title) {
+		log.info("Creating role for {}", title);
+		g.createRole().setName(title).setMentionable(true).setPermissions(0l).queue(r -> roleMap.put(title, r.getId()));
+	}
+
+	private void storeData() {
+		StringBuilder bob = new StringBuilder();
+		msgUcTitMap.forEach((msgId, ucTitMap) -> {
+			bob.append("{" + msgId + ";");
+		});
 	}
 }

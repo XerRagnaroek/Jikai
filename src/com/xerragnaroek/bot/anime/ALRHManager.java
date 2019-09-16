@@ -131,6 +131,7 @@ public class ALRHManager extends ListenerAdapter {
  * Utility class for passing a message and a map of titles and unicodes
  */
 class DTO {
+	//TODO add the starting letter of the msg as well
 	Map<String, String> map;
 	Message me;
 

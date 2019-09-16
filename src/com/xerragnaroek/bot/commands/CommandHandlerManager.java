@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.commands.set.SetCommand;
-import com.xerragnaroek.bot.config.ConfigManager;
+import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -31,7 +31,7 @@ public class CommandHandlerManager extends ListenerAdapter {
 	}
 
 	private static void initCommandHandlerImpls() {
-		ConfigManager.getGuildIds().forEach(CommandHandlerManager::getCommandHandlerForGuild);
+		GuildDataManager.getGuildIds().forEach(CommandHandlerManager::getCommandHandlerForGuild);
 	}
 
 	public static CommandHandlerImpl getCommandHandlerForGuild(String g) {

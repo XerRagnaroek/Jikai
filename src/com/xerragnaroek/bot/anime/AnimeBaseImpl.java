@@ -25,8 +25,9 @@ import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
 import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearch;
 import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearchAnime;
 import com.github.Doomsdayrs.Jikan4java.types.Support.Prop.From;
-import com.xerragnaroek.bot.config.ConfigManager;
-import com.xerragnaroek.bot.config.ConfigOption;
+import com.xerragnaroek.bot.data.GuildData;
+import com.xerragnaroek.bot.data.GuildDataKey;
+import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.entities.Guild;
 
@@ -61,32 +62,41 @@ class AnimeBaseImpl {
 		ZonedDateTime zdt = ZonedDateTime.now(jst);
 		loading.set(true);
 		try {
+			GuildData gData = GuildDataManager.getBotConfig();
 			SeasonSearch ss = new Connector().seasonSearch(zdt.getYear(), getSeason(zdt)).get();
 			log.info("Retrieving season search for {} {}", ss.season_name, ss.season_year);
 			//compare hashs, so only new data will be used
-			String hash = Objects.requireNonNullElse(ConfigManager.getBotConfig().getOption(ConfigOption.LATEST_SEASON_HASH), "");
+			String hash = Objects.requireNonNullElse(gData.get(GuildDataKey.CURRENT_SEASON_HASH), "");
 			if (!ss.request_hash.equals(hash) || !animes.get(jst).hasEntries()) {
-				Instant start = Instant.now();
-				List<AnimeDayTime> tmp = ss.animes.stream().map(SeasonSearchAnime::getAnime).map(t -> {
-					try {
-						return t.get();
-					} catch (InterruptedException | ExecutionException e) {
-						log.error("Exception while getting anime", e);
-					}
-					return null;
-				}).filter(Objects::nonNull).filter(a -> a.airing).map(this::makeAnimeDayTime).limit(10).filter(AnimeDayTime::isKnown).collect(Collectors.toList());
-				//TODO remove limit above for final version!!!
-				animes.get(jst).setAnimeDayTimes(tmp);
-				ConfigManager.getBotConfig().setOption(ConfigOption.LATEST_SEASON_HASH, ss.request_hash);
-				loading.set(false);
-				zoneAnimes(true);
-				log.info("Loaded {} animes in {}ms", tmp.size(), Duration.between(start, Instant.now()).toMillis());
+				loadSeasonImpl(ss, zdt);
+				if (!ss.request_hash.equals(hash)) {
+					incrementDataBaseVersion(gData);
+				}
 			} else {
 				log.info("Current schedule is up to date.");
 			}
 		} catch (InterruptedException | ExecutionException e1) {
 			log.error("Error while loading season", e1);
 		}
+	}
+
+	private void loadSeasonImpl(SeasonSearch ss, ZonedDateTime zdt) throws InterruptedException, ExecutionException {
+		Instant start = Instant.now();
+		List<AnimeDayTime> tmp = ss.animes.stream().map(SeasonSearchAnime::getAnime).map(t -> {
+			try {
+				return t.get();
+			} catch (InterruptedException | ExecutionException e) {
+				log.error("Exception while getting anime", e);
+			}
+			return null;
+		}).filter(Objects::nonNull).filter(a -> a.airing).map(this::makeAnimeDayTime).limit(10).filter(AnimeDayTime::isKnown).collect(Collectors.toList());
+		//TODO remove limit above for final version!!!
+		animes.get(jst).setAnimeDayTimes(tmp);
+
+		GuildDataManager.getBotConfig().set(GuildDataKey.CURRENT_SEASON_HASH, ss.request_hash);
+		loading.set(false);
+		zoneAnimes(true);
+		log.info("Loaded {} animes in {}ms", tmp.size(), Duration.between(start, Instant.now()).toMillis());
 	}
 
 	private void putInMap(Map<ZoneId, Map<String, AnimeDayTime>> m, AnimeDayTime adt, ZoneId z) {
@@ -134,7 +144,7 @@ class AnimeBaseImpl {
 	}*/
 
 	void zoneAnimes(boolean overwrite) {
-		ConfigManager.getUsedTimeZones().forEach(z -> {
+		GuildDataManager.getUsedTimeZones().forEach(z -> {
 			addTimeZone(z, overwrite);
 		});
 	}
@@ -223,7 +233,7 @@ class AnimeBaseImpl {
 	}
 
 	List<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
-		ZoneId zone = ZoneId.of(ConfigManager.getConfigForGuild(g.getId()).getOption(ConfigOption.TIMEZONE));
+		ZoneId zone = ZoneId.of(GuildDataManager.getDataForGuild(g.getId()).get(GuildDataKey.TIMEZONE));
 		if (!animes.containsKey(zone)) {
 			addTimeZone(zone, false);
 		}
@@ -240,5 +250,11 @@ class AnimeBaseImpl {
 
 	boolean isLoading() {
 		return loading.get();
+	}
+
+	private void incrementDataBaseVersion(GuildData gData) {
+		String ver = String.valueOf(Integer.parseInt(Objects.requireNonNullElse(gData.get(GuildDataKey.ANIME_BASE_VERSION), "0")) + 1);
+		log.info("Updating AnimeBase version to {}", ver);
+		gData.set(GuildDataKey.ANIME_BASE_VERSION, ver);
 	}
 }

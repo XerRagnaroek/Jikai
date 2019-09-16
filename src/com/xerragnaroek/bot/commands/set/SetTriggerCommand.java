@@ -5,8 +5,8 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.commands.Command;
 import com.xerragnaroek.bot.commands.CommandHandlerImpl;
-import com.xerragnaroek.bot.config.ConfigManager;
-import com.xerragnaroek.bot.config.ConfigOption;
+import com.xerragnaroek.bot.data.GuildDataManager;
+import com.xerragnaroek.bot.data.GuildDataKey;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -37,7 +37,7 @@ public class SetTriggerCommand implements Command {
 				content += " ";
 			}
 			if (content.length() >= 1) {
-				ConfigManager.getConfigForGuild(event.getGuild().getId()).setOption(ConfigOption.TRIGGER, content);
+				GuildDataManager.getDataForGuild(event.getGuild().getId()).set(GuildDataKey.TRIGGER, content);
 				event.getChannel().sendMessageFormat("Trigger was changed to \"%s\"", content).queue();
 			}
 		} else {

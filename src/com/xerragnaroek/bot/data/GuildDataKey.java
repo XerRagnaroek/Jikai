@@ -1,6 +1,6 @@
-package com.xerragnaroek.bot.config;
+package com.xerragnaroek.bot.data;
 
-public enum ConfigOption {
+public enum GuildDataKey {
 	/**
 	 * Whatever string or char triggers commands.
 	 */
@@ -21,20 +21,37 @@ public enum ConfigOption {
 	TIMEZONE,
 
 	/**
+	 * The TextChannel the list messages were posted in.
+	 */
+	LIST_MESSAGES_TC,
+	/**
 	 * The list messages' ids.
 	 */
 	LIST_MESSAGES,
 	/**
-	 * The hash of the latest season search.
+	 * The AnimeBase's version when the list was posted.
 	 */
-	LATEST_SEASON_HASH(true);
+	LIST_MESSAGES_AB_VERSION,
+	/**
+	 * [title:roleId]
+	 */
+	ANIME_ROLES,
+	/**
+	 * The hash of the most up to date season search.
+	 */
+	CURRENT_SEASON_HASH(true),
+
+	/**
+	 * The current version of the anime database.
+	 */
+	ANIME_BASE_VERSION(true);
 
 	//only options affecting the bot have this set;
 	private boolean bot = false;
 
-	ConfigOption() {}
+	GuildDataKey() {}
 
-	ConfigOption(boolean bot) {
+	GuildDataKey(boolean bot) {
 		this.bot = bot;
 	}
 

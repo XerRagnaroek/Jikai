@@ -1,4 +1,4 @@
-package com.xerragnaroek.bot.main;
+package com.xerragnaroek.bot.core;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import com.xerragnaroek.bot.anime.ALRHManager;
 import com.xerragnaroek.bot.anime.AnimeBase;
 import com.xerragnaroek.bot.commands.CommandHandlerManager;
-import com.xerragnaroek.bot.config.ConfigManager;
+import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.AccountType;
 import net.dv8tion.jda.api.JDA;
@@ -68,10 +68,10 @@ public class Core {
 
 	private static void init() {
 		log.info("Initializing");
-		ConfigManager.init();
-		CommandHandlerManager.init();
+		GuildDataManager.init();
 		AnimeBase.init();
 		AnimeBase.waitUntilLoaded();
+		CommandHandlerManager.init();
 		ALRHManager.init();
 	}
 

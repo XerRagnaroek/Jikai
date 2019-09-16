@@ -1,4 +1,4 @@
-package com.xerragnaroek.bot.main;
+package com.xerragnaroek.bot.core;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

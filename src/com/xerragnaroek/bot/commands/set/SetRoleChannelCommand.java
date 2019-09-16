@@ -4,8 +4,8 @@ import java.util.List;
 
 import com.xerragnaroek.bot.commands.Command;
 import com.xerragnaroek.bot.commands.CommandHandlerImpl;
-import com.xerragnaroek.bot.config.ConfigManager;
-import com.xerragnaroek.bot.config.ConfigOption;
+import com.xerragnaroek.bot.data.GuildDataManager;
+import com.xerragnaroek.bot.data.GuildDataKey;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -37,7 +37,7 @@ public class SetRoleChannelCommand implements Command {
 		List<TextChannel> tc = g.getTextChannelsByName(chan, false);
 		if (!tc.isEmpty()) {
 			TextChannel textC = tc.get(0);
-			ConfigManager.getConfigForGuild(g.getId()).setOption(ConfigOption.ROLE_CHANNEL, textC.getId());
+			GuildDataManager.getDataForGuild(g.getId()).set(GuildDataKey.ROLE_CHANNEL, textC.getId());
 			textC.sendMessage("I'll post anime garbage in here.").queue();
 		}
 	}
