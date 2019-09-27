@@ -28,5 +28,5 @@ public interface Command {
 	 * @param arguments
 	 *            - what was written after the command
 	 */
-	abstract void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments);
+	abstract void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments);
 }

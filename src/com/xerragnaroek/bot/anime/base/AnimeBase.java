@@ -1,4 +1,4 @@
-package com.xerragnaroek.bot.anime;
+package com.xerragnaroek.bot.anime.base;
 
 import java.time.DayOfWeek;
 import java.time.ZoneId;
@@ -8,8 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
-import com.xerragnaroek.bot.data.GuildDataManager;
 import com.xerragnaroek.bot.data.GuildDataKey;
+import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.entities.Guild;
 
@@ -23,7 +23,7 @@ public class AnimeBase {
 		if (!initialized) {
 			aB.init();
 			initialized = true;
-			GuildDataManager.registerUniversalOptionChangedConsumer(GuildDataKey.TIMEZONE, AnimeBase::addTimeZone);
+			GuildDataManager.registerUniversalOptionChangedConsumer(GuildDataKey.TIMEZONE, (gId, zone) -> AnimeBase.addTimeZone(zone));
 		} else {
 			log.error("Already initialized!");
 			throw new IllegalStateException("Already initialized!");
@@ -35,7 +35,7 @@ public class AnimeBase {
 		return aB.getAnimesAiringOnWeekday(day, g);
 	}
 
-	public static List<Anime> getSeasonalAnimes() {
+	public static List<AnimeDayTime> getSeasonalAnimes() {
 		assertInitialisation();
 		return aB.getSeasonalAnimes();
 	}
@@ -48,6 +48,16 @@ public class AnimeBase {
 	public static void waitUntilLoaded() {
 		assertInitialisation();
 		while (aB.isLoading()) {}
+	}
+
+	public static List<AnimeDayTime> getSeasonalAnimesAdjusted(ZoneId tz) {
+		assertInitialisation();
+		return aB.getSeasonalAnimesAdjusted(tz);
+	}
+
+	public static Anime getAnime(String title) {
+		assertInitialisation();
+		return aB.getAnime(title);
 	}
 
 	private static void assertInitialisation() {

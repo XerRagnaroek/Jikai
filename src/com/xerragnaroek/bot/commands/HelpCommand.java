@@ -21,7 +21,7 @@ public class HelpCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
 		log.info("Executing help command");
 		synchronized (helpString) {
 			if (helpString.isEmpty()) {

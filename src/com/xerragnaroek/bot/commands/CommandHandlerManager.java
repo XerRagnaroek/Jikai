@@ -50,7 +50,7 @@ public class CommandHandlerManager extends ListenerAdapter {
 	 * Load the commands
 	 */
 	private static void initCommands() {
-		Command[] coms = new Command[] { new PingCommand(), new SetCommand(), new ScheduleCommand(), new EmbedTestCommand(), new DebugCommand(), new AnimeListCommand(), new HelpCommand(), new WipeRolesCommand() };
+		Command[] coms = new Command[] { new WhenAnimeCommand(), new PingCommand(), new SetCommand(), new ScheduleCommand(), new EmbedTestCommand(), new DebugCommand(), new AnimeListCommand(), new HelpCommand(), new WipeRolesCommand() };
 		for (Command c : coms) {
 			commands.put(c.getCommandName(), c);
 			log.debug("Loaded command " + c.getCommandName());

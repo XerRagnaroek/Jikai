@@ -19,7 +19,7 @@ public class WipeRolesCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
 		Message m1 = event.getTextChannel().sendMessage("Deleting all anime roles...").complete();
 		AtomicInteger count = new AtomicInteger(0);

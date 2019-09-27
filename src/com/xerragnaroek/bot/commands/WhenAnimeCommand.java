@@ -1,24 +1,24 @@
 package com.xerragnaroek.bot.commands;
 
-import com.xerragnaroek.bot.anime.alrh.ALRHManager;
+import com.xerragnaroek.bot.anime.base.ReleaseTimeKeeper;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
-public class AnimeListCommand implements Command {
+public class WhenAnimeCommand implements Command {
 
 	@Override
 	public String getCommandName() {
-		return "list";
+		return "when_anime";
 	}
 
 	@Override
 	public String getUsage() {
-		return "list";
+		return "when_anime <optional: true> (override threshold)";
 	}
 
 	@Override
 	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
-		ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild()).sendList();
+		ReleaseTimeKeeper.updateAllAnimesForGuild(event.getGuild(), Boolean.parseBoolean(arguments[0]));
 	}
 
 }

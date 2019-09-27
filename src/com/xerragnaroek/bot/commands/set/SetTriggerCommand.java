@@ -5,8 +5,8 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.commands.Command;
 import com.xerragnaroek.bot.commands.CommandHandlerImpl;
-import com.xerragnaroek.bot.data.GuildDataManager;
 import com.xerragnaroek.bot.data.GuildDataKey;
+import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -29,7 +29,8 @@ public class SetTriggerCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String content) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
+		String content = arguments[0];
 		//only high ranking lads can use this command
 		if (PermissionUtil.checkPermission(event.getMember(), Permission.MANAGE_ROLES)) {
 			//pad it with a whitespace at the end so words can be used better: foo bar instead of foobar

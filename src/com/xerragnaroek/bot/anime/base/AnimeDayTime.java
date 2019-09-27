@@ -1,8 +1,9 @@
-package com.xerragnaroek.bot.anime;
+package com.xerragnaroek.bot.anime.base;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
+import java.time.temporal.TemporalAdjusters;
 
 import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
 
@@ -53,6 +54,10 @@ public class AnimeDayTime implements Comparable<AnimeDayTime> {
 
 	public ZonedDateTime getZonedDateTime() {
 		return zdt;
+	}
+
+	void updateZDTToNextAirDate() {
+		zdt = zdt.with(TemporalAdjusters.next(getDayOfWeek()));
 	}
 
 	public static boolean isKnown(AnimeDayTime adt) {

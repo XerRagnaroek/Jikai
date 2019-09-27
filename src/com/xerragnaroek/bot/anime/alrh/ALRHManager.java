@@ -1,4 +1,4 @@
-package com.xerragnaroek.bot.anime;
+package com.xerragnaroek.bot.anime.alrh;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -12,7 +12,9 @@ import java.util.TreeSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
+import com.xerragnaroek.bot.anime.base.AnimeBase;
+import com.xerragnaroek.bot.anime.base.AnimeDayTime;
+import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Guild;
@@ -30,12 +32,12 @@ import net.dv8tion.jda.internal.utils.EncodingUtil;
 public class ALRHManager extends ListenerAdapter {
 
 	private static final Map<String, List<String>> aniAlph = new TreeMap<>();
-	private static final Map<String, ALRHImpl> impls = Collections.synchronizedMap(new HashMap<>());
+	private static final Map<String, ALRHandler> impls = Collections.synchronizedMap(new HashMap<>());
 	private static final Set<DTO> listMsgs = new TreeSet<>((d1, d2) -> d1.getMessage().getContentRaw().compareTo(d2.getMessage().getContentRaw()));
 	private static final Logger log = LoggerFactory.getLogger(ALRHManager.class);
 	private static boolean initialized = false;
 
-	public static ALRHImpl getAnimeListReactionHandlerForGuild(Guild g) {
+	public static ALRHandler getAnimeListReactionHandlerForGuild(Guild g) {
 		return getAnimeListReactionHandlerForGuild(g.getId());
 	}
 
@@ -44,12 +46,12 @@ public class ALRHManager extends ListenerAdapter {
 	 * 
 	 * @param g
 	 *            - the guild's id
-	 * @return - an ALRH or null
+	 * @return - an ALRH
 	 */
-	public static ALRHImpl getAnimeListReactionHandlerForGuild(String g) {
+	public static ALRHandler getAnimeListReactionHandlerForGuild(String g) {
 		assertInitialisation();
 		log.debug("Getting ALRH for guild {}", g);
-		return impls.compute(g, (gid, alrh) -> (alrh = (alrh == null) ? new ALRHImpl(gid) : alrh));
+		return impls.compute(g, (gid, alrh) -> (alrh = (alrh == null) ? new ALRHandler(gid) : alrh));
 	}
 
 	/**
@@ -59,9 +61,17 @@ public class ALRHManager extends ListenerAdapter {
 		if (!initialized) {
 			mapAnimesToStartingLetter();
 			initialized = true;
+			initImpls();
 		} else {
 			throw new IllegalStateException("Already initialized!");
 		}
+	}
+
+	private static void initImpls() {
+		log.debug("Loading ALRHs");
+		GuildDataManager.getGuildIds().forEach(id -> {
+			getAnimeListReactionHandlerForGuild(id);
+		});
 	}
 
 	static Set<DTO> getListMessages() {
@@ -110,8 +120,8 @@ public class ALRHManager extends ListenerAdapter {
 	 */
 	private static void mapAnimesToStartingLetter() {
 		log.debug("Mapping animes to starting letter");
-		List<Anime> animes = AnimeBase.getSeasonalAnimes();
-		animes.stream().map(a -> a.title).forEach(title -> aniAlph.compute(("" + title.charAt(0)).toUpperCase(), (k, v) -> {
+		List<AnimeDayTime> animes = AnimeBase.getSeasonalAnimes();
+		animes.stream().map(a -> a.getAnime().title).forEach(title -> aniAlph.compute(("" + title.charAt(0)).toUpperCase(), (k, v) -> {
 			v = (v == null) ? new LinkedList<>() : v;
 			v.add(title);
 			return v;

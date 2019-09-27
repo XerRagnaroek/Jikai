@@ -4,8 +4,8 @@ import java.util.List;
 
 import com.xerragnaroek.bot.commands.Command;
 import com.xerragnaroek.bot.commands.CommandHandlerImpl;
-import com.xerragnaroek.bot.data.GuildDataManager;
 import com.xerragnaroek.bot.data.GuildDataKey;
+import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -32,8 +32,8 @@ public class SetAnimeChannelCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments) {
-		String chan = arguments;
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
+		String chan = arguments[0];
 		Guild g = event.getGuild();
 		List<TextChannel> tc = g.getTextChannelsByName(chan, false);
 		if (!tc.isEmpty()) {

@@ -11,10 +11,10 @@ import java.util.TreeSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.bot.anime.AnimeBase;
-import com.xerragnaroek.bot.anime.AnimeDayTime;
-import com.xerragnaroek.bot.data.GuildDataManager;
+import com.xerragnaroek.bot.anime.base.AnimeBase;
+import com.xerragnaroek.bot.anime.base.AnimeDayTime;
 import com.xerragnaroek.bot.data.GuildDataKey;
+import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.MessageBuilder;
@@ -45,7 +45,7 @@ public class ScheduleCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
 		TextChannel channel;
 		if ((channel = g.getTextChannelById(GuildDataManager.getDataForGuild(g.getId()).get(GuildDataKey.ANIME_CHANNEL))) != null) {

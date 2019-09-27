@@ -12,10 +12,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,14 +30,14 @@ import net.dv8tion.jda.api.entities.Guild;
  *
  */
 public class GuildDataManager {
-	static final Set<ZoneId> usedZones = new HashSet<>();
-	private static Map<GuildDataKey, List<Consumer<String>>> consumers = Collections.synchronizedMap(new HashMap<>());
+	static final Map<ZoneId, List<String>> usedZones = Collections.synchronizedMap(new HashMap<>());
+	private static Map<GuildDataKey, List<BiConsumer<String, String>>> consumers = Collections.synchronizedMap(new HashMap<>());
 	private static Map<String, GuildData> data = new HashMap<>();
 	private static final Logger log = LoggerFactory.getLogger(GuildDataManager.class);
 	private static final ScheduledExecutorService saver = Executors.newSingleThreadScheduledExecutor();
 
 	static {
-		registerUniversalOptionChangedConsumer(GuildDataKey.TIMEZONE, GuildDataManager::updateTimeZone);
+		registerUniversalOptionChangedConsumer(GuildDataKey.TIMEZONE, GuildDataManager::addTimeZone);
 	}
 
 	public static GuildData getBotConfig() {
@@ -60,18 +61,26 @@ public class GuildDataManager {
 			return data.get(id);
 		} else {
 			log.debug("No config found, creating new one");
-			GuildData c = new GuildData(id);
+			GuildData c = makeConfigFromId(id);
 			data.put(id, c);
 			return c;
 		}
 	}
 
 	public static Set<String> getGuildIds() {
-		return data.keySet();
+		Set<String> copy = new TreeSet<String>(data.keySet());
+		copy.remove(GuildData.BOT);
+		return copy;
 	}
 
 	public static Set<ZoneId> getUsedTimeZones() {
-		return new HashSet<>(usedZones);
+		return new HashSet<>(usedZones.keySet());
+	}
+
+	public static Map<ZoneId, List<String>> timeZoneGuildMap() {
+		Map<ZoneId, List<String>> tmp = new HashMap<>();
+		tmp.putAll(usedZones);
+		return tmp;
 	}
 
 	public static void init() {
@@ -97,7 +106,14 @@ public class GuildDataManager {
 		log.debug("Started thread to save configurations every 10 minutes");
 	}
 
-	public static void registerUniversalOptionChangedConsumer(GuildDataKey co, Consumer<String> con) {
+	/**
+	 * 
+	 * @param co
+	 *            - the GuildDataKey
+	 * @param con
+	 *            - BiConsumer for the GuildId and the new Value
+	 */
+	public static void registerUniversalOptionChangedConsumer(GuildDataKey co, BiConsumer<String, String> con) {
 		consumers.compute(co, (key, list) -> {
 			if (list == null) {
 				list = new LinkedList<>();
@@ -125,7 +141,7 @@ public class GuildDataManager {
 		GuildData bot = new GuildData(GuildData.BOT);
 		bot.set(GuildDataKey.TIMEZONE, "Europe/Berlin");
 		bot.set(GuildDataKey.TRIGGER, "!");
-		usedZones.add(ZoneId.of("Europe/Berlin"));
+		usedZones.put(ZoneId.of("Europe/Berlin"), new LinkedList<String>());
 		return bot;
 	}
 
@@ -151,9 +167,21 @@ public class GuildDataManager {
 	 * @param zone
 	 *            - the TimeZone's id
 	 */
-	private static void updateTimeZone(String zone) {
+	private static void addTimeZone(String gId, String zone) {
 		ZoneId z = ZoneId.of(zone);
-		usedZones.add(z);
-		log.debug("Added zone {}", zone);
+		if (!gId.equals(GuildData.BOT)) {
+			usedZones.compute(z, (k, v) -> {
+				if (v == null) {
+					v = new LinkedList<String>();
+				}
+				v.add(gId);
+				return v;
+			});
+			log.debug("Added zone {}", zone);
+		}
+	}
+
+	public static boolean isKnownGuild(String gId) {
+		return getGuildIds().contains(gId);
 	}
 }

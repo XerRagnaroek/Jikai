@@ -13,7 +13,7 @@ public enum GuildDataKey {
 	/**
 	 * The channel the bot posts the anime list in.
 	 */
-	ROLE_CHANNEL,
+	LIST_CHANNEL,
 
 	/**
 	 * The server's timezone.

@@ -1,5 +1,5 @@
 /.gradle/
 /target/
 /logs/
-/configs/*
-!/configs/config_BOT.ini
+/data/*
+!/data/BOT.ini

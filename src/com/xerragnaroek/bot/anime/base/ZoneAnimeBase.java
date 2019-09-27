@@ -1,4 +1,4 @@
-package com.xerragnaroek.bot.anime;
+package com.xerragnaroek.bot.anime.base;
 
 import java.time.DayOfWeek;
 import java.time.ZoneId;
@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -14,6 +15,8 @@ import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
 
 /**
  * Stores ADTs adjusted to a specific timezone.
@@ -24,8 +27,8 @@ import org.slf4j.LoggerFactory;
 public class ZoneAnimeBase {
 	private static ZoneId jst = ZoneId.of("Japan");
 	private final Logger log;
-	private Map<String, AnimeDayTime> animes = new ConcurrentHashMap<>();
-	private Map<DayOfWeek, List<AnimeDayTime>> animeWeek = new ConcurrentHashMap<>();
+	private Map<String, AnimeDayTime> animes = Collections.synchronizedSortedMap(new TreeMap<>());
+	private Map<DayOfWeek, List<AnimeDayTime>> animeWeek = Collections.synchronizedSortedMap(new TreeMap<>());
 	private ZoneId zone;
 
 	ZoneAnimeBase(ZoneId z) {
@@ -122,5 +125,9 @@ public class ZoneAnimeBase {
 	 */
 	boolean hasEntries() {
 		return !animes.isEmpty();
+	}
+
+	Anime getAnime(String title) {
+		return animes.get(title).getAnime();
 	}
 }

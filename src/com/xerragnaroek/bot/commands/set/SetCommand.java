@@ -1,5 +1,6 @@
 package com.xerragnaroek.bot.commands.set;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,20 +39,19 @@ public class SetCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String arguments) {
-		String[] tmp = arguments.split(" ");
-		if (tmp.length > 1) {
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
+		if (arguments.length > 1) {
 			Command c;
-			String com = tmp[0].toLowerCase();
+			String com = arguments[0].toLowerCase();
 			if ((c = setComs.get(com)) != null) {
 				log.info("Recognized SetCommand '{}'", c.getCommandName());
-				c.executeCommand(chi, event, arguments.substring(com.length()).trim());
+				c.executeCommand(chi, event, Arrays.copyOfRange(arguments, 1, arguments.length));
 			}
 		}
 	}
 
 	private void initCommands() {
-		Command[] commands = new Command[] { new SetTriggerCommand(), new SetAnimeChannelCommand(), new SetTimeZoneCommand(), new SetRoleChannelCommand() };
+		Command[] commands = new Command[] { new SetTriggerCommand(), new SetAnimeChannelCommand(), new SetTimeZoneCommand(), new SetListChannelCommand() };
 		for (Command c : commands) {
 			setComs.put(c.getCommandName(), c);
 			log.debug("Loaded SetCommand " + c.getCommandName());

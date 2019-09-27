@@ -8,8 +8,7 @@ import javax.security.auth.login.LoginException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.bot.anime.ALRHManager;
-import com.xerragnaroek.bot.anime.AnimeBase;
+import com.xerragnaroek.bot.anime.base.AnimeBase;
 import com.xerragnaroek.bot.commands.CommandHandlerManager;
 import com.xerragnaroek.bot.data.GuildDataManager;
 
@@ -30,40 +29,6 @@ public class Core {
 		builder.addEventListeners(new EventListener());
 		jda = builder.build();
 		jda.awaitReady();
-		/*Instant start = Instant.now();
-		AnimeSearch as = new AnimeSearch().setStatus(AnimeStati.AIRING);
-		AnimePage ap = as.get().get();
-		int page = 1;
-		AtomicInteger c = new AtomicInteger(0);
-		while (!ap.animes.isEmpty()) {
-			System.out.println("Page " + page);
-			ap.animes.forEach(a -> c.incrementAndGet());
-			Thread.sleep(1000);
-			as.setPage(page++);
-			ap = as.get().get();
-		}
-		System.out.println("MAL lists a totla of " + c.get() + " currently airing animes. Listing was completed in " + Duration.between(start,
-																																		Instant.now()).toMillis() + "ms.");*/
-		/*Schedule s = new Connector().getCurrentSchedule().get();
-		Consumer<SubAnime> printTitle = a -> System.out.println(a.title);
-		System.out.println("\nMonday:\n");
-		s.monday.forEach(printTitle);
-		System.out.println("\nTuesday:\n");
-		s.tuesday.forEach(printTitle);
-		System.out.println("\nWednesday:\n");
-		s.wednesday.forEach(printTitle);
-		System.out.println("\nThursday:\n");
-		s.thursday.forEach(printTitle);
-		System.out.println("\nFriday:\n");
-		s.friday.forEach(printTitle);
-		System.out.println("\nSaturday:\n");
-		s.saturday.forEach(printTitle);
-		System.out.println("\nSunday:\n");
-		s.sunday.forEach(printTitle);
-		System.out.println("\nOthers:\n");
-		s.others.forEach(printTitle);
-		System.out.println("\nUnknown:\n");
-		s.unknown.forEach(printTitle);*/
 	}
 
 	private static void init() {
@@ -72,7 +37,8 @@ public class Core {
 		AnimeBase.init();
 		AnimeBase.waitUntilLoaded();
 		CommandHandlerManager.init();
-		ALRHManager.init();
+
+		/*ALRHManager.init(); is called in the onReady of the EventListener*/
 	}
 
 	public static JDA getJDA() {

@@ -11,7 +11,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,12 +25,13 @@ import org.slf4j.LoggerFactory;
 public class GuildData {
 	public static final String BOT = "BOT";
 	private final Map<GuildDataKey, String> data = Collections.synchronizedMap(new HashMap<>());
-	private Map<GuildDataKey, List<Consumer<String>>> consumers = new HashMap<>();
+	private Map<GuildDataKey, List<BiConsumer<String, String>>> consumers = new HashMap<>();
 	private final Path fileLoc;
 	private final String guildId;
 	private AtomicBoolean hasChanged = new AtomicBoolean(false);
 	private final Logger log;
 
+	//TODO make it easier to save and load stuff by changing how data is called!
 	/**
 	 * Package only cause it mine >:)
 	 */
@@ -57,7 +58,14 @@ public class GuildData {
 		return guildId;
 	}
 
-	public void registerDataChangedConsumer(GuildDataKey co, Consumer<String> con) {
+	/**
+	 * 
+	 * @param co
+	 *            - the GuildDataKey
+	 * @param con
+	 *            - BiConsumer for the GuildId and the new value
+	 */
+	public void registerDataChangedConsumer(GuildDataKey co, BiConsumer<String, String> con) {
 		consumers.compute(co, (key, list) -> {
 			if (list == null) {
 				list = new LinkedList<>();
@@ -124,7 +132,7 @@ public class GuildData {
 		}
 	}
 
-	void setConsumers(Map<GuildDataKey, List<Consumer<String>>> cons) {
+	void setConsumers(Map<GuildDataKey, List<BiConsumer<String, String>>> cons) {
 		consumers = cons;
 	}
 
@@ -150,7 +158,7 @@ public class GuildData {
 	private void runConsumers(GuildDataKey co, String newVal) {
 		if (consumers.containsKey(co)) {
 			log.debug("Running consumers for {}", co);
-			consumers.get(co).forEach(con -> con.accept(newVal));
+			consumers.get(co).forEach(con -> con.accept(guildId, newVal));
 		}
 	}
 

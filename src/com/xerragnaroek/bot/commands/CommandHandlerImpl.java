@@ -7,8 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.data.GuildData;
-import com.xerragnaroek.bot.data.GuildDataManager;
 import com.xerragnaroek.bot.data.GuildDataKey;
+import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
@@ -33,7 +33,7 @@ public class CommandHandlerImpl {
 	private void init() {
 		GuildData c = GuildDataManager.getDataForGuild(gId);
 		setTrigger(c.get(GuildDataKey.TRIGGER));
-		c.registerDataChangedConsumer(GuildDataKey.TRIGGER, this::setTrigger);
+		c.registerDataChangedConsumer(GuildDataKey.TRIGGER, (gId, trig) -> this.setTrigger(trig));
 		commands = CommandHandlerManager.getCommands();
 		log.info("Initialized");
 	}
@@ -53,7 +53,7 @@ public class CommandHandlerImpl {
 					log.info("Recognised command {}", com.getCommandName());
 					//remove the command from the content and execute it
 					content = content.substring(com.getCommandName().length()).trim();
-					com.executeCommand(this, event, content);
+					com.executeCommand(this, event, content.trim().split(" "));
 				} else {
 					log.debug("No commands recognised");
 					//trash talk the user cause they typed some garbage

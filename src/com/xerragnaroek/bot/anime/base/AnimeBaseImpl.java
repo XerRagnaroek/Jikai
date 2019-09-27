@@ -1,4 +1,4 @@
-package com.xerragnaroek.bot.anime;
+package com.xerragnaroek.bot.anime.base;
 
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -7,6 +7,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -159,14 +162,17 @@ class AnimeBaseImpl {
 	}
 
 	private ZonedDateTime makeZDT(Anime a) {
+		ZonedDateTime zdt = null;
 		if (a.broadcast == null || a.broadcast.equals("Not scheduled once per week")) {
 			return null;
 		} else if (a.broadcast.equals("Unknown")) {
 			log.debug("Broadcast is unknown, defaulting to airing day = day it first aired");
-			return makeZDTFromAired(a);
+			zdt = makeZDTFromAired(a);
 		} else {
-			return makeZDTFromBroadcast(a);
+			zdt = makeZDTFromBroadcast(a);
 		}
+		//adjusted into the next time they air
+		return ZonedDateTime.of(LocalDate.now(jst), zdt.toLocalTime(), jst).with(TemporalAdjusters.nextOrSame(zdt.getDayOfWeek()));
 	}
 
 	private ZonedDateTime makeZDTFromAired(Anime a) {
@@ -232,6 +238,10 @@ class AnimeBaseImpl {
 		}
 	}
 
+	Anime getAnime(String title) {
+		return animes.get(jst).getAnime(title);
+	}
+
 	List<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
 		ZoneId zone = ZoneId.of(GuildDataManager.getDataForGuild(g.getId()).get(GuildDataKey.TIMEZONE));
 		if (!animes.containsKey(zone)) {
@@ -244,8 +254,8 @@ class AnimeBaseImpl {
 		return list.stream().filter(adt -> adt.releasesOnDay(day)).collect(Collectors.toList());
 	}
 
-	List<Anime> getSeasonalAnimes() {
-		return animes.get(jst).getAnimes().stream().map(AnimeDayTime::getAnime).sorted((a1, a2) -> a1.title.compareTo(a2.title)).collect(Collectors.toCollection(LinkedList::new));
+	List<AnimeDayTime> getSeasonalAnimes() {
+		return animes.get(jst).getAnimes().stream().sorted((a1, a2) -> a1.getAnime().title.compareTo(a2.getAnime().title)).collect(Collectors.toCollection(LinkedList::new));
 	}
 
 	boolean isLoading() {
@@ -256,5 +266,11 @@ class AnimeBaseImpl {
 		String ver = String.valueOf(Integer.parseInt(Objects.requireNonNullElse(gData.get(GuildDataKey.ANIME_BASE_VERSION), "0")) + 1);
 		log.info("Updating AnimeBase version to {}", ver);
 		gData.set(GuildDataKey.ANIME_BASE_VERSION, ver);
+	}
+
+	List<AnimeDayTime> getSeasonalAnimesAdjusted(ZoneId tz) {
+		List<AnimeDayTime> tmp = new ArrayList<>(animes.get(tz).getAnimes());
+		Collections.sort(tmp);
+		return tmp;
 	}
 }
