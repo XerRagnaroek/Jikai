@@ -2,4 +2,4 @@
 /target/
 /logs/
 /data/*
-!/data/BOT.ini
+!/data/BOT.json

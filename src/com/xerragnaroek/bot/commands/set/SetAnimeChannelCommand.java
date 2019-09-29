@@ -4,7 +4,6 @@ import java.util.List;
 
 import com.xerragnaroek.bot.commands.Command;
 import com.xerragnaroek.bot.commands.CommandHandlerImpl;
-import com.xerragnaroek.bot.data.GuildDataKey;
 import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -38,7 +37,7 @@ public class SetAnimeChannelCommand implements Command {
 		List<TextChannel> tc = g.getTextChannelsByName(chan, false);
 		if (!tc.isEmpty()) {
 			TextChannel textC = tc.get(0);
-			GuildDataManager.getDataForGuild(g.getId()).set(GuildDataKey.ANIME_CHANNEL, textC.getId());
+			GuildDataManager.getDataForGuild(g.getId()).setAnimeChannelId(textC.getId());
 			textC.sendMessage("I'll post anime garbage in here.").queue();
 		}
 	}

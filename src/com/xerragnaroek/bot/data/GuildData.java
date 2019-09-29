@@ -4,173 +4,221 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * GuildData storage object.
- * 
- * @author XerRagnarök
- *
- */
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.xerragnaroek.bot.anime.alrh.ALRHData;
+
+@JsonInclude(Include.NON_NULL)
 public class GuildData {
-	public static final String BOT = "BOT";
-	private final Map<GuildDataKey, String> data = Collections.synchronizedMap(new HashMap<>());
-	private Map<GuildDataKey, List<BiConsumer<String, String>>> consumers = new HashMap<>();
-	private final Path fileLoc;
-	private final String guildId;
-	private AtomicBoolean hasChanged = new AtomicBoolean(false);
+	private String gId;
+	private String trigger;
+	private String aniChId;
+	private String listChId;
+	private ZoneId zone;
+	private Set<ALRHData> alrhData;
+	private AtomicBoolean changed = new AtomicBoolean(false);
+	private Map<GuildDataKey, Set<BiConsumer<String, String>>> strConsumer = new HashMap<>();
+	private Set<BiConsumer<String, ZoneId>> zoneCons = new HashSet<>();
+	private Set<BiConsumer<String, Set<ALRHData>>> alrhdCons = new HashSet<>();
+	private Path fileLoc;
 	private final Logger log;
 
-	//TODO make it easier to save and load stuff by changing how data is called!
-	/**
-	 * Package only cause it mine >:)
-	 */
-	GuildData(String id) {
-		guildId = id;
-		log = LoggerFactory.getLogger(GuildData.class.getName() + "#" + guildId);
-		fileLoc = Paths.get(String.format("./data/%s.ini", guildId));
-
+	public GuildData(String guildId, boolean save) {
+		log = LoggerFactory.getLogger(GuildData.class + "#" + guildId);
+		gId = guildId;
+		alrhData = new TreeSet<>();
+		fileLoc = Paths.get(String.format("./data/%s.json", guildId));
+		changed.set(save);
+		log.info("Loaded configuration for {}", guildId);
 	}
 
-	/**
-	 * Get the Value of a {@link GuildDataKey}
-	 */
-	public String get(GuildDataKey co) {
-		String val;
-		if (!guildId.equals(BOT)) {
-			return ((val = data.get(co)) == null) ? GuildDataManager.getBotConfig().get(co) : val;
+	@JsonProperty("trigger")
+	public String getTrigger() {
+		return Objects.requireNonNullElse(trigger, GuildDataManager.getBotConfig().getDefaultTrigger());
+	}
+
+	@JsonProperty("anime_channel_id")
+	public String getAnimeChannelId() {
+		return aniChId;
+	}
+
+	@JsonProperty("list_channel_id")
+	public String getListChannelId() {
+		return listChId;
+	}
+
+	@JsonProperty("guild_id")
+	public String getGuildId() {
+		return gId;
+	}
+
+	@JsonIgnore
+	public ZoneId getTimeZone() {
+		return Objects.requireNonNullElse(zone, GuildDataManager.getBotConfig().getDefaultTimeZone());
+	}
+
+	@JsonProperty("timezone")
+	public String getTimeZoneString() {
+		if (zone != null) {
+			return zone.getId();
 		} else {
-			return data.get(co);
+			return GuildDataManager.getBotConfig().getDefaultTimeZoneString();
 		}
 	}
 
-	public String getGuildId() {
-		return guildId;
+	@JsonProperty("alrh_data")
+	public Set<ALRHData> getALRHData() {
+		return new TreeSet<>(alrhData);
 	}
 
-	/**
-	 * 
-	 * @param co
-	 *            - the GuildDataKey
-	 * @param con
-	 *            - BiConsumer for the GuildId and the new value
-	 */
-	public void registerDataChangedConsumer(GuildDataKey co, BiConsumer<String, String> con) {
-		consumers.compute(co, (key, list) -> {
-			if (list == null) {
-				list = new LinkedList<>();
-			}
+	public String setTrigger(String trigger) {
+		String tmp = this.trigger;
+		this.trigger = trigger;
+		log.info("Trigger was changed from '{}' to '{}'", tmp, trigger);
+		hasChanged();
+		runStringConsumer(GuildDataKey.TRIGGER, trigger);
+		return tmp;
+	}
+
+	public String setAnimeChannelId(String id) {
+		String tmp = aniChId;
+		aniChId = id;
+		log.info("AnimeChannelId was changed from '{}' to '{}'", tmp, id);
+		hasChanged();
+		runStringConsumer(GuildDataKey.ANIME_CHANNEL, id);
+		return tmp;
+	}
+
+	public String setListChannelId(String id) {
+		String tmp = listChId;
+		listChId = id;
+		log.info("ListChannelId was changed from '{}' to '{}'", tmp, id);
+		hasChanged();
+		runStringConsumer(GuildDataKey.LIST_CHANNEL, id);
+		return tmp;
+	}
+
+	public ZoneId setTimeZone(ZoneId z) {
+		ZoneId tmp = zone;
+		zone = z;
+		log.info("TimeZone was changed from '{}' to '{}'", tmp, z);
+		hasChanged();
+		runTimeZoneConsumer(z);
+		return tmp;
+	}
+
+	public void setALRHData(Set<ALRHData> data) {
+		alrhData = data;
+		log.info("Data was changed");
+		hasChanged();
+		runALRHDataConsumer(data);
+	}
+
+	private void hasChanged() {
+		changed.set(true);
+	}
+
+	private void runStringConsumer(GuildDataKey gdk, String newValue) {
+		if (strConsumer != null && strConsumer.containsKey(gdk)) {
+			log.debug("Running string consumer for {}", gdk);
+			strConsumer.get(gdk).forEach(con -> con.accept(gId, newValue));
+		}
+	}
+
+	private void runTimeZoneConsumer(ZoneId newZ) {
+		if (zoneCons != null) {
+			log.debug("Running TimeZone consumer");
+			zoneCons.forEach(con -> con.accept(gId, newZ));
+		}
+	}
+
+	private void runALRHDataConsumer(Set<ALRHData> newData) {
+		if (alrhdCons != null) {
+			log.debug("Running ALRHData consumer");
+			alrhdCons.forEach(con -> con.accept(gId, newData));
+		}
+	}
+
+	public void registerOnTriggerChange(BiConsumer<String, String> con) {
+		registerOnStringOptionChangeConsumer(GuildDataKey.TRIGGER, con);
+	}
+
+	public void registerOnAnimeChannelIdChange(BiConsumer<String, String> con) {
+		registerOnStringOptionChangeConsumer(GuildDataKey.ANIME_CHANNEL, con);
+	}
+
+	public void registerOnListChannelIdChange(BiConsumer<String, String> con) {
+		registerOnStringOptionChangeConsumer(GuildDataKey.LIST_CHANNEL, con);
+	}
+
+	public void registerOnTimeZoneChange(BiConsumer<String, ZoneId> con) {
+		if (zoneCons == null) {
+			zoneCons = Collections.synchronizedSet(new HashSet<>());
+		}
+		zoneCons.add(con);
+		log.debug("Registered a new TimeZone consumer");
+	}
+
+	public void registerOnALRHDataChange(BiConsumer<String, Set<ALRHData>> con) {
+		if (alrhdCons == null) {
+			alrhdCons = Collections.synchronizedSet(new HashSet<>());
+		}
+		alrhdCons.add(con);
+		log.debug("Registered a new ALRHData consumer");
+	}
+
+	void registerOnStringOptionChangeConsumer(GuildDataKey gdk, BiConsumer<String, String> con) {
+		strConsumer.compute(gdk, (k, list) -> {
+			list = (list == null) ? new HashSet<>() : list;
 			list.add(con);
 			return list;
 		});
-		log.debug("Registered a new consumer for {}", co);
+		log.debug("Registered a new consumer for {}", gdk);
 	}
 
-	/**
-	 * Set the value of a {@link GuildDataKey}
-	 */
-	public void set(GuildDataKey co, String val) {
-		if (this.guildId.equals(GuildData.BOT) || !co.isBotOnly()) {
-			data.compute(co, (cop, v) -> {
-				if (v == null || !v.equals(val)) {
-					hasChanged.set(true);
-					log.debug("Changed {} from {} to {}", co, v, val);
-					runConsumers(co, val);
-					return val;
-				} else {
-					log.debug("{} was already set to {}", co, v);
-					return v;
-				}
-			});
-		}
-	}
-
-	public void clear(GuildDataKey co) {
-		data.remove(co);
-		hasChanged.set(true);
-		log.debug("Cleared {}", co);
-	}
-
-	boolean hasChanged() {
-		return hasChanged.get();
-	}
-
-	/**
-	 * Load that data, boy. Will load default values and save them if no data file is present.
-	 */
-	void init() {
-		log.info("Loading config [{}]", guildId);
-		//defaultConfig();
-		if (Files.exists(fileLoc)) {
-			loadData();
-		}
-		hasChanged.set(true);
-	}
-
-	/**
-	 * Save the data but only if it changed.
-	 */
-	synchronized void saveData() {
-		if (hasChanged.get()) {
+	void save() {
+		if (changed.get()) {
+			ObjectMapper mapper = new ObjectMapper();
+			mapper.enable(SerializationFeature.INDENT_OUTPUT);
 			try {
-				Files.write(fileLoc, stringifyData());
-				log.info("Saved config to " + fileLoc.toAbsolutePath());
+				Files.writeString(fileLoc, mapper.writeValueAsString(this));
+				log.info("Successfully saved data to {}", fileLoc);
+				changed.set(false);
 			} catch (IOException e) {
-				log.error("Failed saving config", e);
+				log.error("Failed saving data to [}", fileLoc, e);
 			}
-			hasChanged.set(false);
 		}
 	}
 
-	void setConsumers(Map<GuildDataKey, List<BiConsumer<String, String>>> cons) {
-		consumers = cons;
+	@JsonCreator
+	public static GuildData makeGuildData(@JsonProperty("guild_id") String gId, @JsonProperty("trigger") String trig,
+			@JsonProperty("anime_channel_id") String aniChId, @JsonProperty("list_channel_id") String listChId,
+			@JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data) {
+		GuildData gd = new GuildData(gId, false);
+		gd.trigger = trig;
+		gd.aniChId = aniChId;
+		gd.listChId = listChId;
+		gd.zone = ZoneId.of(zone);
+		gd.alrhData = data;
+		return gd;
 	}
-
-	/**
-	 * Load from the data file
-	 */
-	private void loadData() {
-		log.debug("Loading data...");
-		try {
-			Files.lines(fileLoc).forEach(line -> {
-				String[] tmp = line.split("=");
-				if (tmp.length == 2) {
-					GuildDataKey co;
-					set((co = GuildDataKey.valueOf(tmp[0])), tmp[1]);
-					log.debug("{}={}", co, tmp[1]);
-				}
-			});
-		} catch (IOException e) {
-			log.error("Failed loading config", e);
-		}
-	}
-
-	private void runConsumers(GuildDataKey co, String newVal) {
-		if (consumers.containsKey(co)) {
-			log.debug("Running consumers for {}", co);
-			consumers.get(co).forEach(con -> con.accept(guildId, newVal));
-		}
-	}
-
-	/**
-	 * Utility method that turns the data map into an ini-fied string.
-	 */
-	private List<String> stringifyData() {
-		List<String> l = new ArrayList<>(data.size());
-		for (GuildDataKey key : data.keySet()) {
-			l.add(key + "=" + data.get(key));
-		}
-		return l;
-	}
-
 }

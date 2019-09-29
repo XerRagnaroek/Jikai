@@ -21,7 +21,8 @@ public class Core {
 	private final static Logger log = LoggerFactory.getLogger(Core.class);
 	private static JDA jda;
 
-	public static void main(String[] args) throws LoginException, InterruptedException, ExecutionException, ClassNotFoundException, IOException {
+	public static void main(String[] args)
+			throws LoginException, InterruptedException, ExecutionException, ClassNotFoundException, IOException {
 		init();
 		JDABuilder builder = new JDABuilder(AccountType.BOT);
 		//String token = "NjA1MzgzMDU4NDU1MDAzMTU2.XUBVLw.4kUrz7id1T53iqKQar3XbEcpvng";

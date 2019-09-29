@@ -4,7 +4,6 @@ import java.util.List;
 
 import com.xerragnaroek.bot.commands.Command;
 import com.xerragnaroek.bot.commands.CommandHandlerImpl;
-import com.xerragnaroek.bot.data.GuildDataKey;
 import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -37,7 +36,7 @@ public class SetListChannelCommand implements Command {
 		List<TextChannel> tc = g.getTextChannelsByName(chan, false);
 		if (!tc.isEmpty()) {
 			TextChannel textC = tc.get(0);
-			GuildDataManager.getDataForGuild(g.getId()).set(GuildDataKey.LIST_CHANNEL, textC.getId());
+			GuildDataManager.getDataForGuild(g.getId()).setListChannelId(textC.getId());
 		}
 	}
 

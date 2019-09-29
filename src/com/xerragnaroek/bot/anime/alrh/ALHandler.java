@@ -1,6 +1,6 @@
 package com.xerragnaroek.bot.anime.alrh;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -11,6 +11,7 @@ import com.xerragnaroek.bot.core.Core;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
 
 public class ALHandler {
@@ -32,6 +33,12 @@ public class ALHandler {
 		Set<DTO> dtos = ALRHManager.getListMessages();
 		successes.set(0);
 		expectedNumSuccesses = calcExpectedSuccesses(dtos);
+		log.info("Deleting old messages and data");
+		alrh.alrhDB.forEachMessage((id, dat) -> {
+			tc.deleteMessageById(id).queue(	v -> log.info("Deleted old list message"),
+											e -> log.error("Failed deleting old message"));
+		});
+		alrh.alrhDB.clearData();
 		dtos.forEach(dto -> handleDTO(g, tc, dto));
 	}
 
@@ -39,35 +46,42 @@ public class ALHandler {
 		int c = 0;
 		for (DTO dto : dtos) {
 			//roles,reactions and 1 for the message
-			c += dto.getUnicodeTitleMap().size() * 2 + 1;
+			c += dto.getALRHData().size() * 2 + 1;
 		}
 		return c;
 	}
 
 	private void handleDTO(Guild g, TextChannel tc, DTO dto) {
 		Message me = dto.getMessage();
-		Map<String, String> map = dto.getUnicodeTitleMap();
+		Set<ALRHData> data = dto.getALRHData();
 		log.debug("Sending list message...");
 		tc.sendMessage(me).queue(m -> {
 			incrementSuccesses();
-			alrh.msgUcTitMap.put(m.getId(), map);
-			map.forEach((uni, title) -> {
-				if (!alrh.roleExists(g, title)) {
+			alrh.alrhDB.setDataForMessage(m.getId(), data);
+			data.forEach(alrhd -> {
+				alrhd.setTextChannelId(alrh.tcId);
+				String title = alrhd.getTitle();
+				List<Role> roles = g.getRolesByName(title, false);
+				if (roles.isEmpty()) {
 					log.info("Creating role for {}", title);
 					g.createRole().setName(title).setMentionable(true).setPermissions(0l).queue(r -> {
 						if (r != null) {
 							log.debug("Storing role {} with id {}", r.getName(), r.getId());
-							alrh.roleMap.put(title, r.getId());
+							alrhd.setRoleId(r.getId());
+							alrh.alrhDB.addALRHData(alrhd);
 							incrementSuccesses();
 						}
 					}, rerr -> log.error("Failed creating role for {}", title, rerr));
 				} else {
+					log.debug("Role {} already exists, getting id", title);
+					alrhd.setRoleId(roles.get(0).getId());
 					incrementSuccesses();
 				}
-				log.debug("Adding reaction {} to message", uni);
-				m.addReaction(uni).queue(v -> {
+				String uniCP = alrhd.getUnicodeCodePoint();
+				log.debug("Adding reaction {} to message", uniCP);
+				m.addReaction(uniCP).queue(v -> {
 					incrementSuccesses();
-					log.debug("Added reaction {} to message", uni);
+					log.debug("Added reaction {} to message", uniCP);
 					if (successes.get() == expectedNumSuccesses) {
 						alrh.storeData();
 						successes.set(0);

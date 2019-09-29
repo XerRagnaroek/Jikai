@@ -1,25 +1,18 @@
 package com.xerragnaroek.bot.anime.alrh;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.xerragnaroek.bot.anime.base.AnimeBase;
 import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.data.GuildData;
-import com.xerragnaroek.bot.data.GuildDataKey;
 import com.xerragnaroek.bot.data.GuildDataManager;
 import com.xerragnaroek.bot.util.BotUtils;
 
@@ -41,8 +34,7 @@ public class ALRHandler {
 	final GuildData gData;
 	final String gId;
 	private final Logger log;
-	Map<String, Map<String, String>> msgUcTitMap = Collections.synchronizedMap(new HashMap<>()); /*Message Unicode Title Map*/
-	Map<String, String> roleMap = Collections.synchronizedSortedMap(new TreeMap<>()); /*Title, RoleId*/
+	ALRHDataBase alrhDB = new ALRHDataBase();
 	String tcId; //Textchannel Id
 	private ALHandler alh;
 	private ARHandler arh;
@@ -80,34 +72,47 @@ public class ALRHandler {
 
 	void init() {
 		log.debug("Initializing...");
-		setTextChannelId(gData.get(GuildDataKey.LIST_CHANNEL));
-		loadData();
-		gData.registerDataChangedConsumer(GuildDataKey.LIST_CHANNEL, (gId, tcId) -> this.setTextChannelId(tcId));
+		setTextChannelId(gData.getListChannelId());
+		alrhDB.addData(gData.getALRHData());
+		alrhDB.forEachMessage(this::checkIfListChanged);
+		gData.registerOnListChannelIdChange((gId, tcId) -> this.setTextChannelId(tcId));
 	}
 
-	private void moveList(String oldTc, String newTc) {
+	/*private void moveList(String oldTc, String newTc) {
 		log.info("Moving list...");
 		TextChannel tc = Core.getJDA().getGuildById(gId).getTextChannelById(oldTc);
 		new TreeMap<String, Map<String, String>>(msgUcTitMap).keySet().forEach(msg -> {
 			tc.retrieveMessageById(msg).queue(m -> {
 				log.debug("Found list message, deleting...");
-				m.delete().queue(v -> log.info("Deleted an anime list message"), e -> log.error("Failed deleting message {}", msg, e));
+				m.delete().queue(	v -> log.info("Deleted an anime list message"),
+									e -> log.error("Failed deleting message {}", msg, e));
 			}, e -> log.error("Failed looking up list message {}", msg, e));
 			;
 		});
 		msgUcTitMap.clear();
 		tcId = newTc;
 		sendList();
+	}*/
+
+	private void checkIfListChanged(String msgId, Set<ALRHData> data) {
+		Set<String> unis = data.stream().map(ALRHData::getUnicodeCodePoint).collect(Collectors.toSet());
+		Guild g = Core.getJDA().getGuildById(gId);
+		TextChannel tc = g.getTextChannelById(alrhDB.getSentTextChannelId());
+		if (tc != null) {
+			reAddReactionsIfGone(tc, msgId, unis);
+		}
 	}
 
 	private void reAddReactionsIfGone(TextChannel tc, String msgId, Collection<String> unis) {
 		log.debug("Readding missing reactions on msg {} in TextChannel {}", msgId, tc.getName());
 		tc.retrieveMessageById(msgId).queue(m -> {
-			List<String> cps = m.getReactions().stream().map(mr -> mr.getReactionEmote().getAsCodepoints()).collect(Collectors.toList());
+			List<String> cps = m.getReactions().stream().map(mr -> mr.getReactionEmote().getAsCodepoints())
+					.collect(Collectors.toList());
 			for (String uni : unis) {
 				if (!cps.contains(uni)) {
 					log.info("Reaction {} is missing on message {}", uni, msgId);
-					m.addReaction(uni).queue(v -> log.info("Successfully readded reaction"), e -> log.error("Failed adding reaction", e));
+					m.addReaction(uni).queue(	v -> log.info("Successfully readded reaction"),
+												e -> log.error("Failed adding reaction", e));
 				}
 			}
 		});
@@ -141,13 +146,15 @@ public class ALRHandler {
 				e.printStackTrace();
 			}
 		}
-		return noMsg.get() || ids.size() != amsgs.size() || oldTc == null || !gData.get(GuildDataKey.ANIME_BASE_VERSION).equals(gData.get(GuildDataKey.LIST_MESSAGES_AB_VERSION)) || !oldTc.getId().equals(tcId);
+		return noMsg.get() || ids.size() != amsgs.size() || oldTc == null
+				|| !(AnimeBase.getAnimeBaseVersion() == alrhDB.getSentABVersion()) || !oldTc.getId().equals(tcId);
 	}
 
 	private void checkForRoleChanges(Guild g) {
 		log.debug("Checking for any changes to the roles while the bot was offline");
-		roleMap.forEach((title, rId) -> {
-			Role r = g.getRoleById(rId);
+		alrhDB.getData().forEach(d -> {
+			Role r = g.getRoleById(d.getRoleId());
+			String title = d.getTitle();
 			if (r == null || !r.getName().equals(title)) {
 				log.debug("Role for {} is invalid", title);
 				createRole(g, title);
@@ -155,75 +162,21 @@ public class ALRHandler {
 		});
 	}
 
+	void storeData() {
+		gData.setALRHData(alrhDB.getData());
+	}
+
 	private void createRole(Guild g, String title) {
 		log.info("Creating role for {}", title);
-		g.createRole().setName(title).setMentionable(true).setPermissions(0l).queue(r -> roleMap.put(title, r.getId()));
-	}
-
-	void storeData() {
-		log.debug("Storing data");
-		//{msgId;[title,emoji unicode,roleId]...}
-		StringBuilder bob = new StringBuilder();
-		msgUcTitMap.forEach((msgId, ucTitMap) -> {
-			bob.append("{" + msgId + ";");
-			ucTitMap.forEach((uc, title) -> {
-				bob.append(String.format("%s;%s;%s;", title, uc, roleMap.get(title)));
-			});
-			bob.append("}");
-		});
-		gData.set(GuildDataKey.LIST_MESSAGES, bob.toString());
-		gData.set(GuildDataKey.LIST_MESSAGES_TC, tcId);
-		gData.set(GuildDataKey.LIST_MESSAGES_AB_VERSION, gData.get(GuildDataKey.ANIME_BASE_VERSION));
-	}
-
-	//TODO do something when the text channel was deleted
-	//TODO save if anime was reacted to
-	private void loadData() {
-		log.info("Loading data...");
-		Guild g = Core.getJDA().getGuildById(gId);
-		TextChannel tc = g.getTextChannelById(gData.get(GuildDataKey.LIST_MESSAGES_TC));
-		if (tc != null) {
-			String raw = gData.get(GuildDataKey.LIST_MESSAGES);
-			if (raw != null) {
-				List<String> ids = new LinkedList<>();
-				Matcher m = Pattern.compile("(?<=\\{).+?(?=\\})").matcher(raw);
-				while (m.find()) {
-					String msg = m.group();
-					String msgId = msg.substring(0, msg.indexOf(";"));
-					msg = msg.substring(msgId.length() + 1);
-					log.debug("Found message {}", msgId);
-					Map<String, String> ucTitMap = new TreeMap<>();
-					String cont[] = msg.split(";");
-					//title,unicode,role
-					for (int i = 0; i < cont.length; i += 3) {
-						String title = cont[i];
-						String uc = cont[i + 1];
-						String roleId = cont[i + 2];
-						ucTitMap.put(uc, title);
-						roleMap.put(title, roleId);
-					}
-					ids.add(msgId);
-					msgUcTitMap.put(msgId, ucTitMap);
-					reAddReactionsIfGone(tc, msgId, ucTitMap.keySet());
-				}
-				if (haveMessagesChanged(tc, ids)) {
-					//moveList(listMsgTc, tcId);
-				} else {
-					checkForRoleChanges(Core.getJDA().getGuildById(gId));
-				}
-			} else {
-				log.info("No data to load");
-			}
-		} else {
-			log.info("The old TextChannel was deleted, no point in loading data.");
-		}
+		g.createRole().setName(title).setMentionable(true).setPermissions(0l)
+				.queue(r -> alrhDB.getDataForTitle(title).setRoleId(r.getId()));
 	}
 
 	public String getRoleId(String title) {
-		return roleMap.get(title);
+		return alrhDB.getDataForTitle(title).getRoleId();
 	}
 
 	public Set<String> getReactedAnimes() {
-		return arh.getReactedAnimes();
+		return alrhDB.getReactedAnimes().stream().map(ALRHData::getTitle).collect(Collectors.toSet());
 	}
 }

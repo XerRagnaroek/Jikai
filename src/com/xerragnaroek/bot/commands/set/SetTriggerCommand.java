@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.commands.Command;
 import com.xerragnaroek.bot.commands.CommandHandlerImpl;
-import com.xerragnaroek.bot.data.GuildDataKey;
 import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.Permission;
@@ -38,12 +37,14 @@ public class SetTriggerCommand implements Command {
 				content += " ";
 			}
 			if (content.length() >= 1) {
-				GuildDataManager.getDataForGuild(event.getGuild().getId()).set(GuildDataKey.TRIGGER, content);
+				GuildDataManager.getDataForGuild(event.getGuild().getId()).setTrigger(content);
 				event.getChannel().sendMessageFormat("Trigger was changed to \"%s\"", content).queue();
 			}
 		} else {
 			//obligatory trash talk
-			event.getChannel().sendMessageFormat("Who the **fuck** do you think you are, %s? Permission **DENIED**", event.getAuthor().getAsMention()).queue();
+			event.getChannel().sendMessageFormat(	"Who the **fuck** do you think you are, %s? Permission **DENIED**",
+													event.getAuthor().getAsMention())
+					.queue();
 			log.info("User {} has insufficient permissions", event.getAuthor());
 		}
 

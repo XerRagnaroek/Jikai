@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.anime.base.AnimeBase;
 import com.xerragnaroek.bot.anime.base.AnimeDayTime;
-import com.xerragnaroek.bot.data.GuildDataKey;
 import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -48,7 +47,7 @@ public class ScheduleCommand implements Command {
 	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
 		TextChannel channel;
-		if ((channel = g.getTextChannelById(GuildDataManager.getDataForGuild(g.getId()).get(GuildDataKey.ANIME_CHANNEL))) != null) {
+		if ((channel = g.getTextChannelById(GuildDataManager.getDataForGuild(g.getId()).getAnimeChannelId())) != null) {
 			dumpSchedule(channel);
 		} else {
 			channel = event.getTextChannel();
@@ -72,7 +71,9 @@ public class ScheduleCommand implements Command {
 			sb.append(String.join("\n         ", titles) + "\n");
 		});
 		MessageBuilder bob = new MessageBuilder();
-		bob.appendCodeBlock(String.format("%s%n%s%n%s", day, "=".repeat(day.toString().length() + 1), String.join("\n", sb.toString())), "asciidoc");
+		bob.appendCodeBlock(String.format(	"%s%n%s%n%s", day, "=".repeat(day.toString().length() + 1),
+											String.join("\n", sb.toString())),
+							"asciidoc");
 		return bob.build();
 	}
 

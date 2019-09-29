@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
-import com.xerragnaroek.bot.data.GuildDataKey;
 import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -23,7 +22,7 @@ public class AnimeBase {
 		if (!initialized) {
 			aB.init();
 			initialized = true;
-			GuildDataManager.registerUniversalOptionChangedConsumer(GuildDataKey.TIMEZONE, (gId, zone) -> AnimeBase.addTimeZone(zone));
+			GuildDataManager.registerOnUniversalTimeZoneChanged((gId, zone) -> AnimeBase.addTimeZone(zone));
 		} else {
 			log.error("Already initialized!");
 			throw new IllegalStateException("Already initialized!");
@@ -40,9 +39,9 @@ public class AnimeBase {
 		return aB.getSeasonalAnimes();
 	}
 
-	public static void addTimeZone(String z) {
+	public static void addTimeZone(ZoneId z) {
 		assertInitialisation();
-		aB.addTimeZone(ZoneId.of(z), false);
+		aB.addTimeZone(z, false);
 	}
 
 	public static void waitUntilLoaded() {
@@ -65,5 +64,9 @@ public class AnimeBase {
 			log.error("AnimeBase hasn't been initialized yet!");
 			throw new IllegalStateException("AnimeBase hasn't been initialized yet!");
 		}
+	}
+
+	public static int getAnimeBaseVersion() {
+		return GuildDataManager.getBotConfig().getAnimeBaseVersion();
 	}
 }

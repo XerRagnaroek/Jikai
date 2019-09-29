@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.anime.alrh.ALRHManager;
 import com.xerragnaroek.bot.core.Core;
-import com.xerragnaroek.bot.data.GuildDataKey;
 import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -28,19 +27,18 @@ public class ReleaseTimeKeeper {
 		return time;
 	}
 
-	public static void updateAllAnimes(boolean ignoreThresholds) {
+	public static void updateAnimes(boolean ignoreThresholds, boolean allAnimes) {
 		log.info("Sending anime updates");
 		GuildDataManager.timeZoneGuildMap().forEach((zone, gList) -> {
 			log.debug("Sending to {} guilds for ZoneId {}", gList.size(), zone);
-			ZonedDateTime now = ZonedDateTime.now(zone);
 			gList.forEach(id -> {
 				Guild g = Core.getJDA().getGuildById(id);
-				updateAllAnimes(now, g, zone, ignoreThresholds);
+				updateAnimesForGuild(g, ignoreThresholds, allAnimes);
 			});
 		});
 	}
 
-	private static void updateAllAnimes(ZonedDateTime now, Guild g, ZoneId zone, boolean ignoreThresholds) {
+	private static void updateReactedAnimes(ZonedDateTime now, Guild g, ZoneId zone, boolean ignoreThresholds) {
 		Set<String> reactedAnimes = ALRHManager.getAnimeListReactionHandlerForGuild(g).getReactedAnimes();
 		AnimeBase.getSeasonalAnimesAdjusted(zone).forEach(adt -> {
 			String title = adt.getAnime().title;
@@ -55,10 +53,29 @@ public class ReleaseTimeKeeper {
 		});
 	}
 
-	public static void updateAllAnimesForGuild(Guild g, boolean ignoreThresholds) {
-		ZoneId zone = ZoneId.of(GuildDataManager.getDataForGuild(g).get(GuildDataKey.TIMEZONE));
+	private static void updateAllAnimes(ZonedDateTime now, Guild g, ZoneId zone, boolean ignoreThresholds) {
+		AnimeBase.getSeasonalAnimesAdjusted(zone).forEach(adt -> {
+			String title = adt.getAnime().title;
+			ReleaseTime time = ReleaseTimeKeeper.whenWillAnimeAir(now, adt, zone);
+			if (meetsTresholds(time) || ignoreThresholds) {
+				log.debug("{} met threshold with {}", title, time);
+				RoleMentioner.mentionUpdate(g, adt.getAnime(), time);
+			}
+		});
+	}
+
+	public static void updateAnimesForGuild(Guild g, boolean ignoreThresholds, boolean allAnimes) {
+		ZoneId zone = GuildDataManager.getDataForGuild(g).getTimeZone();
+		updateAnimesForGuildZone(g, zone, ignoreThresholds, allAnimes);
+	}
+
+	private static void updateAnimesForGuildZone(Guild g, ZoneId zone, boolean ignoreThresholds, boolean allAnimes) {
 		ZonedDateTime now = ZonedDateTime.now(zone);
-		updateAllAnimes(now, g, zone, ignoreThresholds);
+		if (allAnimes) {
+			updateAllAnimes(now, g, zone, ignoreThresholds);
+		} else {
+			updateReactedAnimes(now, g, zone, ignoreThresholds);
+		}
 	}
 
 	private static boolean meetsTresholds(ReleaseTime time) {

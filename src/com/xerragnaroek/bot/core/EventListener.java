@@ -33,24 +33,28 @@ public class EventListener extends ListenerAdapter {
 	@Override
 	public void onMessageReactionAdd(MessageReactionAddEvent event) {
 		if (!event.getUser().isBot()) {
-			exec.submit(() -> ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild()).handleReactionAdded(event));
+			exec.submit(() -> ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild())
+					.handleReactionAdded(event));
 		}
 	}
 
 	@Override
 	public void onMessageReactionRemove(MessageReactionRemoveEvent event) {
-		exec.submit(() -> ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild()).handleReactionRemoved(event));
+		exec.submit(() -> ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild())
+				.handleReactionRemoved(event));
 	}
 
 	@Override
 	public void onMessageReactionRemoveAll(MessageReactionRemoveAllEvent event) {
-		exec.submit(() -> ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild()).handleReactionRemovedAll(event));
+		exec.submit(() -> ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild())
+				.handleReactionRemovedAll(event));
 	}
 
 	@Override
 	public void onReady(ReadyEvent event) {
 		log.info("Initializing ALRHs");
-		exec.submit(() -> ALRHManager.init());
+		//exec.submit(() -> ALRHManager.init());
+		ALRHManager.init();
 	}
 
 	@Override

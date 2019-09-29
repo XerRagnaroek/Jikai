@@ -28,8 +28,7 @@ import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
 import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearch;
 import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearchAnime;
 import com.github.Doomsdayrs.Jikan4java.types.Support.Prop.From;
-import com.xerragnaroek.bot.data.GuildData;
-import com.xerragnaroek.bot.data.GuildDataKey;
+import com.xerragnaroek.bot.data.BotData;
 import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -65,15 +64,15 @@ class AnimeBaseImpl {
 		ZonedDateTime zdt = ZonedDateTime.now(jst);
 		loading.set(true);
 		try {
-			GuildData gData = GuildDataManager.getBotConfig();
+			BotData bData = GuildDataManager.getBotConfig();
 			SeasonSearch ss = new Connector().seasonSearch(zdt.getYear(), getSeason(zdt)).get();
 			log.info("Retrieving season search for {} {}", ss.season_name, ss.season_year);
 			//compare hashs, so only new data will be used
-			String hash = Objects.requireNonNullElse(gData.get(GuildDataKey.CURRENT_SEASON_HASH), "");
+			String hash = Objects.requireNonNullElse(bData.getCurrentSeasonHash(), "");
 			if (!ss.request_hash.equals(hash) || !animes.get(jst).hasEntries()) {
 				loadSeasonImpl(ss, zdt);
 				if (!ss.request_hash.equals(hash)) {
-					incrementDataBaseVersion(gData);
+					bData.incrementAnimeBaseVersion();
 				}
 			} else {
 				log.info("Current schedule is up to date.");
@@ -92,11 +91,12 @@ class AnimeBaseImpl {
 				log.error("Exception while getting anime", e);
 			}
 			return null;
-		}).filter(Objects::nonNull).filter(a -> a.airing).map(this::makeAnimeDayTime).limit(10).filter(AnimeDayTime::isKnown).collect(Collectors.toList());
+		}).filter(Objects::nonNull).filter(a -> a.airing).map(this::makeAnimeDayTime).filter(AnimeDayTime::isKnown)
+				.limit(10).collect(Collectors.toList());
 		//TODO remove limit above for final version!!!
 		animes.get(jst).setAnimeDayTimes(tmp);
 
-		GuildDataManager.getBotConfig().set(GuildDataKey.CURRENT_SEASON_HASH, ss.request_hash);
+		GuildDataManager.getBotConfig().setCurrentSeasonHash(ss.request_hash);
 		loading.set(false);
 		zoneAnimes(true);
 		log.info("Loaded {} animes in {}ms", tmp.size(), Duration.between(start, Instant.now()).toMillis());
@@ -161,6 +161,7 @@ class AnimeBaseImpl {
 		}
 	}
 
+	//TODO change behaviour if anime airs on same day but has already aired
 	private ZonedDateTime makeZDT(Anime a) {
 		ZonedDateTime zdt = null;
 		if (a.broadcast == null || a.broadcast.equals("Not scheduled once per week")) {
@@ -172,7 +173,13 @@ class AnimeBaseImpl {
 			zdt = makeZDTFromBroadcast(a);
 		}
 		//adjusted into the next time they air
-		return ZonedDateTime.of(LocalDate.now(jst), zdt.toLocalTime(), jst).with(TemporalAdjusters.nextOrSame(zdt.getDayOfWeek()));
+		ZonedDateTime now = ZonedDateTime.now(jst);
+		ZonedDateTime tmp = ZonedDateTime.of(LocalDate.now(jst), zdt.toLocalTime(), jst);
+		if (now.isBefore(tmp)) {
+			return tmp.with(TemporalAdjusters.nextOrSame(zdt.getDayOfWeek()));
+		} else {
+			return tmp.with(TemporalAdjusters.next(zdt.getDayOfWeek()));
+		}
 	}
 
 	private ZonedDateTime makeZDTFromAired(Anime a) {
@@ -184,9 +191,11 @@ class AnimeBaseImpl {
 	private ZonedDateTime makeZDTFromBroadcast(Anime a) {
 		String broadcast[] = a.broadcast.split("s at ");
 		if (!broadcast[1].equals("Unknown")) {
-			return ZonedDateTime.of(dummyWithDayOfWeek(DayOfWeek.valueOf(broadcast[0].toUpperCase())), LocalTime.parse(broadcast[1].substring(0, broadcast[1].length() - 6)), jst);
+			return ZonedDateTime.of(dummyWithDayOfWeek(DayOfWeek.valueOf(broadcast[0].toUpperCase())),
+									LocalTime.parse(broadcast[1].substring(0, broadcast[1].length() - 6)), jst);
 		} else {
-			return ZonedDateTime.of(dummyWithDayOfWeek(DayOfWeek.valueOf(broadcast[0].toUpperCase())), AnimeDayTime.UNKNOWN_TIME, jst);
+			return ZonedDateTime.of(dummyWithDayOfWeek(DayOfWeek.valueOf(broadcast[0].toUpperCase())),
+									AnimeDayTime.UNKNOWN_TIME, jst);
 		}
 	}
 
@@ -243,7 +252,7 @@ class AnimeBaseImpl {
 	}
 
 	List<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
-		ZoneId zone = ZoneId.of(GuildDataManager.getDataForGuild(g.getId()).get(GuildDataKey.TIMEZONE));
+		ZoneId zone = GuildDataManager.getDataForGuild(g.getId()).getTimeZone();
 		if (!animes.containsKey(zone)) {
 			addTimeZone(zone, false);
 		}
@@ -255,17 +264,13 @@ class AnimeBaseImpl {
 	}
 
 	List<AnimeDayTime> getSeasonalAnimes() {
-		return animes.get(jst).getAnimes().stream().sorted((a1, a2) -> a1.getAnime().title.compareTo(a2.getAnime().title)).collect(Collectors.toCollection(LinkedList::new));
+		return animes.get(jst).getAnimes().stream()
+				.sorted((a1, a2) -> a1.getAnime().title.compareTo(a2.getAnime().title))
+				.collect(Collectors.toCollection(LinkedList::new));
 	}
 
 	boolean isLoading() {
 		return loading.get();
-	}
-
-	private void incrementDataBaseVersion(GuildData gData) {
-		String ver = String.valueOf(Integer.parseInt(Objects.requireNonNullElse(gData.get(GuildDataKey.ANIME_BASE_VERSION), "0")) + 1);
-		log.info("Updating AnimeBase version to {}", ver);
-		gData.set(GuildDataKey.ANIME_BASE_VERSION, ver);
 	}
 
 	List<AnimeDayTime> getSeasonalAnimesAdjusted(ZoneId tz) {

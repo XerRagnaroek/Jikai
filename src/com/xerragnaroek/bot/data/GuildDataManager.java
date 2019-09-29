@@ -21,6 +21,9 @@ import java.util.function.BiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xerragnaroek.bot.anime.alrh.ALRHData;
+
 import net.dv8tion.jda.api.entities.Guild;
 
 /**
@@ -31,17 +34,22 @@ import net.dv8tion.jda.api.entities.Guild;
  */
 public class GuildDataManager {
 	static final Map<ZoneId, List<String>> usedZones = Collections.synchronizedMap(new HashMap<>());
-	private static Map<GuildDataKey, List<BiConsumer<String, String>>> consumers = Collections.synchronizedMap(new HashMap<>());
+	private static BotData botData;
+	private static Set<BiConsumer<String, ZoneId>> zoneCons = Collections.synchronizedSet(new HashSet<>());
+	private static Set<BiConsumer<String, Set<ALRHData>>> alrhdCons = Collections.synchronizedSet(new HashSet<>());
+	private static Map<GuildDataKey, Set<BiConsumer<String, String>>> strConsumers =
+			Collections.synchronizedMap(new HashMap<>());
 	private static Map<String, GuildData> data = new HashMap<>();
 	private static final Logger log = LoggerFactory.getLogger(GuildDataManager.class);
 	private static final ScheduledExecutorService saver = Executors.newSingleThreadScheduledExecutor();
 
 	static {
-		registerUniversalOptionChangedConsumer(GuildDataKey.TIMEZONE, GuildDataManager::addTimeZone);
+		initBotData();
+		registerOnUniversalTimeZoneChanged(GuildDataManager::addTimeZone);
 	}
 
-	public static GuildData getBotConfig() {
-		return getDataForGuild(GuildData.BOT);
+	public static BotData getBotConfig() {
+		return botData;
 	}
 
 	public static GuildData getDataForGuild(Guild g) {
@@ -61,7 +69,7 @@ public class GuildDataManager {
 			return data.get(id);
 		} else {
 			log.debug("No config found, creating new one");
-			GuildData c = makeConfigFromId(id);
+			GuildData c = new GuildData(id, true);
 			data.put(id, c);
 			return c;
 		}
@@ -69,7 +77,6 @@ public class GuildDataManager {
 
 	public static Set<String> getGuildIds() {
 		Set<String> copy = new TreeSet<String>(data.keySet());
-		copy.remove(GuildData.BOT);
 		return copy;
 	}
 
@@ -84,72 +91,77 @@ public class GuildDataManager {
 	}
 
 	public static void init() {
+		loadData();
+		saver.scheduleAtFixedRate(GuildDataManager::saveConfigs, 10, 10, TimeUnit.SECONDS);
+		log.debug("Started thread to save configurations every 10 minutes");
+	}
+
+	private static void loadData() {
 		log.info("Loading configurations...");
 		Path loc = Paths.get("./data/");
 		try {
 			if (Files.exists(loc)) {
-				long count = Files.walk(loc).filter(Files::isRegularFile).map(GuildDataManager::extractId).peek(id -> {
-					data.put(id, makeConfigFromId(id));
+				ObjectMapper mapper = new ObjectMapper();
+				long count = Files.walk(loc).filter(Files::isRegularFile).peek(path -> {
+					if (path.endsWith("BOT.json")) {
+						botData = readFromPath(path, mapper, BotData.class);
+						usedZones.put(botData.getDefaultTimeZone(), new LinkedList<>());
+					} else {
+						GuildData gd = readFromPath(path, mapper, GuildData.class);
+						if (gd != null) {
+							data.put(gd.getGuildId(), gd);
+							addTimeZone(gd.getGuildId(), gd.getTimeZone());
+						}
+					}
 				}).count();
 				log.info("Loaded {} configuration(s)", count);
 			} else {
 				log.debug("Creating config directory");
 				log.info("No configurations found, falling back to default settings");
 
-				data.put(GuildData.BOT, makeBotConfig());
+				botData = new BotData(true);
+				usedZones.put(botData.getDefaultTimeZone(), new LinkedList<>());
 				Files.createDirectory(loc);
 			}
 		} catch (IOException e) {
 			log.error("Failed loading the configurations", e);
 		}
-		saver.scheduleAtFixedRate(GuildDataManager::saveConfigs, 10, 10, TimeUnit.SECONDS);
-		log.debug("Started thread to save configurations every 10 minutes");
+	}
+
+	private static void initBotData() {
+		botData = new BotData(true);
+		usedZones.put(botData.getDefaultTimeZone(), new LinkedList<>());
 	}
 
 	/**
 	 * 
-	 * @param co
+	 * @param gdk
 	 *            - the GuildDataKey
 	 * @param con
 	 *            - BiConsumer for the GuildId and the new Value
 	 */
-	public static void registerUniversalOptionChangedConsumer(GuildDataKey co, BiConsumer<String, String> con) {
-		consumers.compute(co, (key, list) -> {
-			if (list == null) {
-				list = new LinkedList<>();
+	public static void registerOnUniversalStringChanged(GuildDataKey gdk, BiConsumer<String, String> con) {
+		strConsumers.compute(gdk, (key, set) -> {
+			if (set == null) {
+				set = new HashSet<>();
 			}
-			list.add(con);
-			return list;
+			set.add(con);
+			return set;
 		});
-		data.values().forEach(c -> c.registerDataChangedConsumer(co, con));
-		log.debug("Registered a new universal consumer for {}", co);
+		data.values().forEach(c -> c.registerOnStringOptionChangeConsumer(gdk, con));
+		log.debug("Registered a new universal consumer for {}", gdk);
 	}
 
-	/**
-	 * Utility method
-	 */
-	private static String extractId(Path p) {
-		//config file names are config_ID.ini
-		//this replaced everything in front of and including '_' and after including a '.'
-		return p.getFileName().toString().replaceAll("(.*_|\\..*)", "");
+	public static void registerOnUniversalTimeZoneChanged(BiConsumer<String, ZoneId> con) {
+		zoneCons.add(con);
+		data.values().forEach(gd -> gd.registerOnTimeZoneChange(con));
+		log.debug("Registered a new universal consumer for TimeZone");
 	}
 
-	/**
-	 * Makes the bot's default config. Also adds the default timezone to the list of used timezones.
-	 */
-	private static GuildData makeBotConfig() {
-		GuildData bot = new GuildData(GuildData.BOT);
-		bot.set(GuildDataKey.TIMEZONE, "Europe/Berlin");
-		bot.set(GuildDataKey.TRIGGER, "!");
-		usedZones.put(ZoneId.of("Europe/Berlin"), new LinkedList<String>());
-		return bot;
-	}
-
-	private static GuildData makeConfigFromId(String id) {
-		GuildData c = new GuildData(id);
-		c.setConsumers(consumers);
-		c.init();
-		return c;
+	public static void registerOnUniversalALRHDataChanged(BiConsumer<String, Set<ALRHData>> con) {
+		alrhdCons.add(con);
+		data.values().forEach(gd -> gd.registerOnALRHDataChange(con));
+		log.debug("Registered a new universal consumer for ALRHData");
 	}
 
 	/**
@@ -157,7 +169,8 @@ public class GuildDataManager {
 	 */
 	private static void saveConfigs() {
 		log.debug("Saving configs...");
-		data.values().forEach(GuildData::saveData);
+		data.values().forEach(GuildData::save);
+		botData.save();
 		log.info("Saved configurations!");
 	}
 
@@ -167,21 +180,27 @@ public class GuildDataManager {
 	 * @param zone
 	 *            - the TimeZone's id
 	 */
-	private static void addTimeZone(String gId, String zone) {
-		ZoneId z = ZoneId.of(zone);
-		if (!gId.equals(GuildData.BOT)) {
-			usedZones.compute(z, (k, v) -> {
-				if (v == null) {
-					v = new LinkedList<String>();
-				}
-				v.add(gId);
-				return v;
-			});
-			log.debug("Added zone {}", zone);
-		}
+	private static void addTimeZone(String gId, ZoneId zone) {
+		usedZones.compute(zone, (k, v) -> {
+			if (v == null) {
+				v = new LinkedList<String>();
+			}
+			v.add(gId);
+			return v;
+		});
+		log.debug("Added zone {}", zone);
 	}
 
 	public static boolean isKnownGuild(String gId) {
 		return getGuildIds().contains(gId);
+	}
+
+	private static <T> T readFromPath(Path p, ObjectMapper mapper, Class<T> clazz) {
+		try {
+			return mapper.readValue(Files.readString(p), clazz);
+		} catch (IOException e) {
+			log.error("Failed reading json from {}", p, e);
+		}
+		return null;
 	}
 }

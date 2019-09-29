@@ -2,6 +2,7 @@ package com.xerragnaroek.bot.anime.alrh;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,8 @@ public class ALRHManager extends ListenerAdapter {
 
 	private static final Map<String, List<String>> aniAlph = new TreeMap<>();
 	private static final Map<String, ALRHandler> impls = Collections.synchronizedMap(new HashMap<>());
-	private static final Set<DTO> listMsgs = new TreeSet<>((d1, d2) -> d1.getMessage().getContentRaw().compareTo(d2.getMessage().getContentRaw()));
+	private static final Set<DTO> listMsgs =
+			new TreeSet<>((d1, d2) -> d1.getMessage().getContentRaw().compareTo(d2.getMessage().getContentRaw()));
 	private static final Logger log = LoggerFactory.getLogger(ALRHManager.class);
 	private static boolean initialized = false;
 
@@ -100,7 +102,7 @@ public class ALRHManager extends ListenerAdapter {
 	 */
 	private static DTO getLetterListMessage(String letter, List<String> titles) {
 		log.debug("Creating list for letter {} with {} titles", letter, titles.size());
-		Map<String, String> map = new TreeMap<>();
+		Set<ALRHData> data = new HashSet<>();
 		MessageBuilder mb = new MessageBuilder();
 		mb.append("**" + letter + "**\n");
 		//:regional_indicator_a:
@@ -108,11 +110,11 @@ public class ALRHManager extends ListenerAdapter {
 		String uni = "";
 		for (String t : titles) {
 			uni = new String(Character.toChars(cp));
-			map.put(EncodingUtil.encodeCodepoints(uni), t);
+			data.add(new ALRHData(EncodingUtil.encodeCodepoints(uni), t));
 			mb.append(uni + " : **" + t + "**\n");
 			cp++;
 		}
-		return new DTO(mb.build(), map);
+		return new DTO(mb.build(), data);
 	}
 
 	/**
@@ -121,11 +123,12 @@ public class ALRHManager extends ListenerAdapter {
 	private static void mapAnimesToStartingLetter() {
 		log.debug("Mapping animes to starting letter");
 		List<AnimeDayTime> animes = AnimeBase.getSeasonalAnimes();
-		animes.stream().map(a -> a.getAnime().title).forEach(title -> aniAlph.compute(("" + title.charAt(0)).toUpperCase(), (k, v) -> {
-			v = (v == null) ? new LinkedList<>() : v;
-			v.add(title);
-			return v;
-		}));
+		animes.stream().map(a -> a.getAnime().title)
+				.forEach(title -> aniAlph.compute(("" + title.charAt(0)).toUpperCase(), (k, v) -> {
+					v = (v == null) ? new LinkedList<>() : v;
+					v.add(title);
+					return v;
+				}));
 	}
 
 	private static void assertInitialisation() {
@@ -142,19 +145,19 @@ public class ALRHManager extends ListenerAdapter {
  */
 class DTO {
 	//TODO add the starting letter of the msg as well
-	Map<String, String> map;
+	Set<ALRHData> data;
 	Message me;
 
-	DTO(Message message, Map<String, String> emojis) {
+	DTO(Message message, Set<ALRHData> data) {
 		me = message;
-		map = emojis;
+		this.data = data;
 	}
 
 	Message getMessage() {
 		return me;
 	}
 
-	Map<String, String> getUnicodeTitleMap() {
-		return map;
+	Set<ALRHData> getALRHData() {
+		return data;
 	}
 }

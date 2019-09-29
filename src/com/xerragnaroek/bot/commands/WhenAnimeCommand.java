@@ -18,7 +18,12 @@ public class WhenAnimeCommand implements Command {
 
 	@Override
 	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
-		ReleaseTimeKeeper.updateAllAnimesForGuild(event.getGuild(), Boolean.parseBoolean(arguments[0]));
+		if (arguments.length > 1) {
+			ReleaseTimeKeeper.updateAnimesForGuild(	event.getGuild(), Boolean.parseBoolean(arguments[0]),
+													Boolean.parseBoolean(arguments[1]));
+		} else {
+			ReleaseTimeKeeper.updateAnimesForGuild(event.getGuild(), Boolean.parseBoolean(arguments[0]), false);
+		}
 	}
 
 }
