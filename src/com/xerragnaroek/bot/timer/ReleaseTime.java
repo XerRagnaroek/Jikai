@@ -1,4 +1,4 @@
-package com.xerragnaroek.bot.anime.base;
+package com.xerragnaroek.bot.timer;
 
 public class ReleaseTime {
 	private int days;
@@ -27,6 +27,7 @@ public class ReleaseTime {
 
 	@Override
 	public String toString() {
-		return String.format("%02d days %02d hours %02d minutes", days, hours, mins);
+		return String.format(	"%02d days, %02d hours and %02d %s", days, hours, mins,
+								(mins == 1) ? "minute" : "minutes");
 	}
 }

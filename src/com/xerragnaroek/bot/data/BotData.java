@@ -15,13 +15,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.xerragnaroek.bot.util.Property;
 
 public class BotData {
 
 	private String defTrigger = "!";
 	private ZoneId defZone = ZoneId.of("Europe/Berlin");
-	private String curSeasonHash;
-	private int abVersion;
+	private Property<String> curSeasonHash;
+	private Property<Integer> abVersion;
 	private AtomicBoolean changed = new AtomicBoolean(false);
 	private final Path fileLoc = Paths.get("./data/BOT.json");
 	private final Logger log = LoggerFactory.getLogger(BotData.class);
@@ -51,44 +52,47 @@ public class BotData {
 
 	@JsonProperty("current_season_hash")
 	public String getCurrentSeasonHash() {
-		return curSeasonHash;
+		return curSeasonHash.get();
 	}
 
 	@JsonProperty("anime_base_version")
 	public int getAnimeBaseVersion() {
-		return abVersion;
+		return abVersion.get();
 	}
 
 	public String setCurrentSeasonHash(String hash) {
-		String tmp = curSeasonHash;
-		curSeasonHash = hash;
+		String tmp = curSeasonHash.get();
+		curSeasonHash.set(hash);
 		changed.set(true);
 		return tmp;
 	}
 
 	public int incrementAnimeBaseVersion() {
-		int tmp = abVersion;
-		abVersion++;
+		int tmp = abVersion.get();
+		abVersion.set(tmp + 1);
 		log.debug("Updated AnimeBase version to {}", abVersion);
 		changed.set(true);
 		return tmp;
 	}
 
-	void save() {
+	boolean save() {
 		if (changed.get()) {
 			ObjectMapper mapper = new ObjectMapper();
 			mapper.enable(SerializationFeature.INDENT_OUTPUT);
 			try {
 				Files.writeString(fileLoc, mapper.writeValueAsString(this));
+				return true;
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
+		return false;
 	}
 
 	@JsonCreator
 	public static BotData makeBotData(@JsonProperty("trigger") String trigger, @JsonProperty("timezone") String tz,
-			@JsonProperty("current_season_hash") String hash, @JsonProperty("anime_base_version") int version) {
+			@JsonProperty("current_season_hash") Property<String> hash,
+			@JsonProperty("anime_base_version") Property<Integer> version) {
 		BotData b = new BotData();
 		b.defTrigger = trigger;
 		b.defZone = ZoneId.of(tz);

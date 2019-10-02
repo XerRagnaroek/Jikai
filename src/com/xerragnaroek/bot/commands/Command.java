@@ -1,5 +1,6 @@
 package com.xerragnaroek.bot.commands;
 
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
 /**
@@ -8,17 +9,23 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
  * @author XerRagnarök
  *
  */
-public interface Command {
+public interface Command extends Comparable<Command> {
 	/**
 	 * The command's "name", whatever triggers it.
 	 * 
 	 */
-	abstract String getCommandName();
+	public String getName();
 
 	/**
 	 * How to use the command.
 	 */
-	abstract String getUsage();
+	public default String getUsage() {
+		String use = "";
+		if (hasAlternativeName()) {
+			use += "|" + getAlternativeName();
+		}
+		return use;
+	}
 
 	/**
 	 * Run the command.
@@ -28,5 +35,30 @@ public interface Command {
 	 * @param arguments
 	 *            - what was written after the command
 	 */
-	abstract void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments);
+	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments);
+
+	public default boolean hasAlternativeName() {
+		return false;
+	}
+
+	public default String getAlternativeName() {
+		return null;
+	}
+
+	public default boolean isCommand(String identifier) {
+		return getIdentifier().equals(identifier);
+	}
+
+	public String getIdentifier();
+
+	public String getDescription();
+
+	public default Permission[] getRequiredPermissions() {
+		return Permission.EMPTY_PERMISSIONS;
+	}
+
+	@Override
+	default int compareTo(Command o) {
+		return getName().compareTo(o.getName());
+	}
 }

@@ -23,7 +23,7 @@ public class SetTriggerCommand implements Command {
 	SetTriggerCommand() {}
 
 	@Override
-	public String getCommandName() {
+	public String getName() {
 		return "trigger";
 	}
 
@@ -52,7 +52,21 @@ public class SetTriggerCommand implements Command {
 
 	@Override
 	public String getUsage() {
-		return getCommandName() + " <new trigger>";
+		return getName() + " <new trigger>";
 	}
 
+	@Override
+	public String getIdentifier() {
+		return "stcc";
+	}
+
+	@Override
+	public Permission[] getRequiredPermissions() {
+		return new Permission[] { Permission.MANAGE_SERVER };
+	}
+
+	@Override
+	public String getDescription() {
+		return "The string of characters that will trigger a command. Default is \"!\". Can be as long as you want.";
+	}
 }

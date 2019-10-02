@@ -111,6 +111,10 @@ public class ALRHData implements Comparable<ALRHData> {
 		abVersion = version;
 	}
 
+	public boolean hasRoleId() {
+		return roleId != null;
+	}
+
 	@Override
 	public int compareTo(ALRHData o) {
 		return title.compareTo(o.title);

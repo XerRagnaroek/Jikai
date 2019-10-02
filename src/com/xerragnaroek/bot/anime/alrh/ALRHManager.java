@@ -2,7 +2,6 @@ package com.xerragnaroek.bot.anime.alrh;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -15,12 +14,10 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.anime.base.AnimeBase;
 import com.xerragnaroek.bot.anime.base.AnimeDayTime;
-import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.internal.utils.EncodingUtil;
 
 /**
@@ -30,13 +27,14 @@ import net.dv8tion.jda.internal.utils.EncodingUtil;
  * @author XerRagnaroek
  *
  */
-public class ALRHManager extends ListenerAdapter {
+public class ALRHManager {
 
 	private static final Map<String, List<String>> aniAlph = new TreeMap<>();
 	private static final Map<String, ALRHandler> impls = Collections.synchronizedMap(new HashMap<>());
 	private static final Set<DTO> listMsgs =
 			new TreeSet<>((d1, d2) -> d1.getMessage().getContentRaw().compareTo(d2.getMessage().getContentRaw()));
 	private static final Logger log = LoggerFactory.getLogger(ALRHManager.class);
+	private static Map<String, Set<ALRHData>> initMap = new TreeMap<>();
 	private static boolean initialized = false;
 
 	public static ALRHandler getAnimeListReactionHandlerForGuild(Guild g) {
@@ -71,9 +69,17 @@ public class ALRHManager extends ListenerAdapter {
 
 	private static void initImpls() {
 		log.debug("Loading ALRHs");
-		GuildDataManager.getGuildIds().forEach(id -> {
-			getAnimeListReactionHandlerForGuild(id);
+		initMap.forEach((str, data) -> {
+			ALRHandler impl = new ALRHandler(str);
+			if (data != null) {
+				impl.setData(data);
+			}
+			impl.init();
+			impls.put(str, impl);
 		});
+		//not needed anymore
+		initMap.clear();
+		initMap = null;
 	}
 
 	static Set<DTO> getListMessages() {
@@ -102,7 +108,7 @@ public class ALRHManager extends ListenerAdapter {
 	 */
 	private static DTO getLetterListMessage(String letter, List<String> titles) {
 		log.debug("Creating list for letter {} with {} titles", letter, titles.size());
-		Set<ALRHData> data = new HashSet<>();
+		Set<ALRHData> data = new TreeSet<>();
 		MessageBuilder mb = new MessageBuilder();
 		mb.append("**" + letter + "**\n");
 		//:regional_indicator_a:
@@ -138,13 +144,16 @@ public class ALRHManager extends ListenerAdapter {
 		}
 	}
 
+	public static void addToInitMap(String id, Set<ALRHData> data) {
+		initMap.put(id, data);
+	}
+
 }
 
 /**
  * Utility class for passing a message and a map of titles and unicodes
  */
 class DTO {
-	//TODO add the starting letter of the msg as well
 	Set<ALRHData> data;
 	Message me;
 

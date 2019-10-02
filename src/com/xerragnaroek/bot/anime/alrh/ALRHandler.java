@@ -1,6 +1,5 @@
 package com.xerragnaroek.bot.anime.alrh;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -14,10 +13,12 @@ import com.xerragnaroek.bot.anime.base.AnimeBase;
 import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.data.GuildData;
 import com.xerragnaroek.bot.data.GuildDataManager;
+import com.xerragnaroek.bot.data.UpdatableData;
 import com.xerragnaroek.bot.util.BotUtils;
+import com.xerragnaroek.bot.util.Initilizable;
+import com.xerragnaroek.bot.util.Property;
 
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent;
@@ -30,14 +31,16 @@ import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
  * @author XerRagnaroek
  *
  */
-public class ALRHandler {
+public class ALRHandler implements UpdatableData, Initilizable {
 	final GuildData gData;
 	final String gId;
 	private final Logger log;
-	ALRHDataBase alrhDB = new ALRHDataBase();
-	String tcId; //Textchannel Id
+	ALRHDataBase alrhDB;
+	Property<String> tcId; //Textchannel Id
 	private ALHandler alh;
 	private ARHandler arh;
+	private AtomicBoolean changed;
+	private AtomicBoolean initialized;
 
 	/**
 	 * A new AnimeListReactionHandler
@@ -48,34 +51,61 @@ public class ALRHandler {
 		this.gId = gId;
 		log = LoggerFactory.getLogger(ALRHandler.class.getName() + "#" + gId);
 		gData = GuildDataManager.getDataForGuild(gId);
+		alrhDB = new ALRHDataBase();
+		changed = new AtomicBoolean(false);
 		alh = new ALHandler(this);
 		arh = new ARHandler(this);
-		init();
-		log.info("AnimeListReactionHandler initialized", gId);
+		initialized = new AtomicBoolean(false);
 	}
 
+	/**
+	 * To be called by the EventListener. <br>
+	 * Handle a MessageReactionAddEvent
+	 * 
+	 * @param event
+	 *            - the event to handle
+	 */
 	public void handleReactionAdded(MessageReactionAddEvent event) {
 		arh.handleReactionAdded(event);
 	}
 
+	/**
+	 * To be called by the EventListener. <br>
+	 * Handle a MessageReactionRemoveEvent
+	 * 
+	 * @param event
+	 *            - the event to handle
+	 */
 	public void handleReactionRemoved(MessageReactionRemoveEvent event) {
 		arh.handleReactionRemoved(event);
 	}
 
+	/**
+	 * To be called by the EventListener. <br>
+	 * Handle a MessageReactionRemoveAllEvent
+	 * 
+	 * @param event
+	 *            - the event to handle
+	 */
 	public void handleReactionRemovedAll(MessageReactionRemoveAllEvent event) {
 		arh.handleReactionRemovedAll(event);
 	}
 
+	/**
+	 * Send the anime list.
+	 */
 	public void sendList() {
 		alh.sendList();
 	}
 
-	void init() {
+	@Override
+	public void init() {
 		log.debug("Initializing...");
 		setTextChannelId(gData.getListChannelId());
-		alrhDB.addData(gData.getALRHData());
 		alrhDB.forEachMessage(this::checkIfListChanged);
-		gData.registerOnListChannelIdChange((gId, tcId) -> this.setTextChannelId(tcId));
+		gData.listChannelIdProperty().bind(tcId);
+		initialized.set(true);
+		log.info("Initialized");
 	}
 
 	/*private void moveList(String oldTc, String newTc) {
@@ -95,27 +125,11 @@ public class ALRHandler {
 	}*/
 
 	private void checkIfListChanged(String msgId, Set<ALRHData> data) {
-		Set<String> unis = data.stream().map(ALRHData::getUnicodeCodePoint).collect(Collectors.toSet());
 		Guild g = Core.getJDA().getGuildById(gId);
 		TextChannel tc = g.getTextChannelById(alrhDB.getSentTextChannelId());
 		if (tc != null) {
-			reAddReactionsIfGone(tc, msgId, unis);
+			arh.validateReactions(g, tc, msgId, data);
 		}
-	}
-
-	private void reAddReactionsIfGone(TextChannel tc, String msgId, Collection<String> unis) {
-		log.debug("Readding missing reactions on msg {} in TextChannel {}", msgId, tc.getName());
-		tc.retrieveMessageById(msgId).queue(m -> {
-			List<String> cps = m.getReactions().stream().map(mr -> mr.getReactionEmote().getAsCodepoints())
-					.collect(Collectors.toList());
-			for (String uni : unis) {
-				if (!cps.contains(uni)) {
-					log.info("Reaction {} is missing on message {}", uni, msgId);
-					m.addReaction(uni).queue(	v -> log.info("Successfully readded reaction"),
-												e -> log.error("Failed adding reaction", e));
-				}
-			}
-		});
 	}
 
 	boolean roleExists(Guild g, String name) {
@@ -124,8 +138,8 @@ public class ALRHandler {
 
 	private void setTextChannelId(String id) {
 		if (tcId == null) {
-			tcId = BotUtils.getChannelOrDefault(id, gId).getId();
-			log.info("Set TextChannelId to {}", tcId);
+			tcId = Property.of(BotUtils.getChannelOrDefault(id, gId).getId());
+			log.debug("Set TextChannelId to {}", tcId);
 		} else {
 			if (!tcId.equals(id)) {
 				//moveList(tcId, id);
@@ -150,26 +164,8 @@ public class ALRHandler {
 				|| !(AnimeBase.getAnimeBaseVersion() == alrhDB.getSentABVersion()) || !oldTc.getId().equals(tcId);
 	}
 
-	private void checkForRoleChanges(Guild g) {
-		log.debug("Checking for any changes to the roles while the bot was offline");
-		alrhDB.getData().forEach(d -> {
-			Role r = g.getRoleById(d.getRoleId());
-			String title = d.getTitle();
-			if (r == null || !r.getName().equals(title)) {
-				log.debug("Role for {} is invalid", title);
-				createRole(g, title);
-			}
-		});
-	}
-
-	void storeData() {
-		gData.setALRHData(alrhDB.getData());
-	}
-
-	private void createRole(Guild g, String title) {
-		log.info("Creating role for {}", title);
-		g.createRole().setName(title).setMentionable(true).setPermissions(0l)
-				.queue(r -> alrhDB.getDataForTitle(title).setRoleId(r.getId()));
+	void dataChanged() {
+		changed.set(true);
 	}
 
 	public String getRoleId(String title) {
@@ -179,4 +175,33 @@ public class ALRHandler {
 	public Set<String> getReactedAnimes() {
 		return alrhDB.getReactedAnimes().stream().map(ALRHData::getTitle).collect(Collectors.toSet());
 	}
+
+	public boolean isSendingList() {
+		return alh.isSending();
+	}
+
+	public void setReacted(String title, boolean reacted) {
+		if (alrhDB.hasDataForTitle(title)) {
+			alrhDB.getDataForTitle(title).setReacted(reacted);
+		}
+	}
+
+	@Override
+	public boolean hasUpdateFlagAndReset() {
+		return changed.getAndSet(false);
+	}
+
+	void setData(Set<ALRHData> data) {
+		alrhDB.addData(data);
+	}
+
+	public Set<ALRHData> getData() {
+		return alrhDB.getData();
+	}
+
+	@Override
+	public boolean isInitialized() {
+		return initialized.get();
+	}
+
 }

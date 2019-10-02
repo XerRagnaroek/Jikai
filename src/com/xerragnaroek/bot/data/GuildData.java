@@ -5,16 +5,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,44 +24,73 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.xerragnaroek.bot.anime.alrh.ALRHData;
+import com.xerragnaroek.bot.anime.alrh.ALRHManager;
+import com.xerragnaroek.bot.anime.alrh.ALRHandler;
+import com.xerragnaroek.bot.commands.CommandHandlerManager;
+import com.xerragnaroek.bot.timer.RTKManager;
+import com.xerragnaroek.bot.timer.ReleaseTimeKeeper;
+import com.xerragnaroek.bot.util.BotUtils;
+import com.xerragnaroek.bot.util.Property;
 
-@JsonInclude(Include.NON_NULL)
+@JsonInclude(Include.NON_EMPTY)
 public class GuildData {
-	private String gId;
-	private String trigger;
-	private String aniChId;
-	private String listChId;
-	private ZoneId zone;
-	private Set<ALRHData> alrhData;
+	private Property<String> aniChId;
 	private AtomicBoolean changed = new AtomicBoolean(false);
-	private Map<GuildDataKey, Set<BiConsumer<String, String>>> strConsumer = new HashMap<>();
-	private Set<BiConsumer<String, ZoneId>> zoneCons = new HashSet<>();
-	private Set<BiConsumer<String, Set<ALRHData>>> alrhdCons = new HashSet<>();
+	private boolean completedSetup = false;
+	private Property<Boolean> comsEnabled;
 	private Path fileLoc;
+	private String gId;
+	private Property<String> infoChId;
+	private Property<String> listChId;
 	private final Logger log;
+	private Property<String> trigger;
+	private Property<ZoneId> zone;
 
 	public GuildData(String guildId, boolean save) {
 		log = LoggerFactory.getLogger(GuildData.class + "#" + guildId);
 		gId = guildId;
-		alrhData = new TreeSet<>();
 		fileLoc = Paths.get(String.format("./data/%s.json", guildId));
 		changed.set(save);
 		log.info("Loaded configuration for {}", guildId);
 	}
 
-	@JsonProperty("trigger")
-	public String getTrigger() {
-		return Objects.requireNonNullElse(trigger, GuildDataManager.getBotConfig().getDefaultTrigger());
+	public Property<String> animeChannelIdProperty() {
+		return aniChId;
+	}
+
+	@JsonProperty("commands_enabled")
+	public boolean areCommandsEnabled() {
+		if (hasExplicitCommandSetting()) {
+			return comsEnabled.get();
+		} else {
+			return CommandHandlerManager.areCommandsEnabledByDefault();
+		}
+	}
+
+	public Property<Boolean> comsEnabledProperty() {
+		return comsEnabled;
+	}
+
+	@JsonProperty("alrh_data")
+	public Set<ALRHData> getALRHData() {
+		return ALRHManager.getAnimeListReactionHandlerForGuild(gId).getData();
 	}
 
 	@JsonProperty("anime_channel_id")
 	public String getAnimeChannelId() {
-		return aniChId;
+		return aniChId.get();
 	}
 
-	@JsonProperty("list_channel_id")
-	public String getListChannelId() {
-		return listChId;
+	@JsonIgnore
+	public Map<String, ZonedDateTime> getAnimesLastMentioned() {
+		return RTKManager.getKeeperForGuild(gId).getLastMentionedMap();
+	}
+
+	@JsonProperty("last_mentioned")
+	public Map<String, String> getAnimesLastMentionedString() {
+		Map<String, String> tmp = new TreeMap<>();
+		RTKManager.getKeeperForGuild(gId).getLastMentionedMap().forEach((id, zdt) -> tmp.put(id, zdt.toString()));
+		return tmp;
 	}
 
 	@JsonProperty("guild_id")
@@ -71,154 +98,174 @@ public class GuildData {
 		return gId;
 	}
 
+	@JsonProperty("info_channel_id")
+	public String getInfoChannelId() {
+		return infoChId.get();
+	}
+
+	@JsonProperty("list_channel_id")
+	public String getListChannelId() {
+		return listChId.get();
+	}
+
 	@JsonIgnore
 	public ZoneId getTimeZone() {
-		return Objects.requireNonNullElse(zone, GuildDataManager.getBotConfig().getDefaultTimeZone());
+		return Objects.requireNonNullElse(zone.get(), GuildDataManager.getBotConfig().getDefaultTimeZone());
 	}
 
 	@JsonProperty("timezone")
 	public String getTimeZoneString() {
 		if (zone != null) {
-			return zone.getId();
+			return zone.get().getId();
 		} else {
 			return GuildDataManager.getBotConfig().getDefaultTimeZoneString();
 		}
 	}
 
-	@JsonProperty("alrh_data")
-	public Set<ALRHData> getALRHData() {
-		return new TreeSet<>(alrhData);
+	@JsonProperty("trigger")
+	public String getTrigger() {
+		return Objects.requireNonNullElse(trigger.get(), GuildDataManager.getBotConfig().getDefaultTrigger());
 	}
 
-	public String setTrigger(String trigger) {
-		String tmp = this.trigger;
-		this.trigger = trigger;
-		log.info("Trigger was changed from '{}' to '{}'", tmp, trigger);
-		hasChanged();
-		runStringConsumer(GuildDataKey.TRIGGER, trigger);
-		return tmp;
+	@JsonProperty("completed_setup")
+	public boolean hasCompletedSetup() {
+		return completedSetup;
+	}
+
+	public boolean hasExplicitCommandSetting() {
+		return comsEnabled.hasNonNullValue();
+	}
+
+	public Property<String> infoChannelIdProperty() {
+		return infoChId;
+	}
+
+	public Property<String> listChannelIdProperty() {
+		return listChId;
 	}
 
 	public String setAnimeChannelId(String id) {
-		String tmp = aniChId;
-		aniChId = id;
+		String tmp = aniChId.get();
+		aniChId.set(id);
 		log.info("AnimeChannelId was changed from '{}' to '{}'", tmp, id);
 		hasChanged();
-		runStringConsumer(GuildDataKey.ANIME_CHANNEL, id);
 		return tmp;
+	}
+
+	public boolean setCommandsEnabled(boolean enabled) {
+		boolean tmp = enabled;
+		comsEnabled.set(enabled);
+		log.info("Commands for guild {} have been {}", gId, (enabled ? "enabled" : "disabled"));
+		hasChanged();
+		return tmp;
+	}
+
+	public void setInfoChannelId(String id) {
+		infoChId.set(id);
 	}
 
 	public String setListChannelId(String id) {
-		String tmp = listChId;
-		listChId = id;
+		String tmp = listChId.get();
+		listChId.set(id);
 		log.info("ListChannelId was changed from '{}' to '{}'", tmp, id);
 		hasChanged();
-		runStringConsumer(GuildDataKey.LIST_CHANNEL, id);
 		return tmp;
+	}
+
+	public void setSetupCompleted(boolean setup) {
+		completedSetup = setup;
 	}
 
 	public ZoneId setTimeZone(ZoneId z) {
-		ZoneId tmp = zone;
-		zone = z;
+		ZoneId tmp = zone.get();
+		zone.set(z);
 		log.info("TimeZone was changed from '{}' to '{}'", tmp, z);
 		hasChanged();
-		runTimeZoneConsumer(z);
 		return tmp;
 	}
 
-	public void setALRHData(Set<ALRHData> data) {
-		alrhData = data;
-		log.info("Data was changed");
+	public String setTrigger(String trigger) {
+		trigger = StringEscapeUtils.escapeJava(trigger);
+		String tmp = this.trigger.get();
+		this.trigger.set(trigger);
+		log.info("Trigger was changed from '{}' to '{}'", tmp, trigger);
 		hasChanged();
-		runALRHDataConsumer(data);
+		return tmp;
 	}
 
-	private void hasChanged() {
-		changed.set(true);
+	public Property<ZoneId> timeZoneProperty() {
+		return zone;
 	}
 
-	private void runStringConsumer(GuildDataKey gdk, String newValue) {
-		if (strConsumer != null && strConsumer.containsKey(gdk)) {
-			log.debug("Running string consumer for {}", gdk);
-			strConsumer.get(gdk).forEach(con -> con.accept(gId, newValue));
-		}
+	public Property<String> triggerProperty() {
+		return trigger;
 	}
 
-	private void runTimeZoneConsumer(ZoneId newZ) {
-		if (zoneCons != null) {
-			log.debug("Running TimeZone consumer");
-			zoneCons.forEach(con -> con.accept(gId, newZ));
-		}
-	}
-
-	private void runALRHDataConsumer(Set<ALRHData> newData) {
-		if (alrhdCons != null) {
-			log.debug("Running ALRHData consumer");
-			alrhdCons.forEach(con -> con.accept(gId, newData));
-		}
-	}
-
-	public void registerOnTriggerChange(BiConsumer<String, String> con) {
-		registerOnStringOptionChangeConsumer(GuildDataKey.TRIGGER, con);
-	}
-
-	public void registerOnAnimeChannelIdChange(BiConsumer<String, String> con) {
-		registerOnStringOptionChangeConsumer(GuildDataKey.ANIME_CHANNEL, con);
-	}
-
-	public void registerOnListChannelIdChange(BiConsumer<String, String> con) {
-		registerOnStringOptionChangeConsumer(GuildDataKey.LIST_CHANNEL, con);
-	}
-
-	public void registerOnTimeZoneChange(BiConsumer<String, ZoneId> con) {
-		if (zoneCons == null) {
-			zoneCons = Collections.synchronizedSet(new HashSet<>());
-		}
-		zoneCons.add(con);
-		log.debug("Registered a new TimeZone consumer");
-	}
-
-	public void registerOnALRHDataChange(BiConsumer<String, Set<ALRHData>> con) {
-		if (alrhdCons == null) {
-			alrhdCons = Collections.synchronizedSet(new HashSet<>());
-		}
-		alrhdCons.add(con);
-		log.debug("Registered a new ALRHData consumer");
-	}
-
-	void registerOnStringOptionChangeConsumer(GuildDataKey gdk, BiConsumer<String, String> con) {
-		strConsumer.compute(gdk, (k, list) -> {
-			list = (list == null) ? new HashSet<>() : list;
-			list.add(con);
-			return list;
-		});
-		log.debug("Registered a new consumer for {}", gdk);
-	}
-
-	void save() {
-		if (changed.get()) {
+	boolean save() {
+		if (updatesAvailable()) {
 			ObjectMapper mapper = new ObjectMapper();
 			mapper.enable(SerializationFeature.INDENT_OUTPUT);
 			try {
 				Files.writeString(fileLoc, mapper.writeValueAsString(this));
 				log.info("Successfully saved data to {}", fileLoc);
 				changed.set(false);
+				return true;
 			} catch (IOException e) {
-				log.error("Failed saving data to [}", fileLoc, e);
+				BotUtils.logAndSendToDev(log, "Failed saving data to " + fileLoc, e);
 			}
 		}
+		return false;
+	}
+
+	private void hasChanged() {
+		changed.set(true);
+	}
+
+	private boolean updatesAvailable() {
+		boolean tmp = false;
+		log.debug("Seeing if any data changed:");
+		if (changed.get()) {
+			log.debug("GuildData changed");
+			tmp = true;
+		}
+		ALRHandler h = ALRHManager.getAnimeListReactionHandlerForGuild(gId);
+		if (h.isInitialized() && h.hasUpdateFlagAndReset()) {
+			log.debug("ALHRData changed");
+			tmp = true;
+		}
+		ReleaseTimeKeeper rtk = RTKManager.getKeeperForGuild(gId);
+		if (rtk != null && rtk.hasUpdateFlagAndReset()) {
+			log.debug("ReleaseTimeKeeper changed");
+			tmp = true;
+		}
+		return tmp;
 	}
 
 	@JsonCreator
-	public static GuildData makeGuildData(@JsonProperty("guild_id") String gId, @JsonProperty("trigger") String trig,
-			@JsonProperty("anime_channel_id") String aniChId, @JsonProperty("list_channel_id") String listChId,
-			@JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data) {
+	public static GuildData of(@JsonProperty("guild_id") String gId, @JsonProperty("trigger") Property<String> trig,
+			@JsonProperty("anime_channel_id") Property<String> aniChId,
+			@JsonProperty("list_channel_id") Property<String> listChId, @JsonProperty("timezone") String zone,
+			@JsonProperty("alrh_data") Set<ALRHData> data,
+			@JsonProperty("last_mentioned") Map<String, String> lastMentioned,
+			@JsonProperty("completed_setup") boolean setupCompleted,
+			@JsonProperty("commands_enabled") Property<Boolean> comsEnabled,
+			@JsonProperty("info_channel_id") Property<String> icId) {
 		GuildData gd = new GuildData(gId, false);
 		gd.trigger = trig;
 		gd.aniChId = aniChId;
 		gd.listChId = listChId;
-		gd.zone = ZoneId.of(zone);
-		gd.alrhData = data;
+		gd.zone = Property.of(ZoneId.of(zone));
+		gd.completedSetup = setupCompleted;
+		if (comsEnabled == null) {
+			comsEnabled = new Property<Boolean>();
+		}
+		gd.comsEnabled = comsEnabled;
+		if (icId == null) {
+			icId = new Property<String>();
+		}
+		gd.infoChId = icId;
+		ALRHManager.addToInitMap(gId, data);
+		RTKManager.addToInitMap(gId, lastMentioned);
 		return gd;
 	}
 }

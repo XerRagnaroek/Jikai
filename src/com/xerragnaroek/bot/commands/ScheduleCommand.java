@@ -17,6 +17,7 @@ import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.MessageBuilder;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -34,20 +35,15 @@ public class ScheduleCommand implements Command {
 	private final DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm");
 
 	@Override
-	public String getCommandName() {
+	public String getName() {
 		return "schedule";
-	}
-
-	@Override
-	public String getUsage() {
-		return getCommandName();
 	}
 
 	@Override
 	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
 		TextChannel channel;
-		if ((channel = g.getTextChannelById(GuildDataManager.getDataForGuild(g.getId()).getAnimeChannelId())) != null) {
+		if ((channel = g.getTextChannelById(GuildDataManager.getDataForGuild(g.getId()).getListChannelId())) != null) {
 			dumpSchedule(channel);
 		} else {
 			channel = event.getTextChannel();
@@ -96,5 +92,20 @@ public class ScheduleCommand implements Command {
 			s.add(adt.getAnime().title);
 			return s;
 		});
+	}
+
+	@Override
+	public String getIdentifier() {
+		return "scc";
+	}
+
+	@Override
+	public Permission[] getRequiredPermissions() {
+		return CommandHandlerManager.MOD_PERMS;
+	}
+
+	@Override
+	public String getDescription() {
+		return "Sends a schedule of when the animes air in the week, as per the previously set timezone.";
 	}
 }

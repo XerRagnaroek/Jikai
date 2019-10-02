@@ -103,4 +103,8 @@ public class ALRHDataBase {
 		titleMap.clear();
 		ucMsgMap.clear();
 	}
+
+	boolean hasDataForTitle(String title) {
+		return titleMap.containsKey(title);
+	}
 }

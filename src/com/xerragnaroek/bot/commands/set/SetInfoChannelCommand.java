@@ -11,24 +11,16 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
-/**
- * Command that sets the channel the bot posts automated stuff in.
- * 
- * @author XerRagnarök
- *
- */
-public class SetAnimeChannelCommand implements Command {
-
-	SetAnimeChannelCommand() {}
+public class SetInfoChannelCommand implements Command {
 
 	@Override
 	public String getName() {
-		return "anime_channel";
+		return "info_channel";
 	}
 
 	@Override
 	public String getUsage() {
-		return "anime_channel <textchannel>";
+		return "info_channel <textchannel name>";
 	}
 
 	@Override
@@ -38,14 +30,14 @@ public class SetAnimeChannelCommand implements Command {
 		List<TextChannel> tc = g.getTextChannelsByName(chan, false);
 		if (!tc.isEmpty()) {
 			TextChannel textC = tc.get(0);
-			GuildDataManager.getDataForGuild(g.getId()).setAnimeChannelId(textC.getId());
-			textC.sendMessage("Channel for upcoming release messages set.\nFeel free to delete this message").queue();
+			GuildDataManager.getDataForGuild(g.getId()).setInfoChannelId(textC.getId());
+			textC.sendMessage("Channel for bot information messages set.\nFeel free to delete this message").queue();
 		}
 	}
 
 	@Override
 	public String getIdentifier() {
-		return "sacc";
+		return "sicc";
 	}
 
 	@Override
@@ -55,6 +47,6 @@ public class SetAnimeChannelCommand implements Command {
 
 	@Override
 	public String getDescription() {
-		return "The channel for anime release updates.";
+		return "The channel for bot updates/status changes.";
 	}
 }

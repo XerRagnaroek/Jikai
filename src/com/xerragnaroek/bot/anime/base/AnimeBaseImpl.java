@@ -30,6 +30,7 @@ import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearchAnime;
 import com.github.Doomsdayrs.Jikan4java.types.Support.Prop.From;
 import com.xerragnaroek.bot.data.BotData;
 import com.xerragnaroek.bot.data.GuildDataManager;
+import com.xerragnaroek.bot.util.Initilizable;
 
 import net.dv8tion.jda.api.entities.Guild;
 
@@ -39,18 +40,20 @@ import net.dv8tion.jda.api.entities.Guild;
  * @author XerRagnaroek
  *
  */
-class AnimeBaseImpl {
+class AnimeBaseImpl implements Initilizable {
 	private ZoneId jst = ZoneId.of("Japan");
 	private Map<ZoneId, ZoneAnimeBase> animes = new ConcurrentHashMap<>();
 	private static final Logger log = LoggerFactory.getLogger(AnimeBaseImpl.class);
 	private AtomicBoolean loading = new AtomicBoolean(true);
+	private AtomicBoolean initialized = new AtomicBoolean(false);
 
 	AnimeBaseImpl() {}
 
-	void init() {
+	public void init() {
 		log.info("Initializing AnimeBase");
 		animes.put(jst, new ZoneAnimeBase(jst));
 		loadSeason();
+		initialized.set(true);
 	}
 
 	/**
@@ -73,6 +76,7 @@ class AnimeBaseImpl {
 				loadSeasonImpl(ss, zdt);
 				if (!ss.request_hash.equals(hash)) {
 					bData.incrementAnimeBaseVersion();
+					GuildDataManager.getBotConfig().setCurrentSeasonHash(ss.request_hash);
 				}
 			} else {
 				log.info("Current schedule is up to date.");
@@ -96,7 +100,6 @@ class AnimeBaseImpl {
 		//TODO remove limit above for final version!!!
 		animes.get(jst).setAnimeDayTimes(tmp);
 
-		GuildDataManager.getBotConfig().setCurrentSeasonHash(ss.request_hash);
 		loading.set(false);
 		zoneAnimes(true);
 		log.info("Loaded {} animes in {}ms", tmp.size(), Duration.between(start, Instant.now()).toMillis());
@@ -161,7 +164,6 @@ class AnimeBaseImpl {
 		}
 	}
 
-	//TODO change behaviour if anime airs on same day but has already aired
 	private ZonedDateTime makeZDT(Anime a) {
 		ZonedDateTime zdt = null;
 		if (a.broadcast == null || a.broadcast.equals("Not scheduled once per week")) {
@@ -277,5 +279,10 @@ class AnimeBaseImpl {
 		List<AnimeDayTime> tmp = new ArrayList<>(animes.get(tz).getAnimes());
 		Collections.sort(tmp);
 		return tmp;
+	}
+
+	@Override
+	public boolean isInitialized() {
+		return initialized.get();
 	}
 }

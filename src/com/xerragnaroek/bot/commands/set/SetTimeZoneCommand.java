@@ -7,13 +7,14 @@ import com.xerragnaroek.bot.commands.CommandHandlerImpl;
 import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
 public class SetTimeZoneCommand implements Command {
 	SetTimeZoneCommand() {}
 
 	@Override
-	public String getCommandName() {
+	public String getName() {
 		return "timezone";
 	}
 
@@ -35,4 +36,18 @@ public class SetTimeZoneCommand implements Command {
 		}
 	}
 
+	@Override
+	public String getIdentifier() {
+		return "stzc";
+	}
+
+	@Override
+	public Permission[] getRequiredPermissions() {
+		return new Permission[] { Permission.MANAGE_SERVER };
+	}
+
+	@Override
+	public String getDescription() {
+		return "The TimeZone of this server, so the release updates are in your time. Default is \"Europe/Berlin\". Please refer to this [list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), specifically the row \\\"TZ database name\\\"!.";
+	}
 }

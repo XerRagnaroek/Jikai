@@ -26,35 +26,45 @@ public class EventListener extends ListenerAdapter {
 	public void onMessageReceived(MessageReceivedEvent event) {
 		//ignore bots
 		if (!event.getAuthor().isBot() && event.isFromGuild()) {
-			exec.submit(() -> CommandHandlerManager.getCommandHandlerForGuild(event.getGuild()).handleMessage(event));
+			if (GuildDataManager.hasCompletedSetup(event.getGuild())) {
+				exec.submit(() -> CommandHandlerManager.getCommandHandlerForGuild(event.getGuild())
+						.handleMessage(event));
+			}
 		}
 	}
 
 	@Override
 	public void onMessageReactionAdd(MessageReactionAddEvent event) {
 		if (!event.getUser().isBot()) {
-			exec.submit(() -> ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild())
-					.handleReactionAdded(event));
+			if (GuildDataManager.hasCompletedSetup(event.getGuild())) {
+				exec.submit(() -> ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild())
+						.handleReactionAdded(event));
+			}
 		}
 	}
 
 	@Override
 	public void onMessageReactionRemove(MessageReactionRemoveEvent event) {
-		exec.submit(() -> ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild())
-				.handleReactionRemoved(event));
+		if (GuildDataManager.hasCompletedSetup(event.getGuild())) {
+			exec.submit(() -> ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild())
+					.handleReactionRemoved(event));
+		}
 	}
 
 	@Override
 	public void onMessageReactionRemoveAll(MessageReactionRemoveAllEvent event) {
-		exec.submit(() -> ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild())
-				.handleReactionRemovedAll(event));
+		if (GuildDataManager.hasCompletedSetup(event.getGuild())) {
+			exec.submit(() -> ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild())
+					.handleReactionRemovedAll(event));
+		}
 	}
 
 	@Override
 	public void onReady(ReadyEvent event) {
-		log.info("Initializing ALRHs");
+		/*log.info("Initializing ALRHs");
 		//exec.submit(() -> ALRHManager.init());
 		ALRHManager.init();
+		GuildDataManager.startSaveThread(10, TimeUnit.SECONDS);*/
 	}
 
 	@Override

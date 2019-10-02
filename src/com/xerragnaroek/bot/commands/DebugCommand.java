@@ -5,6 +5,7 @@ import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.responses.PremadeResponses;
 
 import net.dv8tion.jda.api.MessageBuilder;
@@ -15,12 +16,7 @@ public class DebugCommand implements Command {
 	private final Logger log = LoggerFactory.getLogger(DebugCommand.class);
 
 	@Override
-	public String getCommandName() {
-		return "debug";
-	}
-
-	@Override
-	public String getUsage() {
+	public String getName() {
 		return "debug";
 	}
 
@@ -28,8 +24,7 @@ public class DebugCommand implements Command {
 	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
 		log.debug("Checking if user is the author of the bot...");
 		User u = event.getAuthor();
-		//my ID
-		if (u.getId().equals("129942311663697921")) {
+		if (u.getId().equals(Core.getDevId())) {
 			log.debug("Command was called by the author");
 			log.info("Executing debug command");
 			MessageBuilder bob = new MessageBuilder();
@@ -43,6 +38,16 @@ public class DebugCommand implements Command {
 			log.debug("Command was called by someone else");
 			event.getTextChannel().sendMessage(PremadeResponses.lackingPermissions(u)).queue();
 		}
+	}
+
+	@Override
+	public String getIdentifier() {
+		return "dec";
+	}
+
+	@Override
+	public String getDescription() {
+		return "Prints internal debug information. Only usable by the owner of this bot.";
 	}
 
 }

@@ -6,6 +6,7 @@ import com.xerragnaroek.bot.commands.Command;
 import com.xerragnaroek.bot.commands.CommandHandlerImpl;
 import com.xerragnaroek.bot.data.GuildDataManager;
 
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -20,7 +21,7 @@ public class SetListChannelCommand implements Command {
 	SetListChannelCommand() {}
 
 	@Override
-	public String getCommandName() {
+	public String getName() {
 		return "list_channel";
 	}
 
@@ -37,7 +38,22 @@ public class SetListChannelCommand implements Command {
 		if (!tc.isEmpty()) {
 			TextChannel textC = tc.get(0);
 			GuildDataManager.getDataForGuild(g.getId()).setListChannelId(textC.getId());
+			textC.sendMessage("Channel for the anime list set.\nFeel free to delete this message").queue();
 		}
 	}
 
+	@Override
+	public String getIdentifier() {
+		return "slcc";
+	}
+
+	@Override
+	public Permission[] getRequiredPermissions() {
+		return new Permission[] { Permission.MANAGE_CHANNEL, Permission.MANAGE_SERVER };
+	}
+
+	@Override
+	public String getDescription() {
+		return "The channel for the anime list.";
+	}
 }
