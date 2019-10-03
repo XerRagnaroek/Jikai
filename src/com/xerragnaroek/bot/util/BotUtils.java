@@ -24,7 +24,7 @@ public class BotUtils {
 
 	public static TextChannel getChannelOrDefault(String channel, String gId) {
 		TextChannel tc = null;
-		Guild g = Core.getJDA().getGuildById(gId);
+		Guild g = Core.JDA.getGuildById(gId);
 		if (channel != null) {
 			tc = g.getTextChannelById(channel);
 		}
@@ -43,10 +43,10 @@ public class BotUtils {
 
 	public static CompletableFuture<Message> sendToDev(String msg) {
 		log.debug("Attempting to send a message to the dev");
-		String devId = Core.getDevId();
+		String devId = Core.DEV_ID;
 		if (devId != null) {
 			log.debug("DevId != null");
-			User dev = Core.getJDA().getUserById(devId);
+			User dev = Core.JDA.getUserById(devId);
 			if (dev != null) {
 				log.debug("Dev user exists, sending message...");
 				return sendPM(dev, new MessageBuilder().append(msg).build());
@@ -62,8 +62,7 @@ public class BotUtils {
 		} else {
 			eb.setTitle(msg);
 		}
-		eb.addField(Objects.requireNonNullElse(e.getMessage(), ""), ExceptionUtils.getStackTrace(e), false)
-				.setColor(Color.RED);
+		eb.addField(Objects.requireNonNullElse(e.getMessage(), ""), ExceptionUtils.getStackTrace(e), false).setColor(Color.RED);
 		return sendEmbedToDev(eb.build());
 	}
 
@@ -74,16 +73,20 @@ public class BotUtils {
 
 	private static CompletableFuture<Message> sendEmbedToDev(MessageEmbed me) {
 		log.debug("Attempting to send a message to the dev");
-		String devId = Core.getDevId();
+		String devId = Core.DEV_ID;
 		if (devId != null) {
 			log.debug("DevId != null");
-			User dev = Core.getJDA().getUserById(devId);
+			User dev = Core.JDA.getUserById(devId);
 			if (dev != null) {
 				log.debug("Dev user exists, sending message...");
 				return sendPM(dev, me);
 			}
 		}
 		return null;
+	}
+
+	public static CompletableFuture<Message> sendPM(User u, String msg) {
+		return sendPM(u, new MessageBuilder().append(msg).build());
 	}
 
 	public static CompletableFuture<Message> sendPM(User u, Message msg) {

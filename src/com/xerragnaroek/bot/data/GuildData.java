@@ -1,5 +1,9 @@
 package com.xerragnaroek.bot.data;
 
+import static com.xerragnaroek.bot.core.Core.ALRHM;
+import static com.xerragnaroek.bot.core.Core.GDM;
+import static com.xerragnaroek.bot.core.Core.RTKM;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,10 +28,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.xerragnaroek.bot.anime.alrh.ALRHData;
-import com.xerragnaroek.bot.anime.alrh.ALRHManager;
 import com.xerragnaroek.bot.anime.alrh.ALRHandler;
-import com.xerragnaroek.bot.commands.CommandHandlerManager;
-import com.xerragnaroek.bot.timer.RTKManager;
+import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.timer.ReleaseTimeKeeper;
 import com.xerragnaroek.bot.util.BotUtils;
 import com.xerragnaroek.bot.util.Property;
@@ -63,7 +65,7 @@ public class GuildData {
 		if (hasExplicitCommandSetting()) {
 			return comsEnabled.get();
 		} else {
-			return CommandHandlerManager.areCommandsEnabledByDefault();
+			return Core.CHM.areCommandsEnabledByDefault();
 		}
 	}
 
@@ -73,7 +75,7 @@ public class GuildData {
 
 	@JsonProperty("alrh_data")
 	public Set<ALRHData> getALRHData() {
-		return ALRHManager.getAnimeListReactionHandlerForGuild(gId).getData();
+		return ALRHM.get(gId).getData();
 	}
 
 	@JsonProperty("anime_channel_id")
@@ -83,13 +85,13 @@ public class GuildData {
 
 	@JsonIgnore
 	public Map<String, ZonedDateTime> getAnimesLastMentioned() {
-		return RTKManager.getKeeperForGuild(gId).getLastMentionedMap();
+		return RTKM.get(gId).getLastMentionedMap();
 	}
 
 	@JsonProperty("last_mentioned")
 	public Map<String, String> getAnimesLastMentionedString() {
 		Map<String, String> tmp = new TreeMap<>();
-		RTKManager.getKeeperForGuild(gId).getLastMentionedMap().forEach((id, zdt) -> tmp.put(id, zdt.toString()));
+		RTKM.get(gId).getLastMentionedMap().forEach((id, zdt) -> tmp.put(id, zdt.toString()));
 		return tmp;
 	}
 
@@ -110,7 +112,7 @@ public class GuildData {
 
 	@JsonIgnore
 	public ZoneId getTimeZone() {
-		return Objects.requireNonNullElse(zone.get(), GuildDataManager.getBotConfig().getDefaultTimeZone());
+		return Objects.requireNonNullElse(zone.get(), GDM.getBotConfig().getDefaultTimeZone());
 	}
 
 	@JsonProperty("timezone")
@@ -118,13 +120,13 @@ public class GuildData {
 		if (zone != null) {
 			return zone.get().getId();
 		} else {
-			return GuildDataManager.getBotConfig().getDefaultTimeZoneString();
+			return GDM.getBotConfig().getDefaultTimeZoneString();
 		}
 	}
 
 	@JsonProperty("trigger")
 	public String getTrigger() {
-		return Objects.requireNonNullElse(trigger.get(), GuildDataManager.getBotConfig().getDefaultTrigger());
+		return Objects.requireNonNullElse(trigger.get(), GDM.getBotConfig().getDefaultTrigger());
 	}
 
 	@JsonProperty("completed_setup")
@@ -228,12 +230,12 @@ public class GuildData {
 			log.debug("GuildData changed");
 			tmp = true;
 		}
-		ALRHandler h = ALRHManager.getAnimeListReactionHandlerForGuild(gId);
+		ALRHandler h = ALRHM.get(gId);
 		if (h.isInitialized() && h.hasUpdateFlagAndReset()) {
 			log.debug("ALHRData changed");
 			tmp = true;
 		}
-		ReleaseTimeKeeper rtk = RTKManager.getKeeperForGuild(gId);
+		ReleaseTimeKeeper rtk = RTKM.get(gId);
 		if (rtk != null && rtk.hasUpdateFlagAndReset()) {
 			log.debug("ReleaseTimeKeeper changed");
 			tmp = true;
@@ -264,8 +266,9 @@ public class GuildData {
 			icId = new Property<String>();
 		}
 		gd.infoChId = icId;
-		ALRHManager.addToInitMap(gId, data);
-		RTKManager.addToInitMap(gId, lastMentioned);
+		ALRHM.addToInitMap(gId, data);
+		RTKM.addToInitMap(gId, lastMentioned);
 		return gd;
 	}
+
 }

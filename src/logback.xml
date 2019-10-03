@@ -30,14 +30,14 @@
 			<level>INFO</level>
 		</filter>
 		<encoder>
-			<pattern>[%d{dd-M-yy HH:mm:ss.SSS}] [%-5level] [%logger{15}] [%t] %m%n</pattern>
+			<pattern>[%d{dd-M-yy HH:mm:ss.SSS}] [%-5level] [%logger{10}] [%t] %m%n</pattern>
 		</encoder>
 	</appender>
 
 	<appender name="STDOUT"
 		class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
-			<pattern>[%d{dd-M-yy HH:mm:ss.SSS}] [%-5level] [%logger] [%t] %m%n</pattern>
+			<pattern>[%d{dd-M-yy HH:mm:ss.SSS}] [%-5level] [%logger{10}] [%t] %m%n</pattern>
 		</encoder>
 	</appender>
 	

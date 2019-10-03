@@ -3,8 +3,9 @@ package com.xerragnaroek.bot.commands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.bot.anime.alrh.ALRHManager;
 import com.xerragnaroek.bot.anime.alrh.ALRHandler;
+import com.xerragnaroek.bot.anime.base.AnimeBase;
+import com.xerragnaroek.bot.core.Core;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -19,9 +20,10 @@ public class AnimeListCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		log.debug("Executing ListCommand");
-		ALRHandler h = ALRHManager.getAnimeListReactionHandlerForGuild(event.getGuild());
+		AnimeBase.waitUntilLoaded();
+		ALRHandler h = Core.ALRHM.get(event.getGuild());
 		if (!h.isSendingList()) {
 			h.sendList();
 		} else {

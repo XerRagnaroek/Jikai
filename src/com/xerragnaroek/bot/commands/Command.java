@@ -20,11 +20,15 @@ public interface Command extends Comparable<Command> {
 	 * How to use the command.
 	 */
 	public default String getUsage() {
-		String use = "";
+		String use = null;
 		if (hasAlternativeName()) {
-			use += "|" + getAlternativeName();
+			use = getName() + "|" + getAlternativeName();
 		}
 		return use;
+	}
+
+	public default boolean hasUsage() {
+		return getUsage() != null;
 	}
 
 	/**
@@ -35,7 +39,7 @@ public interface Command extends Comparable<Command> {
 	 * @param arguments
 	 *            - what was written after the command
 	 */
-	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments);
+	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments);
 
 	public default boolean hasAlternativeName() {
 		return false;

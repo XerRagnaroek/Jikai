@@ -50,10 +50,10 @@ class ALHandler {
 	 */
 	void sendList() {
 		sending.set(true);
-		Guild g = Core.getJDA().getGuildById(alrh.gId);
+		Guild g = Core.JDA.getGuildById(alrh.gId);
 		TextChannel tc = g.getTextChannelById(alrh.tcId.get());
 		log.info("Sending list messages to channel {}", tc.getName() + "#" + alrh.tcId);
-		Set<DTO> dtos = ALRHManager.getListMessages();
+		Set<DTO> dtos = Core.ALRHM.getListMessages();
 		successes.set(0);
 		expectedNumSuccesses = calcExpectedSuccesses(dtos);
 		log.info("Deleting old messages and data");

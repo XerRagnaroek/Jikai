@@ -1,5 +1,7 @@
 package com.xerragnaroek.bot.commands;
 
+import static com.xerragnaroek.bot.core.Core.CHM;
+
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -7,20 +9,20 @@ import org.apache.commons.lang.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.data.GuildData;
-import com.xerragnaroek.bot.data.GuildDataManager;
 import com.xerragnaroek.bot.util.Initilizable;
 import com.xerragnaroek.bot.util.Property;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
 /**
- * Handles commands (who'd have thunk?). Singleton.
+ * Handles commands (who'd have thunk?).
  * 
  * @author XerRagnarök
  *
  */
-public class CommandHandlerImpl implements Initilizable {
+public class CommandHandler implements Initilizable {
 	private Set<Command> commands;
 	private final Logger log;
 	private final String gId;
@@ -28,22 +30,22 @@ public class CommandHandlerImpl implements Initilizable {
 	private Property<Boolean> comsEnabled = new Property<>();
 	private AtomicBoolean initialized = new AtomicBoolean(false);
 
-	CommandHandlerImpl(String g) {
+	CommandHandler(String g) {
 		gId = g;
-		log = LoggerFactory.getLogger(CommandHandlerImpl.class.getName() + "#" + gId);
+		log = LoggerFactory.getLogger(CommandHandler.class.getName() + "#" + gId);
 		init();
 	}
 
 	public void init() {
-		GuildData gd = GuildDataManager.getDataForGuild(gId);
+		GuildData gd = Core.GDM.get(gId);
 		gd.triggerProperty().bindAndSet(trigger);
 		gd.comsEnabledProperty().bind(comsEnabled);
 		if (gd.hasExplicitCommandSetting()) {
 			comsEnabled.set(gd.areCommandsEnabled());
 		} else {
-			comsEnabled.set(CommandHandlerManager.areCommandsEnabledByDefault());
+			comsEnabled.set(CHM.areCommandsEnabledByDefault());
 		}
-		commands = CommandHandlerManager.getCommands();
+		commands = CHM.getCommands();
 		initialized.set(true);
 		log.info("Initialized");
 	}

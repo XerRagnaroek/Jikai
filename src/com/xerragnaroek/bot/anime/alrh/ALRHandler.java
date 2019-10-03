@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import com.xerragnaroek.bot.anime.base.AnimeBase;
 import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.data.GuildData;
-import com.xerragnaroek.bot.data.GuildDataManager;
 import com.xerragnaroek.bot.data.UpdatableData;
 import com.xerragnaroek.bot.util.BotUtils;
 import com.xerragnaroek.bot.util.Initilizable;
@@ -50,7 +49,7 @@ public class ALRHandler implements UpdatableData, Initilizable {
 	ALRHandler(String gId) {
 		this.gId = gId;
 		log = LoggerFactory.getLogger(ALRHandler.class.getName() + "#" + gId);
-		gData = GuildDataManager.getDataForGuild(gId);
+		gData = Core.GDM.get(gId);
 		alrhDB = new ALRHDataBase();
 		changed = new AtomicBoolean(false);
 		alh = new ALHandler(this);
@@ -125,7 +124,7 @@ public class ALRHandler implements UpdatableData, Initilizable {
 	}*/
 
 	private void checkIfListChanged(String msgId, Set<ALRHData> data) {
-		Guild g = Core.getJDA().getGuildById(gId);
+		Guild g = Core.JDA.getGuildById(gId);
 		TextChannel tc = g.getTextChannelById(alrhDB.getSentTextChannelId());
 		if (tc != null) {
 			arh.validateReactions(g, tc, msgId, data);
@@ -148,7 +147,7 @@ public class ALRHandler implements UpdatableData, Initilizable {
 	}
 
 	private boolean haveMessagesChanged(TextChannel oldTc, List<String> ids) {
-		Set<DTO> amsgs = ALRHManager.getListMessages();
+		Set<DTO> amsgs = Core.ALRHM.getListMessages();
 		AtomicBoolean noMsg = new AtomicBoolean(false);
 		if (oldTc == null) {
 			return true;
@@ -160,8 +159,7 @@ public class ALRHandler implements UpdatableData, Initilizable {
 				e.printStackTrace();
 			}
 		}
-		return noMsg.get() || ids.size() != amsgs.size() || oldTc == null
-				|| !(AnimeBase.getAnimeBaseVersion() == alrhDB.getSentABVersion()) || !oldTc.getId().equals(tcId);
+		return noMsg.get() || ids.size() != amsgs.size() || oldTc == null || !(AnimeBase.getAnimeBaseVersion() == alrhDB.getSentABVersion()) || !oldTc.getId().equals(tcId);
 	}
 
 	void dataChanged() {

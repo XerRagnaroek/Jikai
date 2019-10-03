@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.commands.Command;
-import com.xerragnaroek.bot.commands.CommandHandlerImpl;
+import com.xerragnaroek.bot.commands.CommandHandler;
 import com.xerragnaroek.bot.commands.CommandHandlerManager;
 
 import net.dv8tion.jda.api.Permission;
@@ -38,7 +38,7 @@ public class SetCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		if (arguments.length > 1) {
 			String com = arguments[0].toLowerCase();
 			Command c = CommandHandlerManager.findCommand(setComs, com);

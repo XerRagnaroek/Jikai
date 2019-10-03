@@ -1,5 +1,7 @@
 package com.xerragnaroek.bot.anime.base;
 
+import static com.xerragnaroek.bot.core.Core.GDM;
+
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -29,7 +31,6 @@ import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearch;
 import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearchAnime;
 import com.github.Doomsdayrs.Jikan4java.types.Support.Prop.From;
 import com.xerragnaroek.bot.data.BotData;
-import com.xerragnaroek.bot.data.GuildDataManager;
 import com.xerragnaroek.bot.util.Initilizable;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -67,7 +68,7 @@ class AnimeBaseImpl implements Initilizable {
 		ZonedDateTime zdt = ZonedDateTime.now(jst);
 		loading.set(true);
 		try {
-			BotData bData = GuildDataManager.getBotConfig();
+			BotData bData = GDM.getBotConfig();
 			SeasonSearch ss = new Connector().seasonSearch(zdt.getYear(), getSeason(zdt)).get();
 			log.info("Retrieving season search for {} {}", ss.season_name, ss.season_year);
 			//compare hashs, so only new data will be used
@@ -76,7 +77,7 @@ class AnimeBaseImpl implements Initilizable {
 				loadSeasonImpl(ss, zdt);
 				if (!ss.request_hash.equals(hash)) {
 					bData.incrementAnimeBaseVersion();
-					GuildDataManager.getBotConfig().setCurrentSeasonHash(ss.request_hash);
+					GDM.getBotConfig().setCurrentSeasonHash(ss.request_hash);
 				}
 			} else {
 				log.info("Current schedule is up to date.");
@@ -96,7 +97,7 @@ class AnimeBaseImpl implements Initilizable {
 			}
 			return null;
 		}).filter(Objects::nonNull).filter(a -> a.airing).map(this::makeAnimeDayTime).filter(AnimeDayTime::isKnown)
-				.limit(10).collect(Collectors.toList());
+				.collect(Collectors.toList());
 		//TODO remove limit above for final version!!!
 		animes.get(jst).setAnimeDayTimes(tmp);
 
@@ -150,7 +151,7 @@ class AnimeBaseImpl implements Initilizable {
 	}*/
 
 	void zoneAnimes(boolean overwrite) {
-		GuildDataManager.getUsedTimeZones().forEach(z -> {
+		GDM.getUsedTimeZones().forEach(z -> {
 			addTimeZone(z, overwrite);
 		});
 	}
@@ -254,7 +255,7 @@ class AnimeBaseImpl implements Initilizable {
 	}
 
 	List<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
-		ZoneId zone = GuildDataManager.getDataForGuild(g.getId()).getTimeZone();
+		ZoneId zone = GDM.get(g.getId()).getTimeZone();
 		if (!animes.containsKey(zone)) {
 			addTimeZone(zone, false);
 		}

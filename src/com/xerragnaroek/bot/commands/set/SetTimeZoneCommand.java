@@ -3,8 +3,8 @@ package com.xerragnaroek.bot.commands.set;
 import java.time.ZoneId;
 
 import com.xerragnaroek.bot.commands.Command;
-import com.xerragnaroek.bot.commands.CommandHandlerImpl;
-import com.xerragnaroek.bot.data.GuildDataManager;
+import com.xerragnaroek.bot.commands.CommandHandler;
+import com.xerragnaroek.bot.core.Core;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
@@ -24,10 +24,10 @@ public class SetTimeZoneCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		String zone = arguments[0];
 		try {
-			GuildDataManager.getDataForGuild(event.getGuild()).setTimeZone(ZoneId.of(zone));
+			Core.GDM.get(event.getGuild()).setTimeZone(ZoneId.of(zone));
 		} catch (Exception e) {
 			EmbedBuilder eb = new EmbedBuilder();
 			eb.setDescription(event.getAuthor().getAsMention()

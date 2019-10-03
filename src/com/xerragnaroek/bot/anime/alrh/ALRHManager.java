@@ -1,7 +1,5 @@
 package com.xerragnaroek.bot.anime.alrh;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -14,9 +12,10 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.anime.base.AnimeBase;
 import com.xerragnaroek.bot.anime.base.AnimeDayTime;
+import com.xerragnaroek.bot.util.Initilizable;
+import com.xerragnaroek.bot.util.Manager;
 
 import net.dv8tion.jda.api.MessageBuilder;
-import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.internal.utils.EncodingUtil;
 
@@ -27,37 +26,21 @@ import net.dv8tion.jda.internal.utils.EncodingUtil;
  * @author XerRagnaroek
  *
  */
-public class ALRHManager {
+public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 
-	private static final Map<String, List<String>> aniAlph = new TreeMap<>();
-	private static final Map<String, ALRHandler> impls = Collections.synchronizedMap(new HashMap<>());
-	private static final Set<DTO> listMsgs =
+	public ALRHManager() {
+		super(ALRHandler.class);
+	}
+
+	private final Map<String, List<String>> aniAlph = new TreeMap<>();
+	private final Set<DTO> listMsgs =
 			new TreeSet<>((d1, d2) -> d1.getMessage().getContentRaw().compareTo(d2.getMessage().getContentRaw()));
-	private static final Logger log = LoggerFactory.getLogger(ALRHManager.class);
-	private static Map<String, Set<ALRHData>> initMap = new TreeMap<>();
-	private static boolean initialized = false;
+	private final Logger log = LoggerFactory.getLogger(ALRHManager.class);
+	private Map<String, Set<ALRHData>> initMap = new TreeMap<>();
+	private boolean initialized = false;
 
-	public static ALRHandler getAnimeListReactionHandlerForGuild(Guild g) {
-		return getAnimeListReactionHandlerForGuild(g.getId());
-	}
-
-	/**
-	 * Gets the ALRH associated to the guild or null if none was registered yet.
-	 * 
-	 * @param g
-	 *            - the guild's id
-	 * @return - an ALRH
-	 */
-	public static ALRHandler getAnimeListReactionHandlerForGuild(String g) {
-		assertInitialisation();
-		log.debug("Getting ALRH for guild {}", g);
-		return impls.compute(g, (gid, alrh) -> (alrh = (alrh == null) ? new ALRHandler(gid) : alrh));
-	}
-
-	/**
-	 * Initialises the manager. Needs to be called prior to any other method calls.
-	 */
-	public static void init() {
+	@Override
+	public void init() {
 		if (!initialized) {
 			mapAnimesToStartingLetter();
 			initialized = true;
@@ -67,7 +50,7 @@ public class ALRHManager {
 		}
 	}
 
-	private static void initImpls() {
+	private void initImpls() {
 		log.debug("Loading ALRHs");
 		initMap.forEach((str, data) -> {
 			ALRHandler impl = new ALRHandler(str);
@@ -82,7 +65,7 @@ public class ALRHManager {
 		initMap = null;
 	}
 
-	static Set<DTO> getListMessages() {
+	Set<DTO> getListMessages() {
 		if (listMsgs.isEmpty()) {
 			aniAlph.forEach((l, list) -> {
 				listMsgs.add(getLetterListMessage(l, list));
@@ -96,7 +79,7 @@ public class ALRHManager {
 	 * 
 	 * @return - a map where a letter is mapped to a list of titles.
 	 */
-	static Map<String, List<String>> getMappedAnimes() {
+	Map<String, List<String>> getMappedAnimes() {
 		return aniAlph;
 	}
 
@@ -106,7 +89,7 @@ public class ALRHManager {
 	 * @return - a DataTransferObject (DTO) containing the message and the title mapped to its
 	 *         respective unicode
 	 */
-	private static DTO getLetterListMessage(String letter, List<String> titles) {
+	private DTO getLetterListMessage(String letter, List<String> titles) {
 		log.debug("Creating list for letter {} with {} titles", letter, titles.size());
 		Set<ALRHData> data = new TreeSet<>();
 		MessageBuilder mb = new MessageBuilder();
@@ -126,7 +109,7 @@ public class ALRHManager {
 	/**
 	 * groups all animes by the first letter in their title
 	 */
-	private static void mapAnimesToStartingLetter() {
+	private void mapAnimesToStartingLetter() {
 		log.debug("Mapping animes to starting letter");
 		List<AnimeDayTime> animes = AnimeBase.getSeasonalAnimes();
 		animes.stream().map(a -> a.getAnime().title)
@@ -137,15 +120,21 @@ public class ALRHManager {
 				}));
 	}
 
-	private static void assertInitialisation() {
+	@Override
+	protected void assertInitialisation() {
 		if (!initialized) {
 			log.error("ALRHManager hasn't been initialized yet!");
 			throw new IllegalStateException("ALRHManager hasn't been initialized yet!");
 		}
 	}
 
-	public static void addToInitMap(String id, Set<ALRHData> data) {
+	public void addToInitMap(String id, Set<ALRHData> data) {
 		initMap.put(id, data);
+	}
+
+	@Override
+	protected ALRHandler makeNew(String gId) {
+		return new ALRHandler(gId);
 	}
 
 }

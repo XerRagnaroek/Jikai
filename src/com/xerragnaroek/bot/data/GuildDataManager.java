@@ -19,11 +19,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xerragnaroek.bot.util.BotUtils;
+import com.xerragnaroek.bot.util.Initilizable;
+import com.xerragnaroek.bot.util.Manager;
 
 import net.dv8tion.jda.api.entities.Guild;
 
@@ -33,95 +32,64 @@ import net.dv8tion.jda.api.entities.Guild;
  * @author XerRagnaroek
  *
  */
-public class GuildDataManager {
-	static final Map<ZoneId, List<String>> usedZones = Collections.synchronizedMap(new HashMap<>());
-	private static BotData botData;
-	private static Map<String, GuildData> data = new HashMap<>();
-	private static final Logger log = LoggerFactory.getLogger(GuildDataManager.class);
-	private static final ScheduledExecutorService saver = Executors.newSingleThreadScheduledExecutor();
-	private static Map<GuildDataKey, Set<BiConsumer<String, String>>> strConsumers =
-			Collections.synchronizedMap(new HashMap<>());
-	private static Set<BiConsumer<String, ZoneId>> zoneCons = Collections.synchronizedSet(new HashSet<>());
+public class GuildDataManager extends Manager<GuildData> implements Initilizable {
 
-	static {
-		initBotData();
-		registerOnUniversalTimeZoneChanged(GuildDataManager::addTimeZone);
+	final Map<ZoneId, List<String>> usedZones = Collections.synchronizedMap(new HashMap<>());
+	private BotData botData;
+	private final ScheduledExecutorService saver = Executors.newSingleThreadScheduledExecutor();
+	private Set<BiConsumer<String, ZoneId>> zoneCons = Collections.synchronizedSet(new HashSet<>());
+
+	public GuildDataManager() {
+		super(GuildData.class);
 	}
 
-	public static BotData getBotConfig() {
+	@Override
+	public void init() {
+		initBotData();
+		registerOnUniversalTimeZoneChanged(this::addTimeZone);
+		loadData();
+	}
+
+	public BotData getBotConfig() {
 		return botData;
 	}
 
-	public static GuildData getDataForGuild(Guild g) {
-		return getDataForGuild(g.getId());
-	}
-
-	/**
-	 * Gets the id's associated data or creates a new one if none is loaded.
-	 * 
-	 * @param id
-	 *            - the guild's id
-	 * @return the associated data
-	 */
-	public static GuildData getDataForGuild(String id) {
-		log.debug("Fetching config for id {}", id);
-		if (data.containsKey(id)) {
-			return data.get(id);
-		} else {
-			log.debug("No config found, creating new one");
-			GuildData c = new GuildData(id, true);
-			data.put(id, c);
-			return c;
-		}
-	}
-
-	public static Set<String> getGuildIds() {
-		Set<String> copy = new TreeSet<String>(data.keySet());
+	public Set<String> getGuildIds() {
+		Set<String> copy = new TreeSet<String>(impls.keySet());
 		return copy;
 	}
 
-	public static Set<ZoneId> getUsedTimeZones() {
+	public Set<ZoneId> getUsedTimeZones() {
 		return new HashSet<>(usedZones.keySet());
 	}
 
-	public static boolean hasCompletedSetup(Guild g) {
-		return getDataForGuild(g).hasCompletedSetup();
+	public boolean hasCompletedSetup(Guild g) {
+		return get(g).hasCompletedSetup();
 	}
 
-	public static void init() {
-		loadData();
-		log.debug("Started thread to save configurations every 10 minutes");
-	}
-
-	public static boolean isKnownGuild(String gId) {
+	public boolean isKnownGuild(String gId) {
 		return getGuildIds().contains(gId);
 	}
 
-	public static GuildData registerNewGuild(Guild g) {
-		log.info("Registering new guild {}#{}", g.getName(), g.getId());
-		return registerNewGuild(g.getId());
-	}
-
-	public static GuildData registerNewGuild(String gId) {
-		GuildData c = new GuildData(gId, true);
-		data.put(gId, c);
-		return c;
-	}
-
-	public static void registerOnUniversalTimeZoneChanged(BiConsumer<String, ZoneId> con) {
+	public void registerOnUniversalTimeZoneChanged(BiConsumer<String, ZoneId> con) {
 		zoneCons.add(con);
-		data.values().forEach(gd -> gd.timeZoneProperty().onChange((ov, nv) -> con.accept(gd.getGuildId(), nv)));
+		impls.values().forEach(gd -> gd.timeZoneProperty().onChange((ov, nv) -> con.accept(gd.getGuildId(), nv)));
 		log.debug("Registered a new universal consumer for TimeZone");
 	}
 
-	public static void startSaveThread(long delay, TimeUnit unit) {
-		saver.scheduleAtFixedRate(GuildDataManager::saveConfigs, delay, delay, unit);
+	public void startSaveThread(long delay, TimeUnit unit) {
+		saver.scheduleAtFixedRate(this::saveConfigs, delay, delay, unit);
 	}
 
-	public static Map<ZoneId, List<String>> timeZoneGuildMap() {
+	public Map<ZoneId, List<String>> timeZoneGuildMap() {
 		Map<ZoneId, List<String>> tmp = new HashMap<>();
 		tmp.putAll(usedZones);
 		return tmp;
+	}
+
+	@Override
+	protected GuildData makeNew(String gId) {
+		return new GuildData(gId, true);
 	}
 
 	/**
@@ -130,7 +98,7 @@ public class GuildDataManager {
 	 * @param zone
 	 *            - the TimeZone's id
 	 */
-	private static void addTimeZone(String gId, ZoneId zone) {
+	private void addTimeZone(String gId, ZoneId zone) {
 		usedZones.compute(zone, (k, v) -> {
 			if (v == null) {
 				v = new LinkedList<String>();
@@ -141,12 +109,12 @@ public class GuildDataManager {
 		log.debug("Added zone {}", zone);
 	}
 
-	private static void initBotData() {
+	private void initBotData() {
 		botData = new BotData(true);
 		usedZones.put(botData.getDefaultTimeZone(), new LinkedList<>());
 	}
 
-	private static void loadData() {
+	private void loadData() {
 		log.info("Loading configurations...");
 		Path loc = Paths.get("./data/");
 		try {
@@ -159,7 +127,7 @@ public class GuildDataManager {
 					} else {
 						GuildData gd = readFromPath(path, mapper, GuildData.class);
 						if (gd != null) {
-							data.put(gd.getGuildId(), gd);
+							impls.put(gd.getGuildId(), gd);
 							addTimeZone(gd.getGuildId(), gd.getTimeZone());
 						}
 					}
@@ -178,17 +146,7 @@ public class GuildDataManager {
 		}
 	}
 
-	private static void putBiConInStrMap(GuildDataKey gdk, BiConsumer<String, String> con) {
-		strConsumers.compute(gdk, (key, set) -> {
-			if (set == null) {
-				set = new HashSet<>();
-			}
-			set.add(con);
-			return set;
-		});
-	}
-
-	private static <T> T readFromPath(Path p, ObjectMapper mapper, Class<T> clazz) {
+	private <T> T readFromPath(Path p, ObjectMapper mapper, Class<T> clazz) {
 		try {
 			return mapper.readValue(Files.readString(p), clazz);
 		} catch (IOException e) {
@@ -200,10 +158,10 @@ public class GuildDataManager {
 	/**
 	 * Save all configurations. Gets called every 10 minutes.
 	 */
-	private static void saveConfigs() {
+	private void saveConfigs() {
 		log.debug("Saving configs...");
 		AtomicInteger saved = new AtomicInteger(0);
-		data.values().forEach(gd -> {
+		impls.values().forEach(gd -> {
 			if (gd.save()) {
 				saved.incrementAndGet();
 			}

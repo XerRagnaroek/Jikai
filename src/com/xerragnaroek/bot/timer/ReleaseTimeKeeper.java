@@ -10,10 +10,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.bot.anime.alrh.ALRHManager;
 import com.xerragnaroek.bot.anime.base.AnimeBase;
 import com.xerragnaroek.bot.core.Core;
-import com.xerragnaroek.bot.data.GuildDataManager;
 import com.xerragnaroek.bot.data.UpdatableData;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -31,7 +29,7 @@ public class ReleaseTimeKeeper implements UpdatableData {
 	}
 
 	private void updateReactedAnimes(ZonedDateTime now, Guild g, ZoneId zone, boolean ignoreThresholds) {
-		Set<String> reactedAnimes = ALRHManager.getAnimeListReactionHandlerForGuild(g).getReactedAnimes();
+		Set<String> reactedAnimes = Core.ALRHM.get(g).getReactedAnimes();
 		AnimeBase.getSeasonalAnimesAdjusted(zone).forEach(adt -> {
 			String title = adt.getAnime().title;
 			if (reactedAnimes.contains(title)) {
@@ -64,10 +62,9 @@ public class ReleaseTimeKeeper implements UpdatableData {
 	}
 
 	public void updateAnimes(boolean ignoreThresholds, boolean allAnimes) {
-		log.info(	"Sending anime release times to guild {}{}{}", gId, (ignoreThresholds ? " ignoring thresholds" : ""),
-					(allAnimes ? " for all animes" : ""));
-		ZoneId zone = GuildDataManager.getDataForGuild(gId).getTimeZone();
-		Guild g = Core.getJDA().getGuildById(gId);
+		log.info("Sending anime release times to guild {}{}{}", gId, (ignoreThresholds ? " ignoring thresholds" : ""), (allAnimes ? " for all animes" : ""));
+		ZoneId zone = Core.GDM.get(gId).getTimeZone();
+		Guild g = Core.JDA.getGuildById(gId);
 		updateAnimesZone(g, zone, ignoreThresholds, allAnimes);
 	}
 

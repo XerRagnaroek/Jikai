@@ -5,7 +5,7 @@ import java.time.ZonedDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.bot.data.GuildDataManager;
+import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.util.BotUtils;
 
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -21,7 +21,7 @@ public class HelpCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		log.info("Executing help command");
 		Member m = event.getMember();
 		/*StringBuilder bob = new StringBuilder();
@@ -34,9 +34,8 @@ public class HelpCommand implements Command {
 		String trigger = chi.getTrigger();
 		EmbedBuilder eb = new EmbedBuilder();
 		eb.setTitle("Commands you have permissions to use are:");
-		CommandHandlerManager.getCommands().stream().filter(c -> CommandHandlerManager.checkPermissions(c, m))
-				.forEach(com -> eb.addField("**" + trigger + com.getName() + "**", com.getDescription(), false));
-		eb.setTimestamp(ZonedDateTime.now(GuildDataManager.getDataForGuild(event.getGuild()).getTimeZone()));
+		Core.CHM.getCommands().stream().filter(c -> CommandHandlerManager.checkPermissions(c, m)).forEach(com -> eb.addField("**" + trigger + (com.hasUsage() ? com.getUsage() : com.getName()) + "**", com.getDescription(), false));
+		eb.setTimestamp(ZonedDateTime.now(Core.GDM.get(event.getGuild()).getTimeZone()));
 		BotUtils.sendPM(m.getUser(), eb.build());
 	}
 

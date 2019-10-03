@@ -3,8 +3,8 @@ package com.xerragnaroek.bot.commands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.data.GuildData;
-import com.xerragnaroek.bot.data.GuildDataManager;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -25,10 +25,10 @@ public class EnableCommandsCommand implements Command {
 	}
 
 	@Override
-	public void executeCommand(CommandHandlerImpl chi, MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
 		log.debug("Executing EnableCommandsCommand on guild {}#{}", g.getName(), g.getId());
-		GuildData gd = GuildDataManager.getDataForGuild(g);
+		GuildData gd = Core.GDM.get(g);
 		if (!gd.hasExplicitCommandSetting()) {
 			gd.setCommandsEnabled(true);
 			String id = gd.getInfoChannelId();
