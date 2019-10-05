@@ -89,7 +89,7 @@ public class ScheduleManager extends Manager<Scheduler> {
 	}
 
 	private void updateSchedules() {
-		impls.values().forEach(sch -> ForkJoinPool.commonPool().execute(() -> sch.sendScheduleToGuild()));
+		impls.values().forEach(sch -> ForkJoinPool.commonPool().execute(() -> sch.update()));
 	}
 
 }

@@ -61,6 +61,17 @@ public class Scheduler {
 		}
 	}
 
+	void update() {
+		try {
+			sendScheduleToGuild();
+			TextChannel tc = BotUtils.getTextChannelChecked(gId, gd.getInfoChannelId());
+			tc.sendMessage("Schedule has been updated!").queue();
+		} catch (BotException e) {
+			log.error("Exception while sending schedule, passing it on.", e);
+			//TODO handle Exceptions
+		}
+	}
+
 	private void sendSchedImpl(TextChannel tc, List<MessageEmbed> embeds, GuildData gd) {
 		AtomicInteger count = new AtomicInteger(0);
 		List<String> ids = new LinkedList<>();
