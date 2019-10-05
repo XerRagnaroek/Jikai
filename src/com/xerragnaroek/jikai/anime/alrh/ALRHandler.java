@@ -18,6 +18,7 @@ import com.xerragnaroek.jikai.util.Initilizable;
 import com.xerragnaroek.jikai.util.Property;
 
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent;
@@ -218,4 +219,7 @@ public class ALRHandler implements UpdatableData, Initilizable {
 		}
 	}
 
+	public void deleteRole(Role r) {
+		arh.deleteRole(r, alrhDB.getDataForTitle(r.getName()));
+	}
 }

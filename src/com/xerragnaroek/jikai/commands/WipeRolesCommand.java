@@ -2,6 +2,9 @@ package com.xerragnaroek.jikai.commands;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.xerragnaroek.jikai.anime.alrh.ALRHandler;
+import com.xerragnaroek.jikai.core.Core;
+
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
@@ -19,8 +22,8 @@ public class WipeRolesCommand implements Command {
 		Guild g = event.getGuild();
 		Message m1 = event.getTextChannel().sendMessage("Deleting all anime roles...").complete();
 		AtomicInteger count = new AtomicInteger(0);
-		g.getRoles().stream().filter(r -> r.getPermissionsRaw() == 0l).peek(r -> count.incrementAndGet())
-				.forEach(r -> r.delete().queue());
+		ALRHandler alrh = Core.ALRHM.get(g);
+		g.getRoles().stream().filter(r -> r.getPermissionsRaw() == 0l).peek(r -> count.incrementAndGet()).forEach(r -> alrh.deleteRole(r));
 		m1.editMessageFormat("Deleted %d roles", count.get()).queue();
 	}
 

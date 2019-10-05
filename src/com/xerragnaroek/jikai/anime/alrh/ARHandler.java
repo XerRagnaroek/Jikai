@@ -1,7 +1,6 @@
 package com.xerragnaroek.jikai.anime.alrh;
 
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -179,14 +178,18 @@ class ARHandler {
 		}
 	}
 
-	private void deleteRole(Guild g, ALRHData data) {
+	void deleteRole(Guild g, ALRHData data) {
 		if (data.hasRoleId()) {
-			g.getRoleById(data.getRoleId()).delete().queue(v -> {
-				log.info("Deleted role {}", data.getTitle());
-				data.setRoleId(null);
-				alrh.dataChanged();
-			}, e -> BotUtils.logAndSendToDev(log, "Failed deleting role {}" + data.getTitle(), e));
+			deleteRole(g.getRoleById(data.getRoleId()), data);
 		}
+	}
+
+	void deleteRole(Role r, ALRHData data) {
+		r.delete().queue(v -> {
+			log.info("Deleted role {}", data.getTitle());
+			data.setRoleId(null);
+			alrh.dataChanged();
+		});
 	}
 
 	void validateReactions(Guild g, TextChannel tc, String msgId, Set<ALRHData> data) {
@@ -199,7 +202,6 @@ class ARHandler {
 	void update() {
 		Set<ALRHData> reacted = alrhDB.getReactedAnimes();
 		Set<String> titles = AnimeDB.getSeasonalAnimes().stream().map(adt -> adt.getAnime().title).collect(Collectors.toSet());
-		Set<ALRHData> tmp = new TreeSet<>(reacted);
 		reacted.forEach(data -> {
 			String title = data.getTitle();
 			if (!titles.contains(title)) {
