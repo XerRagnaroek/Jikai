@@ -13,7 +13,7 @@ import org.apache.commons.collections4.map.MultiKeyMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.jikai.anime.db.AnimeBase;
+import com.xerragnaroek.jikai.anime.db.AnimeDB;
 
 public class ALRHDataBase {
 	private Map<String, Set<ALRHData>> msgMap = Collections.synchronizedMap(new HashMap<>());
@@ -45,7 +45,7 @@ public class ALRHDataBase {
 	}
 
 	private void updateVariables(ALRHData data) {
-		sentABVersion = AnimeBase.getAnimeBaseVersion();
+		sentABVersion = AnimeDB.getAnimeBaseVersion();
 		sentTcId = data.getTextChannelId();
 	}
 

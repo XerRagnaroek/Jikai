@@ -2,7 +2,7 @@ package com.xerragnaroek.jikai.commands;
 
 import static com.xerragnaroek.jikai.core.Core.RTKM;
 
-import com.xerragnaroek.jikai.anime.db.AnimeBase;
+import com.xerragnaroek.jikai.anime.db.AnimeDB;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -23,7 +23,7 @@ public class WhenAnimeCommand implements Command {
 	@Override
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
-		AnimeBase.waitUntilLoaded();
+		AnimeDB.waitUntilLoaded();
 		if (arguments.length > 1) {
 			RTKM.get(g).updateAnimes(Boolean.parseBoolean(arguments[0]), Boolean.parseBoolean(arguments[1]));
 		} else if (arguments.length == 1) {

@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.jikai.anime.db.AnimeBase;
+import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.data.GuildData;
 import com.xerragnaroek.jikai.data.UpdatableData;
@@ -163,7 +163,7 @@ public class ALRHandler implements UpdatableData, Initilizable {
 				e.printStackTrace();
 			}
 		}
-		return noMsg.get() || ids.size() != amsgs.size() || oldTc == null || !(AnimeBase.getAnimeBaseVersion() == alrhDB.getSentABVersion()) || !oldTc.getId().equals(tcId);
+		return noMsg.get() || ids.size() != amsgs.size() || oldTc == null || !(AnimeDB.getAnimeBaseVersion() == alrhDB.getSentABVersion()) || !oldTc.getId().equals(tcId);
 	}
 
 	void dataChanged() {

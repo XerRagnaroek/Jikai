@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.jikai.anime.db.AnimeBase;
+import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.util.BotUtils;
 
@@ -198,7 +198,7 @@ class ARHandler {
 
 	void update() {
 		Set<ALRHData> reacted = alrhDB.getReactedAnimes();
-		Set<String> titles = AnimeBase.getSeasonalAnimes().stream().map(adt -> adt.getAnime().title).collect(Collectors.toSet());
+		Set<String> titles = AnimeDB.getSeasonalAnimes().stream().map(adt -> adt.getAnime().title).collect(Collectors.toSet());
 		Set<ALRHData> tmp = new TreeSet<>(reacted);
 		reacted.forEach(data -> {
 			String title = data.getTitle();

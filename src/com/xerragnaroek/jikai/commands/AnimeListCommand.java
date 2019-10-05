@@ -4,7 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.anime.alrh.ALRHandler;
-import com.xerragnaroek.jikai.anime.db.AnimeBase;
+import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.core.Core;
 
 import net.dv8tion.jda.api.Permission;
@@ -22,7 +22,7 @@ public class AnimeListCommand implements Command {
 	@Override
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		log.debug("Executing ListCommand");
-		AnimeBase.waitUntilLoaded();
+		AnimeDB.waitUntilLoaded();
 		ALRHandler h = Core.ALRHM.get(event.getGuild());
 		if (!h.isSendingList()) {
 			h.sendList();

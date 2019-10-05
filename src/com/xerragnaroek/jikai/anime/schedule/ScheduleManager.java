@@ -14,7 +14,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
 
-import com.xerragnaroek.jikai.anime.db.AnimeBase;
+import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.util.Manager;
@@ -59,7 +59,7 @@ public class ScheduleManager extends Manager<Scheduler> {
 
 	private List<MessageEmbed> makeEmbedsForWeek(ZoneId zone) {
 		List<MessageEmbed> embeds = new LinkedList<>();
-		AnimeBase.getAnimesMappedToDayOfAiring(zone).forEach((day, animes) -> embeds.add(makeEmbedForDay(day, animes)));
+		AnimeDB.getAnimesMappedToDayOfAiring(zone).forEach((day, animes) -> embeds.add(makeEmbedForDay(day, animes)));
 		return embeds;
 	}
 

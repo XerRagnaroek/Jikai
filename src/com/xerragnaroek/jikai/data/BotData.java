@@ -21,7 +21,7 @@ public class BotData {
 
 	private String defTrigger = "!";
 	private ZoneId defZone = ZoneId.of("Europe/Berlin");
-	private Property<String> curSeasonHash;
+	private Property<String> curSeasonHash = new Property<>();
 	private Property<Integer> abVersion = new Property<>();
 	private AtomicBoolean changed = new AtomicBoolean(false);
 	private final Path fileLoc = Paths.get("./data/BOT.json");
@@ -58,6 +58,10 @@ public class BotData {
 	@JsonProperty("anime_base_version")
 	public int getAnimeBaseVersion() {
 		return abVersion.get();
+	}
+
+	public boolean hasSeasonSearchHash() {
+		return curSeasonHash.hasNonNullValue();
 	}
 
 	public String setCurrentSeasonHash(String hash) {

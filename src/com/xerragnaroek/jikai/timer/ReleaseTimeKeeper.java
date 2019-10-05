@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.jikai.anime.db.AnimeBase;
+import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.data.UpdatableData;
 
@@ -30,7 +30,7 @@ public class ReleaseTimeKeeper implements UpdatableData {
 
 	private void updateReactedAnimes(ZonedDateTime now, Guild g, ZoneId zone, boolean ignoreThresholds) {
 		Set<String> reactedAnimes = Core.ALRHM.get(g).getReactedAnimes();
-		AnimeBase.getSeasonalAnimesAdjusted(zone).forEach(adt -> {
+		AnimeDB.getSeasonalAnimesAdjusted(zone).forEach(adt -> {
 			String title = adt.getAnime().title;
 			if (reactedAnimes.contains(title)) {
 				log.debug("{} is a reacted to anime", title);
@@ -49,7 +49,7 @@ public class ReleaseTimeKeeper implements UpdatableData {
 	}
 
 	private void updateAllAnimes(ZonedDateTime now, Guild g, ZoneId zone, boolean ignoreThresholds) {
-		AnimeBase.getSeasonalAnimesAdjusted(zone).forEach(adt -> {
+		AnimeDB.getSeasonalAnimesAdjusted(zone).forEach(adt -> {
 			String title = adt.getAnime().title;
 			ReleaseTime time = RTKManager.whenWillAnimeAir(now, adt, zone);
 			if (RTKManager.meetsTresholds(time, lastMentioned.get(title)) || ignoreThresholds) {

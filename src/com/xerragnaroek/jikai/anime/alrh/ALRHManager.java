@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.jikai.anime.db.AnimeBase;
+import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.util.Initilizable;
@@ -136,7 +136,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 	 */
 	private void mapAnimesToStartingLetter() {
 		log.debug("Mapping animes to starting letter");
-		Set<AnimeDayTime> data = AnimeBase.getSeasonalAnimes();
+		Set<AnimeDayTime> data = AnimeDB.getSeasonalAnimes();
 		aniAlph = new TreeMap<>(data.stream().map(a -> a.getAnime().title).collect(Collectors.groupingBy(a -> "" + a.charAt(0))));
 		aniAlph.values().forEach(Collections::sort);
 		log.info("Mapped {} animes to {} letters", data.size(), aniAlph.size());

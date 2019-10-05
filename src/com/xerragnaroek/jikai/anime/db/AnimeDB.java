@@ -18,11 +18,11 @@ import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
 
 import net.dv8tion.jda.api.entities.Guild;
 
-public class AnimeBase {
+public class AnimeDB {
 
-	private static AnimeBaseImpl aB = new AnimeBaseImpl();
+	private static AnimeDBImpl aB = new AnimeDBImpl();
 	private static boolean initialized = false;
-	private final static Logger log = LoggerFactory.getLogger(AnimeBase.class);
+	private final static Logger log = LoggerFactory.getLogger(AnimeDB.class);
 	private static long updateRate = 6;
 	private static ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
 
@@ -30,7 +30,7 @@ public class AnimeBase {
 		if (!initialized) {
 			aB.init();
 			initialized = true;
-			GDM.registerOnUniversalTimeZoneChanged((gId, zone) -> AnimeBase.addTimeZone(zone));
+			GDM.registerOnUniversalTimeZoneChanged((gId, zone) -> AnimeDB.addTimeZone(zone));
 		} else {
 			log.error("Already initialized!");
 			throw new IllegalStateException("Already initialized!");

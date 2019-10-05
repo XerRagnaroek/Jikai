@@ -43,14 +43,14 @@ import net.dv8tion.jda.api.entities.Guild;
  * @author XerRagnaroek
  *
  */
-class AnimeBaseImpl implements Initilizable {
+class AnimeDBImpl implements Initilizable {
 	private ZoneId jst = ZoneId.of("Japan");
 	private Map<ZoneId, ZoneAnimeBase> animes = new ConcurrentHashMap<>();
-	private static final Logger log = LoggerFactory.getLogger(AnimeBaseImpl.class);
+	private static final Logger log = LoggerFactory.getLogger(AnimeDBImpl.class);
 	private AtomicBoolean loading = new AtomicBoolean(true);
 	private AtomicBoolean initialized = new AtomicBoolean(false);
 
-	AnimeBaseImpl() {}
+	AnimeDBImpl() {}
 
 	public void init() {
 		log.info("Initializing AnimeBase");

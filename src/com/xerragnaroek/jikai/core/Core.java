@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.anime.alrh.ALRHManager;
-import com.xerragnaroek.jikai.anime.db.AnimeBase;
+import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.xerragnaroek.jikai.commands.CommandHandlerManager;
 import com.xerragnaroek.jikai.data.GuildDataManager;
@@ -52,8 +52,8 @@ public class Core {
 		log.info("Initializing");
 		RestAction.setDefaultFailure(e -> BotUtils.logAndSendToDev(ERROR_LOG, "", e));
 		GDM.init();
-		AnimeBase.init();
-		AnimeBase.waitUntilLoaded();
+		AnimeDB.init();
+		AnimeDB.waitUntilLoaded();
 		CHM.init();
 		RTKM.init();
 		ALRHM.init();
@@ -107,7 +107,7 @@ public class Core {
 				break;
 			case "-anime_base_update_rate":
 				tmp = Long.parseLong(it.next());
-				AnimeBase.setUpdateRate(tmp);
+				AnimeDB.setUpdateRate(tmp);
 				log.info("Set anime_base_update_rate to " + tmp);
 				break;
 			default:
