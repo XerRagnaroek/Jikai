@@ -42,7 +42,7 @@ public class RoleMentioner {
 		EmbedBuilder eb = new EmbedBuilder();
 		Anime a = adt.getAnime();
 		ZonedDateTime zdt = adt.getZonedDateTime();
-		eb.setThumbnail(a.imageURL).setTitle("**" + a.title + "**", a.url).setDescription(String.format("**%s, %s** at %s\n**%s** \n%02d:%02d:%02d", adt.getDayOfWeek(), date.format(zdt), timeF.format(zdt), time, time.days(), time.hours(), time.mins())).setTimestamp(ZonedDateTime.now(Core.GDM.get(g).getTimeZone()));
+		eb.setThumbnail(a.imageURL).setTitle("**" + a.title + "**", a.url).setDescription(String.format("**%s, %s at %s\n%s**", adt.getDayOfWeek(), date.format(zdt), timeF.format(zdt), time)).setTimestamp(ZonedDateTime.now(Core.GDM.get(g).getTimeZone()));
 		log.debug("Made MessageEmbed");
 		return eb.build();
 	}
