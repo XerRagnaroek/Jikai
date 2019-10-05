@@ -76,6 +76,7 @@ class AnimeDBImpl implements Initilizable {
 			log.info("Retrieving season search for {} {}", ss.season_name, ss.season_year);
 			//compare hashs, so only new data will be used
 			String hash = Objects.requireNonNullElse(bData.getCurrentSeasonHash(), "");
+			log.debug("Current search hash = " + hash);
 			if (!ss.request_hash.equals(hash) || !animes.get(jst).hasEntries()) {
 				loadSeasonImpl(ss, zdt);
 				if (!ss.request_hash.equals(hash)) {

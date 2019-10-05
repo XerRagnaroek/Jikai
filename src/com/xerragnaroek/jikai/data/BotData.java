@@ -21,8 +21,8 @@ public class BotData {
 
 	private String defTrigger = "!";
 	private ZoneId defZone = ZoneId.of("Europe/Berlin");
-	private Property<String> curSeasonHash = new Property<>();
-	private Property<Integer> abVersion = new Property<>();
+	private Property<String> curSeasonHash = new Property<>("");
+	private Property<Integer> abVersion = new Property<>(0);
 	private AtomicBoolean changed = new AtomicBoolean(false);
 	private final Path fileLoc = Paths.get("./data/BOT.json");
 	private final Logger log = LoggerFactory.getLogger(BotData.class);
