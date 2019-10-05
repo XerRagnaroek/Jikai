@@ -1,8 +1,5 @@
 package com.xerragnaroek.jikai.commands;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.xerragnaroek.jikai.core.Core;
 
 import net.dv8tion.jda.api.Permission;
@@ -15,7 +12,6 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
  *
  */
 public class ScheduleCommand implements Command {
-	private final Logger log = LoggerFactory.getLogger(ScheduleCommand.class);
 
 	@Override
 	public String getName() {

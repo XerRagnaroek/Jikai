@@ -3,3 +3,4 @@
 /logs/
 /data/*
 !/data/BOT.json
+/notes
