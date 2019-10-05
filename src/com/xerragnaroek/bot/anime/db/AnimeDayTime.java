@@ -1,4 +1,4 @@
-package com.xerragnaroek.bot.anime.base;
+package com.xerragnaroek.bot.anime.db;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
@@ -56,7 +56,7 @@ public class AnimeDayTime implements Comparable<AnimeDayTime> {
 		return zdt;
 	}
 
-	void updateZDTToNextAirDate() {
+	public void updateZDTToNextAirDate() {
 		zdt = zdt.with(TemporalAdjusters.next(getDayOfWeek()));
 	}
 

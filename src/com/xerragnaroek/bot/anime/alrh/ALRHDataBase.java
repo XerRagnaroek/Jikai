@@ -10,8 +10,10 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.map.MultiKeyMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.bot.anime.base.AnimeBase;
+import com.xerragnaroek.bot.anime.db.AnimeBase;
 
 public class ALRHDataBase {
 	private Map<String, Set<ALRHData>> msgMap = Collections.synchronizedMap(new HashMap<>());
@@ -20,6 +22,7 @@ public class ALRHDataBase {
 	private MultiKeyMap ucMsgMap = new MultiKeyMap();
 	private int sentABVersion;
 	private String sentTcId;
+	private final Logger log = LoggerFactory.getLogger(ALRHDataBase.class);
 
 	ALRHDataBase() {}
 
@@ -106,5 +109,19 @@ public class ALRHDataBase {
 
 	boolean hasDataForTitle(String title) {
 		return titleMap.containsKey(title);
+	}
+
+	void deleteEntry(ALRHData data) {
+		titleMap.remove(data.getTitle());
+		log.debug("Deleted entry for {}", data.getTitle());
+	}
+
+	void clearUcMsgMap() {
+		ucMsgMap.clear();
+		log.debug("Cleared the unicode-messageId map");
+	}
+
+	boolean isReacted(ALRHData data) {
+		return getReactedAnimes().contains(data);
 	}
 }

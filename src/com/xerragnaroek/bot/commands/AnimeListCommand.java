@@ -4,7 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.anime.alrh.ALRHandler;
-import com.xerragnaroek.bot.anime.base.AnimeBase;
+import com.xerragnaroek.bot.anime.db.AnimeBase;
 import com.xerragnaroek.bot.core.Core;
 
 import net.dv8tion.jda.api.Permission;

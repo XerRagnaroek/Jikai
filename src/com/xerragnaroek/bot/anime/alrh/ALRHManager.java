@@ -1,19 +1,23 @@
 package com.xerragnaroek.bot.anime.alrh;
 
-import java.util.LinkedList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.bot.anime.base.AnimeBase;
-import com.xerragnaroek.bot.anime.base.AnimeDayTime;
+import com.xerragnaroek.bot.anime.db.AnimeBase;
+import com.xerragnaroek.bot.anime.db.AnimeDayTime;
+import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.util.Initilizable;
 import com.xerragnaroek.bot.util.Manager;
+import com.xerragnaroek.bot.util.Property;
 
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Message;
@@ -32,22 +36,32 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		super(ALRHandler.class);
 	}
 
-	private final Map<String, List<String>> aniAlph = new TreeMap<>();
-	private final Set<DTO> listMsgs =
-			new TreeSet<>((d1, d2) -> d1.getMessage().getContentRaw().compareTo(d2.getMessage().getContentRaw()));
+	private Map<String, List<String>> aniAlph = new TreeMap<>();
+	private Property<Set<DTO>> listMsgs = new Property<>();
 	private final Logger log = LoggerFactory.getLogger(ALRHManager.class);
 	private Map<String, Set<ALRHData>> initMap = new TreeMap<>();
-	private boolean initialized = false;
 
 	@Override
 	public void init() {
-		if (!initialized) {
-			mapAnimesToStartingLetter();
-			initialized = true;
+		if (!isInitialized()) {
+			update();
+			init.set(true);
+			;
 			initImpls();
+			Core.GDM.getBotData().animeBaseVersionProperty().onChange((ov, nv) -> {
+				if (isInitialized()) {
+					update();
+				}
+			});
 		} else {
 			throw new IllegalStateException("Already initialized!");
 		}
+	}
+
+	private void update() {
+		mapAnimesToStartingLetter();
+		makeListMessages();
+		ForkJoinPool.commonPool().submit(() -> impls.values().forEach(ALRHandler::update));
 	}
 
 	private void initImpls() {
@@ -66,12 +80,19 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 	}
 
 	Set<DTO> getListMessages() {
-		if (listMsgs.isEmpty()) {
-			aniAlph.forEach((l, list) -> {
-				listMsgs.add(getLetterListMessage(l, list));
-			});
+		if (!listMsgs.hasNonNullValue()) {
+			makeListMessages();
 		}
-		return listMsgs;
+		return listMsgs.get();
+	}
+
+	private void makeListMessages() {
+		Set<DTO> tmp = new TreeSet<>((d1, d2) -> d1.getMessage().getContentRaw().compareTo(d2.getMessage().getContentRaw()));
+		aniAlph.forEach((l, list) -> {
+			tmp.add(getLetterListMessage(l, list));
+		});
+		listMsgs.set(tmp);
+		log.info("Made {} list massages", aniAlph.size());
 	}
 
 	/**
@@ -106,26 +127,19 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		return new DTO(mb.build(), data);
 	}
 
+	Property<Set<DTO>> listMessagesProperty() {
+		return listMsgs;
+	}
+
 	/**
 	 * groups all animes by the first letter in their title
 	 */
 	private void mapAnimesToStartingLetter() {
 		log.debug("Mapping animes to starting letter");
-		List<AnimeDayTime> animes = AnimeBase.getSeasonalAnimes();
-		animes.stream().map(a -> a.getAnime().title)
-				.forEach(title -> aniAlph.compute(("" + title.charAt(0)).toUpperCase(), (k, v) -> {
-					v = (v == null) ? new LinkedList<>() : v;
-					v.add(title);
-					return v;
-				}));
-	}
-
-	@Override
-	protected void assertInitialisation() {
-		if (!initialized) {
-			log.error("ALRHManager hasn't been initialized yet!");
-			throw new IllegalStateException("ALRHManager hasn't been initialized yet!");
-		}
+		Set<AnimeDayTime> data = AnimeBase.getSeasonalAnimes();
+		aniAlph = new TreeMap<>(data.stream().map(a -> a.getAnime().title).collect(Collectors.groupingBy(a -> "" + a.charAt(0))));
+		aniAlph.values().forEach(Collections::sort);
+		log.info("Mapped {} animes to {} letters", data.size(), aniAlph.size());
 	}
 
 	public void addToInitMap(String id, Set<ALRHData> data) {

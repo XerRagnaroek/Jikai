@@ -8,4 +8,5 @@ public interface Initilizable {
 	public default void waitForInitilization() {
 		while (!isInitialized()) {}
 	}
+
 }

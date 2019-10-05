@@ -29,7 +29,7 @@ public class EnableCommandsCommand implements Command {
 		Guild g = event.getGuild();
 		log.debug("Executing EnableCommandsCommand on guild {}#{}", g.getName(), g.getId());
 		GuildData gd = Core.GDM.get(g);
-		if (!gd.hasExplicitCommandSetting()) {
+		if (!gd.areCommandsEnabled()) {
 			gd.setCommandsEnabled(true);
 			String id = gd.getInfoChannelId();
 			TextChannel tc = null;
@@ -37,8 +37,7 @@ public class EnableCommandsCommand implements Command {
 				tc = g.getTextChannelById(id);
 			}
 			tc = (tc == null) ? event.getTextChannel() : tc;
-			tc.sendMessage("Commands have been enabled. Call ```" + gd.getTrigger()
-					+ "disable_commands``` to disable them.").queue();
+			tc.sendMessage("Commands have been enabled. Call `" + gd.getTrigger() + "disable_commands` to disable them.").queue();
 		}
 	}
 

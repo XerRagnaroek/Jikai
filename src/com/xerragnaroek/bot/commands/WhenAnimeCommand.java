@@ -2,7 +2,7 @@ package com.xerragnaroek.bot.commands;
 
 import static com.xerragnaroek.bot.core.Core.RTKM;
 
-import com.xerragnaroek.bot.anime.base.AnimeBase;
+import com.xerragnaroek.bot.anime.db.AnimeBase;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -26,8 +26,10 @@ public class WhenAnimeCommand implements Command {
 		AnimeBase.waitUntilLoaded();
 		if (arguments.length > 1) {
 			RTKM.get(g).updateAnimes(Boolean.parseBoolean(arguments[0]), Boolean.parseBoolean(arguments[1]));
-		} else {
+		} else if (arguments.length == 1) {
 			RTKM.get(g).updateAnimes(Boolean.parseBoolean(arguments[0]), false);
+		} else {
+			RTKM.get(g).updateAnimes(false, false);
 		}
 	}
 

@@ -1,13 +1,14 @@
-package com.xerragnaroek.bot.anime.base;
+package com.xerragnaroek.bot.anime.db;
 
 import java.time.DayOfWeek;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -28,7 +29,7 @@ public class ZoneAnimeBase {
 	private static ZoneId jst = ZoneId.of("Japan");
 	private final Logger log;
 	private Map<String, AnimeDayTime> animes = Collections.synchronizedSortedMap(new TreeMap<>());
-	private Map<DayOfWeek, List<AnimeDayTime>> animeWeek = Collections.synchronizedSortedMap(new TreeMap<>());
+	private Map<DayOfWeek, Set<AnimeDayTime>> animeWeek = Collections.synchronizedSortedMap(new TreeMap<>());
 	private ZoneId zone;
 
 	ZoneAnimeBase(ZoneId z) {
@@ -61,8 +62,8 @@ public class ZoneAnimeBase {
 	 *            - the ADTs to map
 	 * @return a Map with ADTs mapped to their respective DayOfWeek
 	 */
-	private Map<DayOfWeek, List<AnimeDayTime>> makeWeekMap(Collection<AnimeDayTime> col) {
-		Map<DayOfWeek, List<AnimeDayTime>> map = emptyWeekMap();
+	private Map<DayOfWeek, Set<AnimeDayTime>> makeWeekMap(Collection<AnimeDayTime> col) {
+		Map<DayOfWeek, Set<AnimeDayTime>> map = emptyWeekMap();
 		for (AnimeDayTime adt : col) {
 			map.get(adt.getDayOfWeek()).add(adt);
 		}
@@ -72,9 +73,9 @@ public class ZoneAnimeBase {
 	/*
 	 * Utility method that wraps the lists in a map in an unmodifiable one.
 	 */
-	private Map<DayOfWeek, List<AnimeDayTime>> makeUnmodifiable(Map<DayOfWeek, List<AnimeDayTime>> map) {
+	private Map<DayOfWeek, Set<AnimeDayTime>> makeUnmodifiable(Map<DayOfWeek, Set<AnimeDayTime>> map) {
 		for (DayOfWeek day : DayOfWeek.values()) {
-			map.put(day, Collections.unmodifiableList(map.get(day)));
+			map.put(day, Collections.unmodifiableSet(map.get(day)));
 		}
 		return map;
 	}
@@ -92,10 +93,10 @@ public class ZoneAnimeBase {
 	 * 
 	 * @return
 	 */
-	private Map<DayOfWeek, List<AnimeDayTime>> emptyWeekMap() {
-		Map<DayOfWeek, List<AnimeDayTime>> map = new ConcurrentHashMap<>();
+	private Map<DayOfWeek, Set<AnimeDayTime>> emptyWeekMap() {
+		Map<DayOfWeek, Set<AnimeDayTime>> map = new ConcurrentHashMap<>();
 		for (DayOfWeek day : DayOfWeek.values()) {
-			map.put(day, new ArrayList<>());
+			map.put(day, new TreeSet<>());
 		}
 		return map;
 	}
@@ -108,7 +109,7 @@ public class ZoneAnimeBase {
 	 * @return - A List of all animes that air on the given day. If none match the returned list is
 	 *         empty.
 	 */
-	List<AnimeDayTime> getAnimesOnDayOfWeek(DayOfWeek day) {
+	Set<AnimeDayTime> getAnimesOnDayOfWeek(DayOfWeek day) {
 		return animeWeek.get(day);
 	}
 
@@ -116,8 +117,8 @@ public class ZoneAnimeBase {
 	 * Get all stored animes.
 	 * 
 	 */
-	Collection<AnimeDayTime> getAnimes() {
-		return Collections.unmodifiableCollection(animes.values());
+	Set<AnimeDayTime> getAnimes() {
+		return Collections.unmodifiableSet(new TreeSet<>(animes.values()));
 	}
 
 	/**

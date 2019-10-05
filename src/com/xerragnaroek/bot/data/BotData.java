@@ -22,7 +22,7 @@ public class BotData {
 	private String defTrigger = "!";
 	private ZoneId defZone = ZoneId.of("Europe/Berlin");
 	private Property<String> curSeasonHash;
-	private Property<Integer> abVersion;
+	private Property<Integer> abVersion = new Property<>();
 	private AtomicBoolean changed = new AtomicBoolean(false);
 	private final Path fileLoc = Paths.get("./data/BOT.json");
 	private final Logger log = LoggerFactory.getLogger(BotData.class);
@@ -75,6 +75,10 @@ public class BotData {
 		return tmp;
 	}
 
+	public Property<Integer> animeBaseVersionProperty() {
+		return abVersion;
+	}
+
 	boolean save() {
 		if (changed.get()) {
 			ObjectMapper mapper = new ObjectMapper();
@@ -90,9 +94,7 @@ public class BotData {
 	}
 
 	@JsonCreator
-	public static BotData makeBotData(@JsonProperty("trigger") String trigger, @JsonProperty("timezone") String tz,
-			@JsonProperty("current_season_hash") Property<String> hash,
-			@JsonProperty("anime_base_version") Property<Integer> version) {
+	public static BotData makeBotData(@JsonProperty("trigger") String trigger, @JsonProperty("timezone") String tz, @JsonProperty("current_season_hash") Property<String> hash, @JsonProperty("anime_base_version") Property<Integer> version) {
 		BotData b = new BotData();
 		b.defTrigger = trigger;
 		b.defZone = ZoneId.of(tz);

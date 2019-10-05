@@ -25,12 +25,14 @@ class ALHandler {
 	private ALRHandler alrh;
 	private int expectedNumSuccesses = 0;
 	private final Logger log;
+	private ALRHDataBase alrhDB;
 	private AtomicBoolean sending = new AtomicBoolean(false);
 	private AtomicInteger successes = new AtomicInteger(0); //Successful RestActions
 
 	ALHandler(ALRHandler alrh) {
 		this.alrh = alrh;
 		log = LoggerFactory.getLogger(ALHandler.class.getName() + "#" + alrh.gId);
+		alrhDB = alrh.alrhDB;
 	}
 
 	/**
@@ -57,10 +59,10 @@ class ALHandler {
 		successes.set(0);
 		expectedNumSuccesses = calcExpectedSuccesses(dtos);
 		log.info("Deleting old messages and data");
-		alrh.alrhDB.forEachMessage((id, dat) -> {
+		alrhDB.forEachMessage((id, dat) -> {
 			tc.deleteMessageById(id).queue(v -> log.info("Deleted old list message"));
 		});
-		alrh.alrhDB.clearData();
+		alrhDB.clearUcMsgMap();
 		dtos.forEach(dto -> handleDTO(g, tc, dto));
 	}
 
@@ -98,10 +100,11 @@ class ALHandler {
 		log.debug("Sending list message...");
 		tc.sendMessage(me).queue(m -> {
 			incrementSuccesses();
-			alrh.alrhDB.setDataForMessage(m.getId(), data);
 			data.forEach(alrhd -> {
+				if (alrhDB.isReacted(alrhd)) {
+					alrhd.setReacted(true);
+				}
 				alrhd.setTextChannelId(alrh.tcId.get());
-				String title = alrhd.getTitle();
 				/*List<Role> roles = g.getRolesByName(title, false);
 				if (roles.isEmpty()) {
 					log.info("Creating role for {}", title);
@@ -109,7 +112,7 @@ class ALHandler {
 						if (r != null) {
 							log.debug("Storing role {} with id {}", r.getName(), r.getId());
 							alrhd.setRoleId(r.getId());
-							alrh.alrhDB.addALRHData(alrhd);
+							alrhDB.addALRHData(alrhd);
 							incrementSuccesses();
 						}
 					}, rerr -> log.error("Failed creating role for {}", title, rerr));
@@ -126,10 +129,12 @@ class ALHandler {
 					if (successes.get() == expectedNumSuccesses) {
 						alrh.dataChanged();
 						successes.set(0);
+						alrh.gData.save(true);
 						sending.set(false);
 					}
 				});
 			});
+			alrhDB.setDataForMessage(m.getId(), data);
 		});
 	}
 
@@ -137,4 +142,7 @@ class ALHandler {
 		log.debug("Successful sends: {}/{}", successes.incrementAndGet(), expectedNumSuccesses);
 	}
 
+	void update() {
+		sendList();
+	}
 }

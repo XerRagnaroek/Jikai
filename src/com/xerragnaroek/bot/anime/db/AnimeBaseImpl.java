@@ -1,4 +1,4 @@
-package com.xerragnaroek.bot.anime.base;
+package com.xerragnaroek.bot.anime.db;
 
 import static com.xerragnaroek.bot.core.Core.GDM;
 
@@ -10,12 +10,11 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAdjusters;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -30,9 +29,12 @@ import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
 import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearch;
 import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearchAnime;
 import com.github.Doomsdayrs.Jikan4java.types.Support.Prop.From;
+import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.data.BotData;
+import com.xerragnaroek.bot.util.BotUtils;
 import com.xerragnaroek.bot.util.Initilizable;
 
+import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.Guild;
 
 /**
@@ -64,11 +66,12 @@ class AnimeBaseImpl implements Initilizable {
 	 * @throws InterruptedException
 	 * @throws ExecutionException
 	 */
-	public void loadSeason() {
+	void loadSeason() {
 		ZonedDateTime zdt = ZonedDateTime.now(jst);
 		loading.set(true);
+		Core.JDA.getPresence().setActivity(Activity.watching("the AnimeDataBase load"));
 		try {
-			BotData bData = GDM.getBotConfig();
+			BotData bData = GDM.getBotData();
 			SeasonSearch ss = new Connector().seasonSearch(zdt.getYear(), getSeason(zdt)).get();
 			log.info("Retrieving season search for {} {}", ss.season_name, ss.season_year);
 			//compare hashs, so only new data will be used
@@ -77,14 +80,15 @@ class AnimeBaseImpl implements Initilizable {
 				loadSeasonImpl(ss, zdt);
 				if (!ss.request_hash.equals(hash)) {
 					bData.incrementAnimeBaseVersion();
-					GDM.getBotConfig().setCurrentSeasonHash(ss.request_hash);
+					GDM.getBotData().setCurrentSeasonHash(ss.request_hash);
 				}
 			} else {
 				log.info("Current schedule is up to date.");
 			}
 		} catch (InterruptedException | ExecutionException e1) {
-			log.error("Error while loading season", e1);
+			BotUtils.sendThrowableToDev("Error while loading season", e1);
 		}
+		Core.JDA.getPresence().setActivity(null);
 	}
 
 	private void loadSeasonImpl(SeasonSearch ss, ZonedDateTime zdt) throws InterruptedException, ExecutionException {
@@ -96,8 +100,7 @@ class AnimeBaseImpl implements Initilizable {
 				log.error("Exception while getting anime", e);
 			}
 			return null;
-		}).filter(Objects::nonNull).filter(a -> a.airing).map(this::makeAnimeDayTime).filter(AnimeDayTime::isKnown)
-				.collect(Collectors.toList());
+		}).filter(Objects::nonNull).filter(a -> a.airing).map(this::makeAnimeDayTime).filter(AnimeDayTime::isKnown).collect(Collectors.toList());
 		//TODO remove limit above for final version!!!
 		animes.get(jst).setAnimeDayTimes(tmp);
 
@@ -129,7 +132,7 @@ class AnimeBaseImpl implements Initilizable {
 		}
 		AnimeDayTime adt;
 		adt = new AnimeDayTime(a, jzdt);
-		log.debug("Loaded {}", adt);
+		log.info("Loaded {}", adt);
 		return adt;
 	}
 
@@ -194,11 +197,9 @@ class AnimeBaseImpl implements Initilizable {
 	private ZonedDateTime makeZDTFromBroadcast(Anime a) {
 		String broadcast[] = a.broadcast.split("s at ");
 		if (!broadcast[1].equals("Unknown")) {
-			return ZonedDateTime.of(dummyWithDayOfWeek(DayOfWeek.valueOf(broadcast[0].toUpperCase())),
-									LocalTime.parse(broadcast[1].substring(0, broadcast[1].length() - 6)), jst);
+			return ZonedDateTime.of(dummyWithDayOfWeek(DayOfWeek.valueOf(broadcast[0].toUpperCase())), LocalTime.parse(broadcast[1].substring(0, broadcast[1].length() - 6)), jst);
 		} else {
-			return ZonedDateTime.of(dummyWithDayOfWeek(DayOfWeek.valueOf(broadcast[0].toUpperCase())),
-									AnimeDayTime.UNKNOWN_TIME, jst);
+			return ZonedDateTime.of(dummyWithDayOfWeek(DayOfWeek.valueOf(broadcast[0].toUpperCase())), AnimeDayTime.UNKNOWN_TIME, jst);
 		}
 	}
 
@@ -254,8 +255,11 @@ class AnimeBaseImpl implements Initilizable {
 		return animes.get(jst).getAnime(title);
 	}
 
-	List<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
-		ZoneId zone = GDM.get(g.getId()).getTimeZone();
+	Set<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
+		return getAnimesAiringOnWeekday(day, GDM.get(g).getTimeZone());
+	}
+
+	Set<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, ZoneId zone) {
 		if (!animes.containsKey(zone)) {
 			addTimeZone(zone, false);
 		}
@@ -266,20 +270,16 @@ class AnimeBaseImpl implements Initilizable {
 		return list.stream().filter(adt -> adt.releasesOnDay(day)).collect(Collectors.toList());
 	}
 
-	List<AnimeDayTime> getSeasonalAnimes() {
-		return animes.get(jst).getAnimes().stream()
-				.sorted((a1, a2) -> a1.getAnime().title.compareTo(a2.getAnime().title))
-				.collect(Collectors.toCollection(LinkedList::new));
+	Set<AnimeDayTime> getSeasonalAnimes() {
+		return animes.get(jst).getAnimes().stream().sorted((a1, a2) -> a1.getAnime().title.compareTo(a2.getAnime().title)).collect(Collectors.toSet());
 	}
 
 	boolean isLoading() {
 		return loading.get();
 	}
 
-	List<AnimeDayTime> getSeasonalAnimesAdjusted(ZoneId tz) {
-		List<AnimeDayTime> tmp = new ArrayList<>(animes.get(tz).getAnimes());
-		Collections.sort(tmp);
-		return tmp;
+	Set<AnimeDayTime> getSeasonalAnimesAdjusted(ZoneId tz) {
+		return new TreeSet<>(animes.get(tz).getAnimes());
 	}
 
 	@Override

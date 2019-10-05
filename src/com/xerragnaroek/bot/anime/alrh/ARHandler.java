@@ -1,10 +1,14 @@
 package com.xerragnaroek.bot.anime.alrh;
 
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.xerragnaroek.bot.anime.db.AnimeBase;
+import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.util.BotUtils;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -21,24 +25,26 @@ import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
 class ARHandler {
 
 	private ALRHandler alrh;
+	private ALRHDataBase alrhDB;
 	final Logger log;
 
 	ARHandler(ALRHandler alrh) {
 		this.alrh = alrh;
 		log = LoggerFactory.getLogger(ARHandler.class + "#" + alrh.gId);
+		alrhDB = alrh.alrhDB;
 	}
 
 	void handleReactionAdded(MessageReactionAddEvent event) {
 		log.trace("Handling MessageReactionAdded event");
 		String msgId = event.getMessageId();
-		if (alrh.alrhDB.hasDataForMessage(msgId)) {
+		if (alrhDB.hasDataForMessage(msgId)) {
 			log.trace("Message is part of the anime list");
 			ReactionEmote re = event.getReactionEmote();
 			Member m = event.getMember();
 			log.debug("Member#{} added reaction {} to the anime list", m.getId(), re.getName());
 			log.debug("Is Emoji? {}", re.isEmoji());
 			if (re.isEmoji()) {
-				ALRHData data = alrh.alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
+				ALRHData data = alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
 				if (data != null) {
 					data.setReacted(true);
 					Guild g = event.getGuild();
@@ -85,11 +91,11 @@ class ARHandler {
 
 	void handleReactionRemoved(MessageReactionRemoveEvent event) {
 		String msgId = event.getMessageId();
-		if (alrh.alrhDB.hasDataForMessage(msgId)) {
+		if (alrhDB.hasDataForMessage(msgId)) {
 			ReactionEmote re = event.getReactionEmote();
 			Guild g = event.getGuild();
 			if (re.isEmoji()) {
-				ALRHData data = alrh.alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
+				ALRHData data = alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
 				String title = data.getTitle();
 				if (!event.getUser().isBot()) {
 					Member m = event.getMember();
@@ -119,10 +125,10 @@ class ARHandler {
 
 	void handleReactionRemovedAll(MessageReactionRemoveAllEvent event) {
 		String msgId = event.getMessageId();
-		if (alrh.alrhDB.hasDataForMessage(msgId)) {
+		if (alrhDB.hasDataForMessage(msgId)) {
 			log.trace("Message is part of the anime list");
 			Guild g = event.getGuild();
-			alrh.alrhDB.getDataForMessage(msgId).forEach(data -> {
+			alrhDB.getDataForMessage(msgId).forEach(data -> {
 				Role r = g.getRoleById(data.getRoleId());
 				log.debug("Guild has role '{}'? {}", data.getTitle(), r != null);
 				if (r != null) {
@@ -137,16 +143,12 @@ class ARHandler {
 
 	private void addReaction(TextChannel tc, String msgId, String uniCode) {
 		log.debug("Adding {} to Message#{} in TextChannel#{}", uniCode, msgId, tc.getName());
-		tc.addReactionById(msgId, uniCode)
-				.queue(	v -> log.info("Added Reaction {} to Message#{}", uniCode, msgId),
-						e -> BotUtils.logAndSendToDev(log, "Failed adding Reaction to Message#{}" + msgId, e));
+		tc.addReactionById(msgId, uniCode).queue(v -> log.info("Added Reaction {} to Message#{}", uniCode, msgId), e -> BotUtils.logAndSendToDev(log, "Failed adding Reaction to Message#{}" + msgId, e));
 	}
 
 	private void removeRoleFromMember(Guild g, Member m, Role r) {
 		log.debug("Removing role from member#{}", m.getId());
-		g.removeRoleFromMember(m, r)
-				.queue(	v -> log.info("Succesfully removed role {} from member#{}", r.getName(), m.getId()),
-						e -> BotUtils.logAndSendToDev(log, "Failed removing role", e));
+		g.removeRoleFromMember(m, r).queue(v -> log.info("Succesfully removed role {} from member#{}", r.getName(), m.getId()), e -> BotUtils.logAndSendToDev(log, "Failed removing role", e));
 	}
 
 	private void validateReaction(Guild g, TextChannel tc, String msgId, String uni, String title) {
@@ -163,7 +165,7 @@ class ARHandler {
 				if (re.getAsCodepoints().equals(uni)) {
 					if (mr.getCount() == 1) {
 						log.debug("No user reaction left for {}", title);
-						ALRHData data = alrh.alrhDB.getDataForTitle(title);
+						ALRHData data = alrhDB.getDataForTitle(title);
 						data.setReacted(false);
 						deleteRole(g, data);
 					}
@@ -173,8 +175,7 @@ class ARHandler {
 			}
 		}
 		if (!found) {
-			m.addReaction(uni).queue(v -> log.info("Readded reaction {}", uni), e -> BotUtils
-					.sendThrowableToDev(String.format("Failed adding reacion %s to msg#%s", uni, m.getId()), e));
+			m.addReaction(uni).queue(v -> log.info("Readded reaction {}", uni), e -> BotUtils.sendThrowableToDev(String.format("Failed adding reacion %s to msg#%s", uni, m.getId()), e));
 		}
 	}
 
@@ -192,6 +193,20 @@ class ARHandler {
 		log.debug("Readding missing reactions on msg {} in TextChannel {}", msgId, tc.getName());
 		tc.retrieveMessageById(msgId).queue(m -> {
 			data.forEach(d -> validateReaction(g, m, d.getUnicodeCodePoint(), d.getTitle()));
+		});
+	}
+
+	void update() {
+		Set<ALRHData> reacted = alrhDB.getReactedAnimes();
+		Set<String> titles = AnimeBase.getSeasonalAnimes().stream().map(adt -> adt.getAnime().title).collect(Collectors.toSet());
+		Set<ALRHData> tmp = new TreeSet<>(reacted);
+		reacted.forEach(data -> {
+			String title = data.getTitle();
+			if (!titles.contains(title)) {
+				Core.JDA.getGuildById(alrh.gId).getRoleById(data.getRoleId()).delete().queue();
+				alrhDB.deleteEntry(data);
+				log.info("Deleted obsolete Role and data for {}", title);
+			}
 		});
 	}
 }

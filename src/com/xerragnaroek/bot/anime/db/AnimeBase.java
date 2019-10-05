@@ -1,8 +1,15 @@
-package com.xerragnaroek.bot.anime.base;
+package com.xerragnaroek.bot.anime.db;
+
+import static com.xerragnaroek.bot.core.Core.GDM;
 
 import java.time.DayOfWeek;
 import java.time.ZoneId;
-import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,12 +17,14 @@ import org.slf4j.LoggerFactory;
 import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
 
 import net.dv8tion.jda.api.entities.Guild;
-import static com.xerragnaroek.bot.core.Core.*;
+
 public class AnimeBase {
 
 	private static AnimeBaseImpl aB = new AnimeBaseImpl();
 	private static boolean initialized = false;
 	private final static Logger log = LoggerFactory.getLogger(AnimeBase.class);
+	private static long updateRate = 6;
+	private static ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
 
 	public static void init() {
 		if (!initialized) {
@@ -28,12 +37,25 @@ public class AnimeBase {
 		}
 	}
 
-	public static List<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
+	public static Set<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
 		assertInitialisation();
 		return aB.getAnimesAiringOnWeekday(day, g);
 	}
 
-	public static List<AnimeDayTime> getSeasonalAnimes() {
+	public static Set<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, ZoneId z) {
+		assertInitialisation();
+		return aB.getAnimesAiringOnWeekday(day, z);
+	}
+
+	public static Map<DayOfWeek, Set<AnimeDayTime>> getAnimesMappedToDayOfAiring(ZoneId zone) {
+		Map<DayOfWeek, Set<AnimeDayTime>> map = new TreeMap<>();
+		for (DayOfWeek day : DayOfWeek.values()) {
+			map.put(day, getAnimesAiringOnWeekday(day, zone));
+		}
+		return map;
+	}
+
+	public static Set<AnimeDayTime> getSeasonalAnimes() {
 		assertInitialisation();
 		return aB.getSeasonalAnimes();
 	}
@@ -48,7 +70,7 @@ public class AnimeBase {
 		while (aB.isLoading()) {}
 	}
 
-	public static List<AnimeDayTime> getSeasonalAnimesAdjusted(ZoneId tz) {
+	public static Set<AnimeDayTime> getSeasonalAnimesAdjusted(ZoneId tz) {
 		assertInitialisation();
 		return aB.getSeasonalAnimesAdjusted(tz);
 	}
@@ -66,6 +88,14 @@ public class AnimeBase {
 	}
 
 	public static int getAnimeBaseVersion() {
-		return GDM.getBotConfig().getAnimeBaseVersion();
+		return GDM.getBotData().getAnimeBaseVersion();
+	}
+
+	public static void startUpdateThread() {
+		exec.scheduleAtFixedRate(aB::loadSeason, updateRate, updateRate, TimeUnit.HOURS);
+	}
+
+	public static void setUpdateRate(long rate) {
+		updateRate = rate;
 	}
 }

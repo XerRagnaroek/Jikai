@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -25,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.xerragnaroek.bot.anime.alrh.ALRHData;
@@ -35,25 +37,32 @@ import com.xerragnaroek.bot.util.BotUtils;
 import com.xerragnaroek.bot.util.Property;
 
 @JsonInclude(Include.NON_EMPTY)
+@JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "trigger", "timezone", "list_channel_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "last_mentioned", "alrh_data" })
 public class GuildData {
-	private Property<String> aniChId;
+	private Property<String> aniChId = new Property<>();
 	private AtomicBoolean changed = new AtomicBoolean(false);
-	private boolean completedSetup = false;
-	private Property<Boolean> comsEnabled;
+	private Property<Boolean> completedSetup = new Property<>(false);
+	private Property<Boolean> comsEnabled = new Property<>();
 	private Path fileLoc;
 	private String gId;
-	private Property<String> infoChId;
-	private Property<String> listChId;
+	private Property<String> infoChId = new Property<>();
+	private Property<String> listChId = new Property<>();
 	private final Logger log;
-	private Property<String> trigger;
-	private Property<ZoneId> zone;
+	private Property<String> schedChId = new Property<>();
+	private List<String> schedMsgIds;
+	private Property<String> trigger = new Property<>();
+	private Property<ZoneId> zone = new Property<>();
 
 	public GuildData(String guildId, boolean save) {
 		log = LoggerFactory.getLogger(GuildData.class + "#" + guildId);
 		gId = guildId;
 		fileLoc = Paths.get(String.format("./data/%s.json", guildId));
+		BotData bc = Core.GDM.getBotData();
+		setTrigger(bc.getDefaultTrigger());
+		setTimeZone(bc.getDefaultTimeZone());
+		setCommandsEnabled(Core.CHM.areCommandsEnabledByDefault());
 		changed.set(save);
-		log.info("Loaded configuration for {}", guildId);
+		log.info("Made configuration for {}", guildId);
 	}
 
 	public Property<String> animeChannelIdProperty() {
@@ -62,7 +71,7 @@ public class GuildData {
 
 	@JsonProperty("commands_enabled")
 	public boolean areCommandsEnabled() {
-		if (hasExplicitCommandSetting()) {
+		if (comsEnabled.hasNonNullValue()) {
 			return comsEnabled.get();
 		} else {
 			return Core.CHM.areCommandsEnabledByDefault();
@@ -110,32 +119,58 @@ public class GuildData {
 		return listChId.get();
 	}
 
+	@JsonProperty("schedule_channel_id")
+	public String getScheduleChannelId() {
+		return schedChId.get();
+	}
+
+	@JsonProperty("schedule_message_ids")
+	public List<String> getScheduleMessageIds() {
+		return schedMsgIds;
+	}
+
 	@JsonIgnore
 	public ZoneId getTimeZone() {
-		return Objects.requireNonNullElse(zone.get(), GDM.getBotConfig().getDefaultTimeZone());
+		return Objects.requireNonNullElse(zone.get(), GDM.getBotData().getDefaultTimeZone());
 	}
 
 	@JsonProperty("timezone")
 	public String getTimeZoneString() {
-		if (zone != null) {
+		if (zone.hasNonNullValue()) {
 			return zone.get().getId();
 		} else {
-			return GDM.getBotConfig().getDefaultTimeZoneString();
+			return GDM.getBotData().getDefaultTimeZoneString();
 		}
 	}
 
 	@JsonProperty("trigger")
 	public String getTrigger() {
-		return Objects.requireNonNullElse(trigger.get(), GDM.getBotConfig().getDefaultTrigger());
+		return Objects.requireNonNullElse(trigger.get(), GDM.getBotData().getDefaultTrigger());
 	}
 
 	@JsonProperty("completed_setup")
 	public boolean hasCompletedSetup() {
-		return completedSetup;
+		return completedSetup != null && completedSetup.hasNonNullValue() && completedSetup.get();
 	}
 
-	public boolean hasExplicitCommandSetting() {
-		return comsEnabled.hasNonNullValue();
+	public boolean hasScheduleMessageIds() {
+		return schedMsgIds != null;
+	}
+
+	public boolean hasScheduleChannelId() {
+		return schedChId.hasNonNullValue();
+	}
+
+	public boolean hasListChannelId() {
+		return listChId.hasNonNullValue();
+	}
+
+	public boolean hasInfoChannelId() {
+		return infoChId.hasNonNullValue();
+	}
+
+	public boolean hasAnimeChannelId() {
+		return aniChId.hasNonNullValue();
 	}
 
 	public Property<String> infoChannelIdProperty() {
@@ -146,65 +181,8 @@ public class GuildData {
 		return listChId;
 	}
 
-	public String setAnimeChannelId(String id) {
-		String tmp = aniChId.get();
-		aniChId.set(id);
-		log.info("AnimeChannelId was changed from '{}' to '{}'", tmp, id);
-		hasChanged();
-		return tmp;
-	}
-
-	public boolean setCommandsEnabled(boolean enabled) {
-		boolean tmp = enabled;
-		comsEnabled.set(enabled);
-		log.info("Commands for guild {} have been {}", gId, (enabled ? "enabled" : "disabled"));
-		hasChanged();
-		return tmp;
-	}
-
-	public void setInfoChannelId(String id) {
-		infoChId.set(id);
-	}
-
-	public String setListChannelId(String id) {
-		String tmp = listChId.get();
-		listChId.set(id);
-		log.info("ListChannelId was changed from '{}' to '{}'", tmp, id);
-		hasChanged();
-		return tmp;
-	}
-
-	public void setSetupCompleted(boolean setup) {
-		completedSetup = setup;
-	}
-
-	public ZoneId setTimeZone(ZoneId z) {
-		ZoneId tmp = zone.get();
-		zone.set(z);
-		log.info("TimeZone was changed from '{}' to '{}'", tmp, z);
-		hasChanged();
-		return tmp;
-	}
-
-	public String setTrigger(String trigger) {
-		trigger = StringEscapeUtils.escapeJava(trigger);
-		String tmp = this.trigger.get();
-		this.trigger.set(trigger);
-		log.info("Trigger was changed from '{}' to '{}'", tmp, trigger);
-		hasChanged();
-		return tmp;
-	}
-
-	public Property<ZoneId> timeZoneProperty() {
-		return zone;
-	}
-
-	public Property<String> triggerProperty() {
-		return trigger;
-	}
-
-	boolean save() {
-		if (updatesAvailable()) {
+	public synchronized boolean save(boolean now) {
+		if (updatesAvailable() || now) {
 			ObjectMapper mapper = new ObjectMapper();
 			mapper.enable(SerializationFeature.INDENT_OUTPUT);
 			try {
@@ -217,6 +195,59 @@ public class GuildData {
 			}
 		}
 		return false;
+	}
+
+	public Property<String> scheduleChannelIdProperty() {
+		return schedChId;
+	}
+
+	public String setAnimeChannelId(String id) {
+		return setData(aniChId, id, "anime_channel_id");
+	}
+
+	public boolean setCommandsEnabled(boolean enabled) {
+		return Objects.requireNonNullElse(setData(comsEnabled, enabled, "commands_enabled"), false);
+	}
+
+	public String setInfoChannelId(String id) {
+		return setData(infoChId, id, "info_channel_id");
+	}
+
+	public String setListChannelId(String id) {
+		return setData(listChId, id, "list_channel_id");
+	}
+
+	public String setScheduleChannelId(String id) {
+		return setData(schedChId, id, "schedule_channel_id");
+	}
+
+	public List<String> setScheduleMessageIds(List<String> ids) {
+		List<String> tmp = schedMsgIds;
+		schedMsgIds = ids;
+		hasChanged();
+		log.info("schedule_message_ids changed '{}' -> '{}'", tmp, schedMsgIds);
+		return tmp;
+	}
+
+	public boolean setSetupCompleted(boolean setup) {
+		return setData(completedSetup, setup, "completed_setup");
+	}
+
+	public ZoneId setTimeZone(ZoneId z) {
+		return setData(zone, z, "timezone");
+	}
+
+	public String setTrigger(String trigger) {
+		trigger = StringEscapeUtils.escapeJava(trigger);
+		return setData(this.trigger, trigger, "trigger");
+	}
+
+	public Property<ZoneId> timeZoneProperty() {
+		return zone;
+	}
+
+	public Property<String> triggerProperty() {
+		return trigger;
 	}
 
 	private void hasChanged() {
@@ -243,32 +274,38 @@ public class GuildData {
 		return tmp;
 	}
 
+	private <T> T setData(Property<T> field, T newData, String name) {
+		T tmp = field.get();
+		field.set(newData);
+		log.info(name + " changed '{}'->'{}'", tmp, newData);
+		hasChanged();
+		return tmp;
+	}
+
 	@JsonCreator
-	public static GuildData of(@JsonProperty("guild_id") String gId, @JsonProperty("trigger") Property<String> trig,
-			@JsonProperty("anime_channel_id") Property<String> aniChId,
-			@JsonProperty("list_channel_id") Property<String> listChId, @JsonProperty("timezone") String zone,
-			@JsonProperty("alrh_data") Set<ALRHData> data,
-			@JsonProperty("last_mentioned") Map<String, String> lastMentioned,
-			@JsonProperty("completed_setup") boolean setupCompleted,
-			@JsonProperty("commands_enabled") Property<Boolean> comsEnabled,
-			@JsonProperty("info_channel_id") Property<String> icId) {
+	public static GuildData of(@JsonProperty("guild_id") String gId, @JsonProperty("trigger") Property<String> trig, @JsonProperty("anime_channel_id") Property<String> aniChId, @JsonProperty("list_channel_id") Property<String> listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("last_mentioned") Map<String, String> lastMentioned, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") Property<String> icId, @JsonProperty("schedule_channel_id") Property<String> schId, @JsonProperty("schedule_message_ids") List<String> schedMsgIds) {
 		GuildData gd = new GuildData(gId, false);
 		gd.trigger = trig;
 		gd.aniChId = aniChId;
 		gd.listChId = listChId;
 		gd.zone = Property.of(ZoneId.of(zone));
 		gd.completedSetup = setupCompleted;
-		if (comsEnabled == null) {
-			comsEnabled = new Property<Boolean>();
+		if (comsEnabled != null) {
+			gd.comsEnabled = comsEnabled;
 		}
-		gd.comsEnabled = comsEnabled;
 		if (icId == null) {
 			icId = new Property<String>();
 		}
 		gd.infoChId = icId;
+		gd.schedChId = schId;
+		gd.schedMsgIds = schedMsgIds;
 		ALRHM.addToInitMap(gId, data);
 		RTKM.addToInitMap(gId, lastMentioned);
 		return gd;
+	}
+
+	public boolean hasExplicitCommandSetting() {
+		return comsEnabled.hasNonNullValue();
 	}
 
 }

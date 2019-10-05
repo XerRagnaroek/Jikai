@@ -5,15 +5,15 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.bot.anime.base.AnimeDayTime;
+import com.xerragnaroek.bot.anime.db.AnimeDayTime;
 import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.util.BotUtils;
 import com.xerragnaroek.bot.util.Manager;
@@ -34,6 +34,10 @@ public class RTKManager extends Manager<ReleaseTimeKeeper> {
 
 	public static ReleaseTime whenWillAnimeAir(ZonedDateTime curTime, AnimeDayTime adt, ZoneId tz) {
 		long diff = curTime.until(adt.getZonedDateTime(), ChronoUnit.MILLIS);
+		if (diff < 0) {
+			adt.updateZDTToNextAirDate();
+			diff = curTime.until(adt.getZonedDateTime(), ChronoUnit.MILLIS);
+		}
 		ReleaseTime time = new ReleaseTime(diff);
 		LoggerFactory.getLogger(RTKManager.class).debug("TimeZone={}; {} airs in {}", tz, adt.getAnime().title, time);
 		return time;
@@ -61,7 +65,10 @@ public class RTKManager extends Manager<ReleaseTimeKeeper> {
 
 	static boolean meetsTresholds(ReleaseTime time, ZonedDateTime lastMentioned) {
 		//airs today and is less or equal than %hourThreshold% away
-		if (time.days() == dayThreshold && time.hours() <= hourThreshold) {
+		if (hourThreshold == 0 && dayThreshold == 0) {
+			return false;
+		}
+		if ((time.days() <= dayThreshold && time.hours() <= hourThreshold) || (hourThreshold == 0 && time.days() <= dayThreshold)) {
 			return true;
 		} else {
 			//hasn't been mentioned today, allows for a daily update
@@ -85,16 +92,32 @@ public class RTKManager extends Manager<ReleaseTimeKeeper> {
 		hourThreshold = thresh;
 	}
 
+	public long getUpdateRate() {
+		return updateRate;
+	}
+
+	public int getHourThreshold() {
+		return hourThreshold;
+	}
+
+	public int getDayThreshold() {
+		return dayThreshold;
+	}
+
 	public void startReleaseUpdateThread() {
 		if (!threadRunning) {
 			log.info("Started release update thread");
 			exec.scheduleAtFixedRate(() -> {
 				impls.forEach((id, rtk) -> {
 					if (Core.GDM.get(id).hasCompletedSetup()) {
-						ForkJoinPool.commonPool().execute(() -> rtk.updateAnimes(false, false));
+						CompletableFuture.runAsync(() -> rtk.updateAnimes(false, false)).whenComplete((v, e) -> {
+							if (e != null) {
+								BotUtils.logAndSendToDev(Core.ERROR_LOG, "", e);
+							}
+						});
 					}
 				});
-			}, updateRate, updateRate, TimeUnit.MINUTES);
+			}, 0, updateRate, TimeUnit.MINUTES);
 			threadRunning = true;
 		}
 	}

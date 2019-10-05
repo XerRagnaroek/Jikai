@@ -49,7 +49,7 @@ public abstract class Manager<T> implements Initilizable {
 		return false;
 	}
 
-	protected void assertInitialisation() {
+	protected void assertInitialization() {
 		if (!init.get()) {
 			log.error(typeName + " hasn't been initialized yet!");
 			throw new IllegalStateException(typeName + " hasn't been initialized yet!");

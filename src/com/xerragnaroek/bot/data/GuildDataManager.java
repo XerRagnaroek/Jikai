@@ -50,7 +50,7 @@ public class GuildDataManager extends Manager<GuildData> implements Initilizable
 		loadData();
 	}
 
-	public BotData getBotConfig() {
+	public BotData getBotData() {
 		return botData;
 	}
 
@@ -64,7 +64,9 @@ public class GuildDataManager extends Manager<GuildData> implements Initilizable
 	}
 
 	public boolean hasCompletedSetup(Guild g) {
-		return get(g).hasCompletedSetup();
+		GuildData gd = get(g);
+
+		return gd != null && gd.hasCompletedSetup();
 	}
 
 	public boolean isKnownGuild(String gId) {
@@ -162,7 +164,7 @@ public class GuildDataManager extends Manager<GuildData> implements Initilizable
 		log.debug("Saving configs...");
 		AtomicInteger saved = new AtomicInteger(0);
 		impls.values().forEach(gd -> {
-			if (gd.save()) {
+			if (gd.save(false)) {
 				saved.incrementAndGet();
 			}
 		});

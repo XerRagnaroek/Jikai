@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.bot.anime.base.AnimeBase;
+import com.xerragnaroek.bot.anime.db.AnimeBase;
 import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.data.UpdatableData;
 
@@ -37,7 +37,7 @@ public class ReleaseTimeKeeper implements UpdatableData {
 				ReleaseTime time = RTKManager.whenWillAnimeAir(now, adt, zone);
 				if (RTKManager.meetsTresholds(time, lastMentioned.get(title)) || ignoreThresholds) {
 					log.debug("{} met threshold with {}", title, time);
-					RoleMentioner.mentionUpdate(g, adt.getAnime(), time, m -> addToLastMentioned(title, now));
+					RoleMentioner.mentionUpdate(g, adt, time, m -> addToLastMentioned(title, now));
 				}
 			}
 		});
@@ -54,7 +54,7 @@ public class ReleaseTimeKeeper implements UpdatableData {
 			ReleaseTime time = RTKManager.whenWillAnimeAir(now, adt, zone);
 			if (RTKManager.meetsTresholds(time, lastMentioned.get(title)) || ignoreThresholds) {
 				log.debug("{} met threshold with {}", title, time);
-				RoleMentioner.mentionUpdate(g, adt.getAnime(), time, m -> addToLastMentioned(title, now));
+				RoleMentioner.mentionUpdate(g, adt, time, m -> addToLastMentioned(title, now));
 			} else {
 				log.debug("{} didn't meet threshold with {}", title, time);
 			}

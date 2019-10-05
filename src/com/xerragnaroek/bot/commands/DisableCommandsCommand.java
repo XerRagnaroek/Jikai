@@ -29,15 +29,16 @@ public class DisableCommandsCommand implements Command {
 		Guild g = event.getGuild();
 		log.debug("Executing DisableCommandsCommand on guild {}#{}", g.getName(), g.getId());
 		GuildData gd = Core.GDM.get(g);
-		gd.setCommandsEnabled(false);
-		String id = gd.getInfoChannelId();
-		TextChannel tc = null;
-		if (id != null) {
-			tc = g.getTextChannelById(id);
+		if (gd.areCommandsEnabled()) {
+			gd.setCommandsEnabled(false);
+			String id = gd.getInfoChannelId();
+			TextChannel tc = null;
+			if (id != null) {
+				tc = g.getTextChannelById(id);
+			}
+			tc = (tc == null) ? event.getTextChannel() : tc;
+			tc.sendMessage("Commands have been disabled.\nOnly members with the `MANAGE_SERVER` permission may call `" + gd.getTrigger() + "enable_commands` to reenable them.").queue();
 		}
-		tc = (tc == null) ? event.getTextChannel() : tc;
-		tc.sendMessage("Commands have been disabled.\n Only members with the ```MANAGE_SERVER``` permission may call ```"
-				+ gd.getTrigger() + "enable_commands``` to reenable them.").queue();
 	}
 
 	@Override

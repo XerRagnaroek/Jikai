@@ -12,7 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.bot.anime.alrh.ALRHManager;
-import com.xerragnaroek.bot.anime.base.AnimeBase;
+import com.xerragnaroek.bot.anime.db.AnimeBase;
+import com.xerragnaroek.bot.anime.schedule.ScheduleManager;
 import com.xerragnaroek.bot.commands.CommandHandlerManager;
 import com.xerragnaroek.bot.data.GuildDataManager;
 import com.xerragnaroek.bot.timer.RTKManager;
@@ -30,11 +31,12 @@ public class Core {
 	private static String token;
 	public static String DEV_ID;
 	private static long saveDelay;
-	private final static Logger ERROR_LOG = LoggerFactory.getLogger("ERROR");
+	public final static Logger ERROR_LOG = LoggerFactory.getLogger("ERROR");
 	public static final GuildDataManager GDM = new GuildDataManager();
 	public static final ALRHManager ALRHM = new ALRHManager();
 	public static final CommandHandlerManager CHM = new CommandHandlerManager();
 	public static final RTKManager RTKM = new RTKManager();
+	public static final ScheduleManager SM = new ScheduleManager();
 
 	public static void main(String[] args) throws LoginException, InterruptedException, ExecutionException, ClassNotFoundException, IOException {
 		handleArgs(args);
@@ -55,6 +57,7 @@ public class Core {
 		CHM.init();
 		RTKM.init();
 		ALRHM.init();
+		SM.init();
 		GDM.startSaveThread(saveDelay, TimeUnit.MINUTES);
 		RTKM.startReleaseUpdateThread();
 	}
@@ -68,6 +71,7 @@ public class Core {
 
 	private static void handleArg(Iterator<String> it, String arg) {
 		int t;
+		long tmp;
 		try {
 			switch (arg) {
 			case "-token":
@@ -86,22 +90,26 @@ public class Core {
 				CHM.setCommandsEnabledDefault(true);
 				log.info("Commands are now enabled by default");
 				break;
-			case "-update_rate":
-				long tmp = Long.parseLong(it.next());
+			case "-release_update_rate":
+				tmp = Long.parseLong(it.next());
 				RTKM.setUpdateRate(tmp);
-				log.info("Set update_rate to " + tmp);
+				log.info("Set release_update_rate to " + tmp);
 				break;
 			case "-day_threshold":
 				t = Integer.parseInt(it.next());
 				RTKM.setDayThreshold(t);
 				log.info("Set day_threshold to " + t);
 				break;
-			case "-hour_threshold": {
+			case "-hour_threshold":
 				t = Integer.parseInt(it.next());
 				RTKM.setHourThreshold(t);
 				log.info("Set hour_threshold to " + t);
 				break;
-			}
+			case "-anime_base_update_rate":
+				tmp = Long.parseLong(it.next());
+				AnimeBase.setUpdateRate(tmp);
+				log.info("Set anime_base_update_rate to " + tmp);
+				break;
 			default:
 				ERROR_LOG.error("Unrecognized option '" + arg + "'");
 				throw new IllegalArgumentException("Unrecognized option '" + arg + "'");
@@ -110,6 +118,10 @@ public class Core {
 			ERROR_LOG.error("Malformed argument: " + e.getMessage(), e);
 			throw new IllegalArgumentException("Unrecognized option '" + arg + "'");
 		}
+	}
+
+	public static void logThrowable(Throwable e) {
+		ERROR_LOG.error("", e);
 	}
 
 }

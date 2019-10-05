@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.bot.anime.base.AnimeBase;
+import com.xerragnaroek.bot.anime.db.AnimeBase;
 import com.xerragnaroek.bot.core.Core;
 import com.xerragnaroek.bot.data.GuildData;
 import com.xerragnaroek.bot.data.UpdatableData;
@@ -35,7 +35,7 @@ public class ALRHandler implements UpdatableData, Initilizable {
 	final String gId;
 	private final Logger log;
 	ALRHDataBase alrhDB;
-	Property<String> tcId; //Textchannel Id
+	Property<String> tcId = new Property<>(); //Textchannel Id
 	private ALHandler alh;
 	private ARHandler arh;
 	private AtomicBoolean changed;
@@ -50,6 +50,7 @@ public class ALRHandler implements UpdatableData, Initilizable {
 		this.gId = gId;
 		log = LoggerFactory.getLogger(ALRHandler.class.getName() + "#" + gId);
 		gData = Core.GDM.get(gId);
+		gData.listChannelIdProperty().bind(tcId);
 		alrhDB = new ALRHDataBase();
 		changed = new AtomicBoolean(false);
 		alh = new ALHandler(this);
@@ -125,9 +126,12 @@ public class ALRHandler implements UpdatableData, Initilizable {
 
 	private void checkIfListChanged(String msgId, Set<ALRHData> data) {
 		Guild g = Core.JDA.getGuildById(gId);
-		TextChannel tc = g.getTextChannelById(alrhDB.getSentTextChannelId());
-		if (tc != null) {
-			arh.validateReactions(g, tc, msgId, data);
+		String tcId = alrhDB.getSentTextChannelId();
+		if (tcId != null) {
+			TextChannel tc = g.getTextChannelById(alrhDB.getSentTextChannelId());
+			if (tc != null) {
+				arh.validateReactions(g, tc, msgId, data);
+			}
 		}
 	}
 
@@ -200,6 +204,18 @@ public class ALRHandler implements UpdatableData, Initilizable {
 	@Override
 	public boolean isInitialized() {
 		return initialized.get();
+	}
+
+	void update() {
+		String iId = Core.GDM.get(gId).getInfoChannelId();
+		if (iId != null) {
+			TextChannel iTc = Core.JDA.getGuildById(gId).getTextChannelById(iId);
+			if (iTc != null) {
+				iTc.sendMessage("The anime database has updated, sending a new list and deleting invalid roles.").queue();
+				arh.update();
+				alh.update();
+			}
+		}
 	}
 
 }
