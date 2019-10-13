@@ -37,7 +37,7 @@ import com.xerragnaroek.jikai.util.BotUtils;
 import com.xerragnaroek.jikai.util.Property;
 
 @JsonInclude(Include.NON_EMPTY)
-@JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "trigger", "timezone", "list_channel_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "last_mentioned", "alrh_data" })
+@JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "trigger", "timezone", "exec_command_count", "list_channel_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "last_mentioned", "alrh_data" })
 public class GuildData {
 	private Property<String> aniChId = new Property<>();
 	private AtomicBoolean changed = new AtomicBoolean(false);
@@ -52,14 +52,15 @@ public class GuildData {
 	private List<String> schedMsgIds;
 	private Property<String> trigger = new Property<>();
 	private Property<ZoneId> zone = new Property<>();
+	private Property<Integer> execComs = new Property<>(0);
+	private BotData bd = Core.GDM.getBotData();
 
 	public GuildData(String guildId, boolean save) {
 		log = LoggerFactory.getLogger(GuildData.class + "#" + guildId);
 		gId = guildId;
 		fileLoc = Paths.get(String.format("./data/%s.json", guildId));
-		BotData bc = Core.GDM.getBotData();
-		setTrigger(bc.getDefaultTrigger());
-		setTimeZone(bc.getDefaultTimeZone());
+		setTrigger(bd.getDefaultTrigger());
+		setTimeZone(bd.getDefaultTimeZone());
 		setCommandsEnabled(Core.CHM.areCommandsEnabledByDefault());
 		changed.set(save);
 		log.info("Made configuration for {}", guildId);
@@ -122,6 +123,11 @@ public class GuildData {
 	@JsonProperty("schedule_channel_id")
 	public String getScheduleChannelId() {
 		return schedChId.get();
+	}
+
+	@JsonProperty("exec_command_count")
+	public int getExecutedCommandCount() {
+		return execComs.get();
 	}
 
 	@JsonProperty("schedule_message_ids")
@@ -213,6 +219,10 @@ public class GuildData {
 		return setData(infoChId, id, "info_channel_id");
 	}
 
+	public int setExecutedCommandCount(int c) {
+		return setData(execComs, c, "exec_command_count");
+	}
+
 	public String setListChannelId(String id) {
 		return setData(listChId, id, "list_channel_id");
 	}
@@ -283,22 +293,20 @@ public class GuildData {
 	}
 
 	@JsonCreator
-	public static GuildData of(@JsonProperty("guild_id") String gId, @JsonProperty("trigger") Property<String> trig, @JsonProperty("anime_channel_id") Property<String> aniChId, @JsonProperty("list_channel_id") Property<String> listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("last_mentioned") Map<String, String> lastMentioned, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") Property<String> icId, @JsonProperty("schedule_channel_id") Property<String> schId, @JsonProperty("schedule_message_ids") List<String> schedMsgIds) {
+	public static GuildData of(@JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") String gId, @JsonProperty("trigger") Property<String> trig, @JsonProperty("anime_channel_id") Property<String> aniChId, @JsonProperty("list_channel_id") Property<String> listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("last_mentioned") Map<String, String> lastMentioned, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") Property<String> icId, @JsonProperty("schedule_channel_id") Property<String> schId, @JsonProperty("schedule_message_ids") List<String> schedMsgIds) {
 		GuildData gd = new GuildData(gId, false);
-		gd.trigger = trig;
-		gd.aniChId = aniChId;
-		gd.listChId = listChId;
-		gd.zone = Property.of(ZoneId.of(zone));
-		gd.completedSetup = setupCompleted;
-		if (comsEnabled != null) {
-			gd.comsEnabled = comsEnabled;
+		setIfNonNull(gd.trigger, trig);
+		setIfNonNull(gd.aniChId, aniChId);
+		setIfNonNull(gd.listChId, listChId);
+		if (zone != null) {
+			gd.zone = Property.of(ZoneId.of(zone));
 		}
-		if (icId == null) {
-			icId = new Property<String>();
-		}
-		gd.infoChId = icId;
-		gd.schedChId = schId;
+		setIfNonNull(gd.completedSetup, setupCompleted);
+		setIfNonNull(gd.comsEnabled, comsEnabled);
+		setIfNonNull(gd.infoChId, icId);
+		setIfNonNull(gd.schedChId, schId);
 		gd.schedMsgIds = schedMsgIds;
+		setIfNonNull(gd.execComs, execComs);
 		ALRHM.addToInitMap(gId, data);
 		RTKM.addToInitMap(gId, lastMentioned);
 		return gd;
@@ -308,4 +316,16 @@ public class GuildData {
 		return comsEnabled.hasNonNullValue();
 	}
 
+	public int incrementAndGetExecComs() {
+		int tmp = execComs.get();
+		tmp++;
+		setData(execComs, tmp, "exec_command_count");
+		return tmp;
+	}
+
+	private static <T> void setIfNonNull(Property<T> gdp, Property<T> prop) {
+		if (prop != null) {
+			gdp.set(prop.get());
+		}
+	}
 }

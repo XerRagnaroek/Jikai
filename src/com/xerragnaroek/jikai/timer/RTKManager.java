@@ -1,5 +1,6 @@
 package com.xerragnaroek.jikai.timer;
 
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
@@ -106,7 +107,9 @@ public class RTKManager extends Manager<ReleaseTimeKeeper> {
 
 	public void startReleaseUpdateThread() {
 		if (!threadRunning) {
-			log.info("Started release update thread");
+			LocalTime now = LocalTime.now();
+			LocalTime nextHour = now.plusHours(1).truncatedTo(ChronoUnit.HOURS);
+			long minDif = now.until(nextHour, ChronoUnit.MINUTES);
 			exec.scheduleAtFixedRate(() -> {
 				impls.forEach((id, rtk) -> {
 					if (Core.GDM.get(id).hasCompletedSetup()) {
@@ -117,8 +120,9 @@ public class RTKManager extends Manager<ReleaseTimeKeeper> {
 						});
 					}
 				});
-			}, 0, updateRate, TimeUnit.MINUTES);
+			}, minDif, updateRate, TimeUnit.MINUTES);
 			threadRunning = true;
+			log.info("Started release update thread. First update will be at " + nextHour.toString() + " in " + minDif + " minutes");
 		}
 	}
 

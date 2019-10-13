@@ -68,9 +68,8 @@ public class CommandHandler implements Initilizable {
 					//remove the command from the content and execute it
 					tmp = (String[]) ArrayUtils.subarray(tmp, 1, tmp.length);
 					if (CommandHandlerManager.checkPermissions(com, event.getMember())) {
-						if (comsEnabled.get()) {
-							com.executeCommand(this, event, tmp);
-						} else if (com.isCommand("ecc")) {
+						if (comsEnabled.get() || com.isAlwaysEnabled()) {
+							Core.GDM.get(gId).incrementAndGetExecComs();
 							com.executeCommand(this, event, tmp);
 						}
 					}

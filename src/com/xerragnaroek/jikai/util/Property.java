@@ -96,10 +96,6 @@ public class Property<T> {
 
 	@JsonCreator
 	public static <T> Property<T> of(T value) {
-		if (value != null) {
-			return new Property<>(value);
-		} else {
-			return null;
-		}
+		return new Property<>(value);
 	}
 }

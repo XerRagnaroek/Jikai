@@ -128,6 +128,10 @@ public class ZoneAnimeBase {
 		return !animes.isEmpty();
 	}
 
+	int size() {
+		return animes.size();
+	}
+
 	Anime getAnime(String title) {
 		return animes.get(title).getAnime();
 	}

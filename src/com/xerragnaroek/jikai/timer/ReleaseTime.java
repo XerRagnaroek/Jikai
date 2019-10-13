@@ -27,7 +27,6 @@ public class ReleaseTime {
 
 	@Override
 	public String toString() {
-		return String.format(	"%02d days, %02d hours and %02d %s", days, hours, mins,
-								(mins == 1) ? "minute" : "minutes");
+		return String.format("%02d %s, %02d hours and %02d %s", days, (days == 1) ? "day" : "days", hours, mins, (mins == 1) ? "minute" : "minutes");
 	}
 }

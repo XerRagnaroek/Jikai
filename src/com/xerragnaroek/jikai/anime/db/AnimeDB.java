@@ -20,7 +20,7 @@ import net.dv8tion.jda.api.entities.Guild;
 
 public class AnimeDB {
 
-	private static AnimeDBImpl aB = new AnimeDBImpl();
+	private static AnimeDBImpl aDB = new AnimeDBImpl();
 	private static boolean initialized = false;
 	private final static Logger log = LoggerFactory.getLogger(AnimeDB.class);
 	private static long updateRate = 6;
@@ -28,7 +28,7 @@ public class AnimeDB {
 
 	public static void init() {
 		if (!initialized) {
-			aB.init();
+			aDB.init();
 			initialized = true;
 			GDM.registerOnUniversalTimeZoneChanged((gId, zone) -> AnimeDB.addTimeZone(zone));
 		} else {
@@ -39,12 +39,12 @@ public class AnimeDB {
 
 	public static Set<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
 		assertInitialisation();
-		return aB.getAnimesAiringOnWeekday(day, g);
+		return aDB.getAnimesAiringOnWeekday(day, g);
 	}
 
 	public static Set<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, ZoneId z) {
 		assertInitialisation();
-		return aB.getAnimesAiringOnWeekday(day, z);
+		return aDB.getAnimesAiringOnWeekday(day, z);
 	}
 
 	public static Map<DayOfWeek, Set<AnimeDayTime>> getAnimesMappedToDayOfAiring(ZoneId zone) {
@@ -57,27 +57,27 @@ public class AnimeDB {
 
 	public static Set<AnimeDayTime> getSeasonalAnimes() {
 		assertInitialisation();
-		return aB.getSeasonalAnimes();
+		return aDB.getSeasonalAnimes();
 	}
 
 	public static void addTimeZone(ZoneId z) {
 		assertInitialisation();
-		aB.addTimeZone(z, false);
+		aDB.addTimeZone(z, false);
 	}
 
 	public static void waitUntilLoaded() {
 		assertInitialisation();
-		while (aB.isLoading()) {}
+		while (aDB.isLoading()) {}
 	}
 
 	public static Set<AnimeDayTime> getSeasonalAnimesAdjusted(ZoneId tz) {
 		assertInitialisation();
-		return aB.getSeasonalAnimesAdjusted(tz);
+		return aDB.getSeasonalAnimesAdjusted(tz);
 	}
 
 	public static Anime getAnime(String title) {
 		assertInitialisation();
-		return aB.getAnime(title);
+		return aDB.getAnime(title);
 	}
 
 	private static void assertInitialisation() {
@@ -92,10 +92,14 @@ public class AnimeDB {
 	}
 
 	public static void startUpdateThread() {
-		exec.scheduleAtFixedRate(aB::loadSeason, updateRate, updateRate, TimeUnit.HOURS);
+		exec.scheduleAtFixedRate(aDB::loadSeason, updateRate, updateRate, TimeUnit.HOURS);
 	}
 
 	public static void setUpdateRate(long rate) {
 		updateRate = rate;
+	}
+
+	public static int loadedAnimes() {
+		return aDB.size();
 	}
 }

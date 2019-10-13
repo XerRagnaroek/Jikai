@@ -65,10 +65,14 @@ class ARHandler {
 			log.debug("Guild has associated role '{}'", r.getName());
 			if (!m.getRoles().contains(r)) {
 				log.debug("Adding role to member#{}", m.getId());
-				g.addRoleToMember(m, r).queue(v -> {
-					log.info("Succesfully added role {} to member#{}", r.getName(), m.getId());
-					alrh.dataChanged();
-				}, e -> BotUtils.logAndSendToDev(log, "Failed adding role to member", e));
+				g.addRoleToMember(m, r).submit().whenComplete((v, e) -> {
+					if (e != null) {
+						BotUtils.logAndSendToDev(log, "Failed adding role to member", e);
+					} else {
+						log.info("Succesfully added role {} to member#{}", r.getName(), m.getId());
+						alrh.dataChanged();
+					}
+				});
 			} else {
 				log.debug("Member#{} already has that role", m.getId());
 			}
@@ -185,11 +189,13 @@ class ARHandler {
 	}
 
 	void deleteRole(Role r, ALRHData data) {
-		r.delete().queue(v -> {
-			log.info("Deleted role {}", data.getTitle());
-			data.setRoleId(null);
-			alrh.dataChanged();
-		});
+		if (r != null) {
+			r.delete().queue(v -> {
+				log.info("Deleted role {}", data.getTitle());
+				data.setRoleId(null);
+				alrh.dataChanged();
+			});
+		}
 	}
 
 	void validateReactions(Guild g, TextChannel tc, String msgId, Set<ALRHData> data) {

@@ -46,7 +46,7 @@ public class CommandHandlerManager extends Manager<CommandHandler> {
 	 * Load the commands
 	 */
 	private void initCommands() {
-		Command[] coms = new Command[] { new WhenAnimeCommand(), new PingCommand(), new SetCommand(), new ScheduleCommand(), new DebugCommand(), new AnimeListCommand(), new HelpCommand(), new WipeRolesCommand(), new EnableCommandsCommand(), new DisableCommandsCommand(), new RequestAssistanceCommand() };
+		Command[] coms = new Command[] { new StatusCommand(), new WhenAnimeCommand(), new PingCommand(), new SetCommand(), new ScheduleCommand(), new DebugCommand(), new AnimeListCommand(), new HelpCommand(), new WipeRolesCommand(), new EnableCommandsCommand(), new DisableCommandsCommand(), new RequestAssistanceCommand() };
 		commands.addAll(Arrays.asList(coms));
 		log.info("Loaded {} commands", commands.size());
 	}

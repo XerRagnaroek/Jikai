@@ -39,4 +39,9 @@ public class DebugCommand implements Command {
 		return "Prints internal debug information. Only usable by the owner of this bot.";
 	}
 
+	@Override
+	public boolean isAlwaysEnabled() {
+		return true;
+	}
+
 }

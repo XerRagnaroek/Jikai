@@ -283,6 +283,10 @@ class AnimeDBImpl implements Initilizable {
 		return new TreeSet<>(animes.get(tz).getAnimes());
 	}
 
+	int size() {
+		return animes.get(jst).size();
+	}
+
 	@Override
 	public boolean isInitialized() {
 		return initialized.get();

@@ -138,9 +138,9 @@ public class BotUtils {
 		u.openPrivateChannel().submit().thenAccept(pc -> {
 			msgs.forEach(m -> futures.add(pc.sendMessage(m).submit().whenComplete((me, e) -> {
 				if (e != null) {
-					log.info("Successfully sent message to {}", u.getName());
-				} else {
 					log.error("Failed sending message to {}", u.getName(), e);
+				} else {
+					log.info("Successfully sent message to {}", u.getName());
 				}
 			})));
 		});

@@ -61,6 +61,10 @@ public interface Command extends Comparable<Command> {
 		return Permission.EMPTY_PERMISSIONS;
 	}
 
+	public default boolean isAlwaysEnabled() {
+		return false;
+	}
+
 	@Override
 	default int compareTo(Command o) {
 		return getName().compareTo(o.getName());
