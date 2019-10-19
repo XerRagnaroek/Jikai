@@ -44,4 +44,9 @@ public class DebugCommand implements Command {
 		return true;
 	}
 
+	@Override
+	public boolean isDevOnly() {
+		return true;
+	}
+
 }

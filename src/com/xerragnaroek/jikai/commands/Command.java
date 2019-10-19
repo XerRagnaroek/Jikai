@@ -69,4 +69,8 @@ public interface Command extends Comparable<Command> {
 	default int compareTo(Command o) {
 		return getName().compareTo(o.getName());
 	}
+
+	public default boolean isDevOnly() {
+		return false;
+	}
 }

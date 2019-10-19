@@ -81,7 +81,9 @@ class AnimeDBImpl implements Initilizable {
 				loadSeasonImpl(ss, zdt);
 				if (!ss.request_hash.equals(hash)) {
 					bData.incrementAnimeBaseVersion();
+					BotUtils.sendToAllInfoChannels("AnimeDB has updated to version " + bData.getAnimeBaseVersion());
 					GDM.getBotData().setCurrentSeasonHash(ss.request_hash);
+					log.info("AnimeDB has updated to version {}", bData.getAnimeBaseVersion());
 				}
 			} else {
 				log.info("Current schedule is up to date.");

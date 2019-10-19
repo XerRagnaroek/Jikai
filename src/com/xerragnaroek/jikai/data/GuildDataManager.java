@@ -80,7 +80,7 @@ public class GuildDataManager extends Manager<GuildData> implements Initilizable
 	}
 
 	public void startSaveThread(long delay, TimeUnit unit) {
-		saver.scheduleAtFixedRate(this::saveConfigs, delay, delay, unit);
+		saver.scheduleAtFixedRate(this::save, delay, delay, unit);
 	}
 
 	public Map<ZoneId, List<String>> timeZoneGuildMap() {
@@ -160,7 +160,7 @@ public class GuildDataManager extends Manager<GuildData> implements Initilizable
 	/**
 	 * Save all configurations. Gets called every 10 minutes.
 	 */
-	private void saveConfigs() {
+	private void save() {
 		log.debug("Saving configs...");
 		AtomicInteger saved = new AtomicInteger(0);
 		impls.values().forEach(gd -> {
@@ -176,6 +176,17 @@ public class GuildDataManager extends Manager<GuildData> implements Initilizable
 		} else {
 			log.debug("No data had to be saved");
 		}
+	}
+
+	public void saveNow() {
+		impls.values().forEach(gd -> {
+			gd.save(true);
+		});
+		log.info("Saved data");
+	}
+
+	public Set<GuildData> data() {
+		return Collections.synchronizedSet(new HashSet<>(impls.values()));
 	}
 
 }

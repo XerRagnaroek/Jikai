@@ -160,4 +160,20 @@ public class BotUtils {
 	public static TextChannel getTextChannelChecked(String gId, String id) throws BotException {
 		return getTextChannelChecked(Core.JDA.getGuildById(gId), id);
 	}
+
+	public static void sendToAllInfoChannels(String msg) {
+		Core.GDM.data().forEach(gd -> {
+			Guild g = Core.JDA.getGuildById(gd.getGuildId());
+			if (g != null) {
+				TextChannel info = g.getTextChannelById(gd.getInfoChannelId());
+				if (info != null) {
+					info.sendMessage(msg).queue(v -> log.debug("Sent to infochannel on guild {}: '{}'", g.getName(), msg));
+				} else {
+					//TODO handle info channel null
+				}
+			} else {
+				//TODO handle guild null
+			}
+		});
+	}
 }
