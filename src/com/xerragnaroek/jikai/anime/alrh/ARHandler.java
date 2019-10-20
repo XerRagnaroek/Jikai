@@ -1,6 +1,12 @@
 package com.xerragnaroek.jikai.anime.alrh;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -26,6 +32,11 @@ class ARHandler {
 	private ALRHandler alrh;
 	private ALRHDataBase alrhDB;
 	final Logger log;
+	private ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
+	private Map<String, Runnable> roleDeletion = new HashMap<>();
+	private ScheduledFuture<?> rDelete;
+	private boolean running = false;
+	private boolean enabled = true;
 
 	ARHandler(ALRHandler alrh) {
 		this.alrh = alrh;
@@ -34,23 +45,29 @@ class ARHandler {
 	}
 
 	void handleReactionAdded(MessageReactionAddEvent event) {
-		log.trace("Handling MessageReactionAdded event");
-		String msgId = event.getMessageId();
-		if (alrhDB.hasDataForMessage(msgId)) {
-			log.trace("Message is part of the anime list");
-			ReactionEmote re = event.getReactionEmote();
-			Member m = event.getMember();
-			log.debug("Member#{} added reaction {} to the anime list", m.getId(), re.getName());
-			log.debug("Is Emoji? {}", re.isEmoji());
-			if (re.isEmoji()) {
-				ALRHData data = alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
-				if (data != null) {
-					data.setReacted(true);
-					Guild g = event.getGuild();
-					if (data.hasRoleId()) {
-						roleExistsAdd(g, data, m);
-					} else {
-						roleNotExistAdd(g, data, m);
+		if (enabled) {
+			log.trace("Handling MessageReactionAdded event");
+			String msgId = event.getMessageId();
+			if (alrhDB.hasDataForMessage(msgId)) {
+				log.trace("Message is part of the anime list");
+				ReactionEmote re = event.getReactionEmote();
+				Member m = event.getMember();
+				log.debug("Member#{} added reaction {} to the anime list", m.getId(), re.getName());
+				log.debug("Is Emoji? {}", re.isEmoji());
+				if (re.isEmoji()) {
+					ALRHData data = alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
+					if (data != null) {
+						data.setReacted(true);
+						Guild g = event.getGuild();
+						roleDeletion.computeIfPresent(data.getTitle(), (t, r) -> {
+							log.debug("Unflagged {} for deletion", t);
+							return null;
+						});
+						if (data.hasRoleId()) {
+							roleExistsAdd(g, data, m);
+						} else {
+							roleNotExistAdd(g, data, m);
+						}
 					}
 				}
 			}
@@ -65,6 +82,7 @@ class ARHandler {
 			log.debug("Guild has associated role '{}'", r.getName());
 			if (!m.getRoles().contains(r)) {
 				log.debug("Adding role to member#{}", m.getId());
+				running = true;
 				g.addRoleToMember(m, r).submit().whenComplete((v, e) -> {
 					if (e != null) {
 						BotUtils.logAndSendToDev(log, "Failed adding role to member", e);
@@ -72,6 +90,7 @@ class ARHandler {
 						log.info("Succesfully added role {} to member#{}", r.getName(), m.getId());
 						alrh.dataChanged();
 					}
+					running = false;
 				});
 			} else {
 				log.debug("Member#{} already has that role", m.getId());
@@ -80,6 +99,7 @@ class ARHandler {
 	}
 
 	private void roleNotExistAdd(Guild g, ALRHData data, Member m) {
+		running = true;
 		g.createRole().setMentionable(true).setName(data.getTitle()).setPermissions(0l).queue(r -> {
 			log.debug("Created role for {}", data.getTitle());
 			data.setRoleId(r.getId());
@@ -184,7 +204,10 @@ class ARHandler {
 
 	void deleteRole(Guild g, ALRHData data) {
 		if (data.hasRoleId()) {
-			deleteRole(g.getRoleById(data.getRoleId()), data);
+			if (!roleDeletion.containsKey(data.getTitle())) {
+				roleDeletion.put(data.getTitle(), () -> deleteRole(g.getRoleById(data.getRoleId()), data));
+				deleteRolesInNSeconds(5);
+			}
 		}
 	}
 
@@ -217,4 +240,18 @@ class ARHandler {
 			}
 		});
 	}
+
+	private synchronized void deleteRolesInNSeconds(long seconds) {
+		if (rDelete != null) {
+			rDelete.cancel(false);
+			log.debug("Cancelled ScheduledFuture");
+		}
+		rDelete = exec.schedule(() -> deleteFlaggedRoles(), seconds, TimeUnit.SECONDS);
+		log.debug("Roles will be deleted in {}s", seconds);
+	}
+
+	private void deleteFlaggedRoles() {
+		roleDeletion.values().forEach(Runnable::run);
+	}
+
 }

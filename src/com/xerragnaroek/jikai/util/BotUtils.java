@@ -1,6 +1,7 @@
 package com.xerragnaroek.jikai.util;
 
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -161,13 +162,16 @@ public class BotUtils {
 		return getTextChannelChecked(Core.JDA.getGuildById(gId), id);
 	}
 
-	public static void sendToAllInfoChannels(String msg) {
+	public static List<CompletableFuture<Message>> sendToAllInfoChannels(String msg) {
+		List<CompletableFuture<Message>> cf = new ArrayList<>();
 		Core.GDM.data().forEach(gd -> {
 			Guild g = Core.JDA.getGuildById(gd.getGuildId());
 			if (g != null) {
 				TextChannel info = g.getTextChannelById(gd.getInfoChannelId());
 				if (info != null) {
-					info.sendMessage(msg).queue(v -> log.debug("Sent to infochannel on guild {}: '{}'", g.getName(), msg));
+					cf.add(info.sendMessage(msg).submit().whenComplete((m, e) -> {
+						log.debug("Sent to infochannel on guild {}: '{}'", g.getName(), msg);
+					}));
 				} else {
 					//TODO handle info channel null
 				}
@@ -175,5 +179,6 @@ public class BotUtils {
 				//TODO handle guild null
 			}
 		});
+		return cf;
 	}
 }

@@ -109,7 +109,7 @@ public class RTKManager extends Manager<ReleaseTimeKeeper> {
 		if (!threadRunning) {
 			LocalTime now = LocalTime.now();
 			LocalTime nextHour = now.plusHours(1).truncatedTo(ChronoUnit.HOURS);
-			long minDif = now.until(nextHour, ChronoUnit.MINUTES);
+			long minDif = now.until(nextHour, ChronoUnit.MINUTES) + 1;
 			exec.scheduleAtFixedRate(() -> {
 				impls.forEach((id, rtk) -> {
 					if (Core.GDM.get(id).hasCompletedSetup()) {

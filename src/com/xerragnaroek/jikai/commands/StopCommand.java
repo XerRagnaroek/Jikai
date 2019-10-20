@@ -1,5 +1,7 @@
 package com.xerragnaroek.jikai.commands;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +23,7 @@ public class StopCommand implements Command {
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		log.info("Shutting the bot down...\n Saving data...");
 		Core.GDM.saveNow();
-		BotUtils.sendToAllInfoChannels("The dev has shut the bot down. Downtime shouldn't be long. ||(Hopefully)||");
+		BotUtils.sendToAllInfoChannels("The dev has shut the bot down. Downtime shouldn't be long. ||(Hopefully)||").forEach(CompletableFuture::join);
 		log.info("Goodbye :)");
 		System.exit(1);
 	}
