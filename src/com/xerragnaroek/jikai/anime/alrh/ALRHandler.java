@@ -15,6 +15,7 @@ import com.xerragnaroek.jikai.data.GuildData;
 import com.xerragnaroek.jikai.data.UpdatableData;
 import com.xerragnaroek.jikai.util.BotUtils;
 import com.xerragnaroek.jikai.util.Initilizable;
+import com.xerragnaroek.jikai.util.JikaiManaged;
 import com.xerragnaroek.jikai.util.Property;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -31,7 +32,7 @@ import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
  * @author XerRagnaroek
  *
  */
-public class ALRHandler implements UpdatableData, Initilizable {
+public class ALRHandler extends JikaiManaged implements UpdatableData, Initilizable {
 	final GuildData gData;
 	final String gId;
 	private final Logger log;

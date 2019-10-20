@@ -34,11 +34,12 @@ import com.xerragnaroek.jikai.anime.alrh.ALRHandler;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.timer.ReleaseTimeKeeper;
 import com.xerragnaroek.jikai.util.BotUtils;
+import com.xerragnaroek.jikai.util.JikaiManaged;
 import com.xerragnaroek.jikai.util.Property;
 
 @JsonInclude(Include.NON_EMPTY)
 @JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "trigger", "timezone", "exec_command_count", "list_channel_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "last_mentioned", "alrh_data" })
-public class GuildData {
+public class GuildData extends JikaiManaged {
 	private Property<String> aniChId = new Property<>();
 	private AtomicBoolean changed = new AtomicBoolean(false);
 	private Property<Boolean> completedSetup = new Property<>(false);

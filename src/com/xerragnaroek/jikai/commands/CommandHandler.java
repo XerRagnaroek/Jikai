@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.data.GuildData;
 import com.xerragnaroek.jikai.util.Initilizable;
+import com.xerragnaroek.jikai.util.JikaiManaged;
 import com.xerragnaroek.jikai.util.Property;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -22,7 +23,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
  * @author XerRagnarök
  *
  */
-public class CommandHandler implements Initilizable {
+public class CommandHandler extends JikaiManaged implements Initilizable {
 	private Set<Command> commands;
 	private final Logger log;
 	private final String gId;

@@ -17,9 +17,9 @@ import org.slf4j.LoggerFactory;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.util.BotUtils;
-import com.xerragnaroek.jikai.util.Manager;
+import com.xerragnaroek.jikai.util.JikaiManager;
 
-public class RTKManager extends Manager<ReleaseTimeKeeper> {
+public class RTKManager extends JikaiManager<ReleaseTimeKeeper> {
 
 	public RTKManager() {
 		super(ReleaseTimeKeeper.class);

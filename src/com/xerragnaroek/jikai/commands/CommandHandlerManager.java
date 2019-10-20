@@ -9,12 +9,12 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.commands.set.SetCommand;
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.util.Manager;
+import com.xerragnaroek.jikai.util.JikaiManager;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 
-public class CommandHandlerManager extends Manager<CommandHandler> {
+public class CommandHandlerManager extends JikaiManager<CommandHandler> {
 
 	public CommandHandlerManager() {
 		super(CommandHandler.class);

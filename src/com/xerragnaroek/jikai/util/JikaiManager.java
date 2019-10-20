@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import net.dv8tion.jda.api.entities.Guild;
 
-public abstract class Manager<T> implements Initilizable {
+public abstract class JikaiManager<T> implements Initilizable {
 
 	protected final Map<String, T> impls = Collections.synchronizedMap(new TreeMap<>());
 	protected AtomicBoolean init = new AtomicBoolean(false);
@@ -19,7 +19,7 @@ public abstract class Manager<T> implements Initilizable {
 
 	protected abstract T makeNew(String gId);
 
-	protected Manager(Class<T> clazz) {
+	protected JikaiManager(Class<T> clazz) {
 		this.typeName = clazz.getTypeName();
 		log = LoggerFactory.getLogger(this.getClass());
 

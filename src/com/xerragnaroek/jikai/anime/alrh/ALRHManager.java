@@ -16,7 +16,7 @@ import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.util.Initilizable;
-import com.xerragnaroek.jikai.util.Manager;
+import com.xerragnaroek.jikai.util.JikaiManager;
 import com.xerragnaroek.jikai.util.Property;
 
 import net.dv8tion.jda.api.MessageBuilder;
@@ -30,7 +30,7 @@ import net.dv8tion.jda.internal.utils.EncodingUtil;
  * @author XerRagnaroek
  *
  */
-public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
+public class ALRHManager extends JikaiManager<ALRHandler> implements Initilizable {
 
 	public ALRHManager() {
 		super(ALRHandler.class);

@@ -14,11 +14,12 @@ import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.data.GuildData;
 import com.xerragnaroek.jikai.util.BotException;
 import com.xerragnaroek.jikai.util.BotUtils;
+import com.xerragnaroek.jikai.util.JikaiManaged;
 
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
 
-public class Scheduler {
+public class Scheduler extends JikaiManaged {
 
 	private final Logger log;
 	private final String gId;

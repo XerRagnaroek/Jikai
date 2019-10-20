@@ -17,12 +17,12 @@ import java.util.concurrent.ForkJoinPool;
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.util.Manager;
+import com.xerragnaroek.jikai.util.JikaiManager;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 
-public class ScheduleManager extends Manager<Scheduler> {
+public class ScheduleManager extends JikaiManager<Scheduler> {
 
 	private final Map<ZoneId, List<MessageEmbed>> schedEmbeds = Collections.synchronizedMap(new HashMap<>());
 	private final DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm");

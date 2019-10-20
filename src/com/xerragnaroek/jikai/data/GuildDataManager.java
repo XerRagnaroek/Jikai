@@ -22,7 +22,7 @@ import java.util.function.BiConsumer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xerragnaroek.jikai.util.BotUtils;
 import com.xerragnaroek.jikai.util.Initilizable;
-import com.xerragnaroek.jikai.util.Manager;
+import com.xerragnaroek.jikai.util.JikaiManager;
 
 import net.dv8tion.jda.api.entities.Guild;
 
@@ -32,7 +32,7 @@ import net.dv8tion.jda.api.entities.Guild;
  * @author XerRagnaroek
  *
  */
-public class GuildDataManager extends Manager<GuildData> implements Initilizable {
+public class GuildDataManager extends JikaiManager<GuildData> implements Initilizable {
 
 	final Map<ZoneId, List<String>> usedZones = Collections.synchronizedMap(new HashMap<>());
 	private BotData botData;

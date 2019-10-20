@@ -13,10 +13,11 @@ import org.slf4j.LoggerFactory;
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.data.UpdatableData;
+import com.xerragnaroek.jikai.util.JikaiManaged;
 
 import net.dv8tion.jda.api.entities.Guild;
 
-public class ReleaseTimeKeeper implements UpdatableData {
+public class ReleaseTimeKeeper extends JikaiManaged implements UpdatableData {
 	private final String gId;
 	private Map<String, ZonedDateTime> lastMentioned;
 	private final Logger log;
