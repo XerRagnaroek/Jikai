@@ -11,12 +11,12 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.GuildData;
+import com.xerragnaroek.jikai.data.Jikai;
+import com.xerragnaroek.jikai.data.JikaiData;
 import com.xerragnaroek.jikai.data.UpdatableData;
 import com.xerragnaroek.jikai.util.BotUtils;
 import com.xerragnaroek.jikai.util.Initilizable;
-import com.xerragnaroek.jikai.util.JikaiManaged;
-import com.xerragnaroek.jikai.util.Property;
+import com.xerragnaroek.jikai.util.prop.Property;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
@@ -32,8 +32,8 @@ import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
  * @author XerRagnaroek
  *
  */
-public class ALRHandler extends JikaiManaged implements UpdatableData, Initilizable {
-	final GuildData gData;
+public class ALRHandler implements UpdatableData, Initilizable {
+	final JikaiData jData;
 	final String gId;
 	private final Logger log;
 	ALRHDataBase alrhDB;
@@ -42,6 +42,7 @@ public class ALRHandler extends JikaiManaged implements UpdatableData, Initiliza
 	private ARHandler arh;
 	private AtomicBoolean changed;
 	private AtomicBoolean initialized;
+	Jikai j;
 
 	/**
 	 * A new AnimeListReactionHandler
@@ -50,9 +51,11 @@ public class ALRHandler extends JikaiManaged implements UpdatableData, Initiliza
 	 */
 	ALRHandler(String gId) {
 		this.gId = gId;
+		j = Core.JM.get(gId);
+		j.setALRH(this);
 		log = LoggerFactory.getLogger(ALRHandler.class.getName() + "#" + gId);
-		gData = Core.GDM.get(gId);
-		gData.listChannelIdProperty().bind(tcId);
+		jData = j.getJikaiData();
+		jData.listChannelIdProperty().bind(tcId);
 		alrhDB = new ALRHDataBase();
 		changed = new AtomicBoolean(false);
 		alh = new ALHandler(this);
@@ -103,9 +106,9 @@ public class ALRHandler extends JikaiManaged implements UpdatableData, Initiliza
 	@Override
 	public void init() {
 		log.debug("Initializing...");
-		setTextChannelId(gData.getListChannelId());
+		setTextChannelId(jData.getListChannelId());
 		alrhDB.forEachMessage(this::checkIfListChanged);
-		gData.listChannelIdProperty().bind(tcId);
+		jData.listChannelIdProperty().bind(tcId);
 		initialized.set(true);
 		log.info("Initialized");
 	}
@@ -153,7 +156,7 @@ public class ALRHandler extends JikaiManaged implements UpdatableData, Initiliza
 	}
 
 	private boolean haveMessagesChanged(TextChannel oldTc, List<String> ids) {
-		Set<DTO> amsgs = Core.ALRHM.getListMessages();
+		Set<DTO> amsgs = Core.JM.getALHRM().getListMessages();
 		AtomicBoolean noMsg = new AtomicBoolean(false);
 		if (oldTc == null) {
 			return true;
@@ -165,7 +168,7 @@ public class ALRHandler extends JikaiManaged implements UpdatableData, Initiliza
 				e.printStackTrace();
 			}
 		}
-		return noMsg.get() || ids.size() != amsgs.size() || oldTc == null || !(AnimeDB.getAnimeBaseVersion() == alrhDB.getSentABVersion()) || !oldTc.getId().equals(tcId);
+		return noMsg.get() || ids.size() != amsgs.size() || oldTc == null || !(AnimeDB.getAnimeDBVersion() == alrhDB.getSentABVersion()) || !oldTc.getId().equals(tcId);
 	}
 
 	void dataChanged() {
@@ -209,14 +212,13 @@ public class ALRHandler extends JikaiManaged implements UpdatableData, Initiliza
 	}
 
 	void update() {
-		String iId = Core.GDM.get(gId).getInfoChannelId();
-		if (iId != null) {
-			TextChannel iTc = Core.JDA.getGuildById(gId).getTextChannelById(iId);
-			if (iTc != null) {
-				iTc.sendMessage("The anime database has updated, sending a new list and deleting invalid roles.").queue();
-				arh.update();
-				alh.update();
-			}
+		try {
+			TextChannel iTc = j.getInfoChannel();
+			iTc.sendMessage("The anime database has updated, sending a new list and deleting invalid roles.").queue();
+			arh.update();
+			alh.update();
+		} catch (Exception e) {
+			//already handled
 		}
 	}
 

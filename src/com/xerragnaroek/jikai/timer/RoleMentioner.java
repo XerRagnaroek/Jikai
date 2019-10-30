@@ -11,6 +11,7 @@ import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
 import com.xerragnaroek.jikai.anime.alrh.ALRHandler;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
 import com.xerragnaroek.jikai.core.Core;
+import com.xerragnaroek.jikai.data.Jikai;
 import com.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -26,15 +27,19 @@ public class RoleMentioner {
 	private static DateTimeFormatter timeF = DateTimeFormatter.ofPattern("HH:mm");
 
 	public static void mentionUpdate(Guild g, AnimeDayTime adt, ReleaseTime time, Consumer<Message> whenComplete) {
-		TextChannel tc = g.getTextChannelById(Core.GDM.get(g).getAnimeChannelId());
-		if (tc != null) {
+		Jikai j = Core.JM.get(g);
+		try {
+			TextChannel tc = j.getAnimeChannel();
+
 			log.debug("Sending to TextChannel {}", tc.getName());
-			ALRHandler h = Core.ALRHM.get(g.getId());
+			ALRHandler h = j.getALRHandler();
 			String rId = h.getRoleId(adt.getAnime().title);
 			if (rId != null) {
 				tc.sendMessage(g.getRoleById(rId).getAsMention()).queue();
 			}
 			tc.sendMessage(makeMessage(g, adt, time)).queue(whenComplete.andThen(v -> log.debug("Successfully sent message to guild {}, textchannel {}", g.getId(), tc.getName())), e -> BotUtils.logAndSendToDev(log, "Failed sending message", e));
+		} catch (Exception e) {
+			//no anime channel, already being handled
 		}
 	}
 
@@ -42,7 +47,7 @@ public class RoleMentioner {
 		EmbedBuilder eb = new EmbedBuilder();
 		Anime a = adt.getAnime();
 		ZonedDateTime zdt = adt.getZonedDateTime();
-		eb.setThumbnail(a.imageURL).setTitle("**" + a.title + "**", a.url).setDescription(String.format("**%s, %s at %s\n%s**", adt.getDayOfWeek(), date.format(zdt), timeF.format(zdt), time)).setTimestamp(ZonedDateTime.now(Core.GDM.get(g).getTimeZone()));
+		eb.setThumbnail(a.imageURL).setTitle("**" + a.title + "**", a.url).setDescription(String.format("**%s, %s at %s\n%s**", adt.getDayOfWeek(), date.format(zdt), timeF.format(zdt), time)).setTimestamp(ZonedDateTime.now(Core.JM.get(g).getJikaiData().getTimeZone()));
 		log.debug("Made MessageEmbed");
 		return eb.build();
 	}

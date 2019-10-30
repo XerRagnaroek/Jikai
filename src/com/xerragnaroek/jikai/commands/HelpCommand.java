@@ -34,8 +34,8 @@ public class HelpCommand implements Command {
 		String trigger = chi.getTrigger();
 		EmbedBuilder eb = new EmbedBuilder();
 		eb.setTitle("Commands you have permissions to use are:");
-		Core.CHM.getCommands().stream().filter(c -> CommandHandlerManager.checkPermissions(c, m)).forEach(com -> eb.addField("**" + trigger + (com.hasUsage() ? com.getUsage() : com.getName()) + "**", com.getDescription(), false));
-		eb.setTimestamp(ZonedDateTime.now(Core.GDM.get(event.getGuild()).getTimeZone()));
+		Core.JM.getCHM().getCommands().stream().filter(c -> CommandHandlerManager.checkPermissions(c, m)).forEach(com -> eb.addField("**" + trigger + (com.hasUsage() ? com.getUsage() : com.getName()) + "**", com.getDescription(), false));
+		eb.setTimestamp(ZonedDateTime.now(Core.JM.get(event.getGuild()).getJikaiData().getTimeZone()));
 		BotUtils.sendPM(m.getUser(), eb.build());
 	}
 

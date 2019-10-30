@@ -1,7 +1,5 @@
 package com.xerragnaroek.jikai.anime.db;
 
-import static com.xerragnaroek.jikai.core.Core.GDM;
-
 import java.time.DayOfWeek;
 import java.time.ZoneId;
 import java.util.Map;
@@ -15,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
+import com.xerragnaroek.jikai.core.Core;
+import com.xerragnaroek.jikai.util.prop.IntegerProperty;
 
 import net.dv8tion.jda.api.entities.Guild;
 
@@ -25,12 +25,13 @@ public class AnimeDB {
 	private final static Logger log = LoggerFactory.getLogger(AnimeDB.class);
 	private static long updateRate = 6;
 	private static ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
+	private static IntegerProperty version = new IntegerProperty(0);
 
 	public static void init() {
 		if (!initialized) {
 			aDB.init();
 			initialized = true;
-			GDM.registerOnUniversalTimeZoneChanged((gId, zone) -> AnimeDB.addTimeZone(zone));
+			Core.JM.getJDM().registerOnUniversalTimeZoneChanged((gId, zone) -> AnimeDB.addTimeZone(zone));
 		} else {
 			log.error("Already initialized!");
 			throw new IllegalStateException("Already initialized!");
@@ -87,8 +88,20 @@ public class AnimeDB {
 		}
 	}
 
-	public static int getAnimeBaseVersion() {
-		return GDM.getBotData().getAnimeBaseVersion();
+	public static int getAnimeDBVersion() {
+		return version.get();
+	}
+
+	public static IntegerProperty dbVersionProperty() {
+		return version;
+	}
+
+	public static int incrementAndGetDBVersion() {
+		return version.incrementAndGet();
+	}
+
+	public static int getAndIncrementDBVersion() {
+		return version.getAndIncrement();
 	}
 
 	public static void startUpdateThread() {
@@ -101,5 +114,9 @@ public class AnimeDB {
 
 	public static int loadedAnimes() {
 		return aDB.size();
+	}
+
+	public static void setDBVersionProperty(IntegerProperty prop) {
+		version = prop;
 	}
 }

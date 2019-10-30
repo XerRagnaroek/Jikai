@@ -1,13 +1,14 @@
 package com.xerragnaroek.jikai.commands;
 
 import static com.xerragnaroek.jikai.core.Core.JDA;
-import static com.xerragnaroek.jikai.core.Core.RTKM;
 
 import java.time.Instant;
 
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.GuildData;
+import com.xerragnaroek.jikai.data.Jikai;
+import com.xerragnaroek.jikai.data.JikaiData;
+import com.xerragnaroek.jikai.timer.RTKManager;
 
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.Permission;
@@ -26,14 +27,18 @@ public class StatusCommand implements Command {
 	@Override
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
-		GuildData gd = Core.GDM.get(g);
-		TextChannel tc = g.getTextChannelById(gd.getInfoChannelId());
-		Instant now = Instant.now();
-		Message m = tc.sendMessage("If you can see this, something broke along the lines.").complete();
-		long ping = Instant.now().toEpochMilli() - now.toEpochMilli();
-		MessageBuilder mb = new MessageBuilder();
-		mb.appendCodeBlock(String.format("= Status =%nPing :: %d ms%nGateway-Ping :: %d ms%nExecuted Commands :: %d%nAnimes in DB :: %02d%nDB Version :: %d%nDay-Threshold :: %d%nHour-Threshold :: %d%nUpdate-Rate :: %d min%nConnected Servers :: %d", ping, JDA.getGatewayPing(), gd.getExecutedCommandCount(), AnimeDB.loadedAnimes(), AnimeDB.getAnimeBaseVersion(), RTKM.getDayThreshold(), RTKM.getHourThreshold(), RTKM.getUpdateRate(), JDA.getGuildCache().size()), "asciidoc");
-		m.editMessage(mb.build()).queue();
+		Jikai j = Core.JM.get(g);
+		JikaiData jd = j.getJikaiData();
+		try {
+			TextChannel tc = j.getInfoChannel();
+			Instant now = Instant.now();
+			Message m = tc.sendMessage("If you can see this, something broke along the lines.").complete();
+			long ping = Instant.now().toEpochMilli() - now.toEpochMilli();
+			MessageBuilder mb = new MessageBuilder();
+			RTKManager rtkm = Core.JM.getRTKM();
+			mb.appendCodeBlock(String.format("= Status =%nPing :: %d ms%nGateway-Ping :: %d ms%nExecuted Commands :: %d%nAnimes in DB :: %02d%nDB Version :: %d%nDay-Threshold :: %d%nHour-Threshold :: %d%nUpdate-Rate :: %d min%nConnected Servers :: %d", ping, JDA.getGatewayPing(), jd.getExecutedCommandCount(), AnimeDB.loadedAnimes(), AnimeDB.getAnimeDBVersion(), rtkm.getDayThreshold(), rtkm.getHourThreshold(), rtkm.getUpdateRate(), JDA.getGuildCache().size()), "asciidoc");
+			m.editMessage(mb.build()).queue();
+		} catch (Exception e) {}
 	}
 
 	@Override

@@ -1,27 +1,29 @@
 package com.xerragnaroek.jikai.timer;
 
+import java.util.concurrent.TimeUnit;
+
 public class ReleaseTime {
-	private int days;
-	private int mins;
-	private int hours;
+	private long days;
+	private long mins;
+	private long hours;
 
 	ReleaseTime(long millis) {
-		days = (int) (millis / 86400000);
-		millis = millis % 86400000;
-		hours = (int) (millis / 3600000);
-		millis = millis % 3600000;
-		mins = (int) (millis / 60000);
+		days = TimeUnit.MILLISECONDS.toDays(millis);
+		millis -= TimeUnit.DAYS.toMillis(days);
+		hours = TimeUnit.MILLISECONDS.toHours(millis);
+		millis -= TimeUnit.HOURS.toMillis(hours);
+		mins = TimeUnit.MILLISECONDS.toMinutes(millis);
 	}
 
-	public int days() {
+	public long days() {
 		return days;
 	}
 
-	public int hours() {
+	public long hours() {
 		return hours;
 	}
 
-	public int mins() {
+	public long mins() {
 		return mins;
 	}
 

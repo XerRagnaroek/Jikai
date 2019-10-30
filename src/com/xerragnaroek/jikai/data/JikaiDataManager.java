@@ -22,7 +22,7 @@ import java.util.function.BiConsumer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xerragnaroek.jikai.util.BotUtils;
 import com.xerragnaroek.jikai.util.Initilizable;
-import com.xerragnaroek.jikai.util.JikaiManager;
+import com.xerragnaroek.jikai.util.Manager;
 
 import net.dv8tion.jda.api.entities.Guild;
 
@@ -32,15 +32,15 @@ import net.dv8tion.jda.api.entities.Guild;
  * @author XerRagnaroek
  *
  */
-public class GuildDataManager extends JikaiManager<GuildData> implements Initilizable {
+public class JikaiDataManager extends Manager<JikaiData> implements Initilizable {
 
 	final Map<ZoneId, List<String>> usedZones = Collections.synchronizedMap(new HashMap<>());
 	private BotData botData;
 	private final ScheduledExecutorService saver = Executors.newSingleThreadScheduledExecutor();
 	private Set<BiConsumer<String, ZoneId>> zoneCons = Collections.synchronizedSet(new HashSet<>());
 
-	public GuildDataManager() {
-		super(GuildData.class);
+	public JikaiDataManager() {
+		super(JikaiData.class);
 	}
 
 	@Override
@@ -64,7 +64,7 @@ public class GuildDataManager extends JikaiManager<GuildData> implements Initili
 	}
 
 	public boolean hasCompletedSetup(Guild g) {
-		GuildData gd = get(g);
+		JikaiData gd = get(g);
 
 		return gd != null && gd.hasCompletedSetup();
 	}
@@ -90,8 +90,8 @@ public class GuildDataManager extends JikaiManager<GuildData> implements Initili
 	}
 
 	@Override
-	protected GuildData makeNew(String gId) {
-		return new GuildData(gId, true);
+	protected JikaiData makeNew(String gId) {
+		return new JikaiData(gId, true);
 	}
 
 	/**
@@ -127,7 +127,7 @@ public class GuildDataManager extends JikaiManager<GuildData> implements Initili
 						botData = readFromPath(path, mapper, BotData.class);
 						usedZones.put(botData.getDefaultTimeZone(), new LinkedList<>());
 					} else {
-						GuildData gd = readFromPath(path, mapper, GuildData.class);
+						JikaiData gd = readFromPath(path, mapper, JikaiData.class);
 						if (gd != null) {
 							impls.put(gd.getGuildId(), gd);
 							addTimeZone(gd.getGuildId(), gd.getTimeZone());
@@ -158,7 +158,7 @@ public class GuildDataManager extends JikaiManager<GuildData> implements Initili
 	}
 
 	/**
-	 * Save all configurations. Gets called every 10 minutes.
+	 * Save all data. Gets called every 10 minutes.
 	 */
 	private void save() {
 		log.debug("Saving configs...");
@@ -185,7 +185,7 @@ public class GuildDataManager extends JikaiManager<GuildData> implements Initili
 		log.info("Saved data");
 	}
 
-	public Set<GuildData> data() {
+	public Set<JikaiData> data() {
 		return Collections.synchronizedSet(new HashSet<>(impls.values()));
 	}
 

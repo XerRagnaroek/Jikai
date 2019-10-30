@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.core.Core;
 
-import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 
@@ -21,7 +20,6 @@ import net.dv8tion.jda.api.entities.TextChannel;
  *
  */
 class ALHandler {
-
 	private ALRHandler alrh;
 	private int expectedNumSuccesses = 0;
 	private final Logger log;
@@ -52,18 +50,19 @@ class ALHandler {
 	 */
 	void sendList() {
 		sending.set(true);
-		Guild g = Core.JDA.getGuildById(alrh.gId);
-		TextChannel tc = g.getTextChannelById(alrh.tcId.get());
-		log.info("Sending list messages to channel {}", tc.getName() + "#" + alrh.tcId);
-		Set<DTO> dtos = Core.ALRHM.getListMessages();
-		successes.set(0);
-		expectedNumSuccesses = calcExpectedSuccesses(dtos);
-		log.info("Deleting old messages and data");
-		alrhDB.forEachMessage((id, dat) -> {
-			tc.deleteMessageById(id).queue(v -> log.info("Deleted old list message"));
-		});
-		alrhDB.clearUcMsgMap();
-		dtos.forEach(dto -> handleDTO(g, tc, dto));
+		try {
+			TextChannel tc = alrh.j.getAnimeChannel();
+			log.info("Sending list messages to channel {}", tc.getName() + "#" + alrh.tcId);
+			Set<DTO> dtos = Core.JM.getALHRM().getListMessages();
+			successes.set(0);
+			expectedNumSuccesses = calcExpectedSuccesses(dtos);
+			log.info("Deleting old messages and data");
+			alrhDB.forEachMessage((id, dat) -> {
+				tc.deleteMessageById(id).queue(v -> log.info("Deleted old list message"));
+			});
+			alrhDB.clearUcMsgMap();
+			dtos.forEach(dto -> handleDTO(tc, dto));
+		} catch (Exception e) {}
 	}
 
 	/**
@@ -94,7 +93,7 @@ class ALHandler {
 	 * @param dto
 	 *            - The DTO containing the data to send
 	 */
-	private void handleDTO(Guild g, TextChannel tc, DTO dto) {
+	private void handleDTO(TextChannel tc, DTO dto) {
 		Message me = dto.getMessage();
 		Set<ALRHData> data = dto.getALRHData();
 		log.debug("Sending list message...");
@@ -129,7 +128,7 @@ class ALHandler {
 					if (successes.get() == expectedNumSuccesses) {
 						alrh.dataChanged();
 						successes.set(0);
-						alrh.gData.save(true);
+						alrh.jData.save(true);
 						sending.set(false);
 					}
 				});

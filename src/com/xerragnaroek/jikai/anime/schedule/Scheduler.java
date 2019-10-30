@@ -11,69 +11,62 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.GuildData;
-import com.xerragnaroek.jikai.util.BotException;
-import com.xerragnaroek.jikai.util.BotUtils;
-import com.xerragnaroek.jikai.util.JikaiManaged;
+import com.xerragnaroek.jikai.data.Jikai;
+import com.xerragnaroek.jikai.data.JikaiData;
 
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
 
-public class Scheduler extends JikaiManaged {
+public class Scheduler {
 
 	private final Logger log;
 	private final String gId;
-	private final GuildData gd;
+	private final JikaiData jd;
 	private final ScheduleManager man;
+	private final Jikai j;
 
 	Scheduler(ScheduleManager man, String guildId) {
 		gId = guildId;
-		gd = Core.GDM.get(guildId);
+		j = Core.JM.get(guildId);
+		j.setScheduler(this);
+		jd = j.getJikaiData();
 		log = LoggerFactory.getLogger(Scheduler.class + "#" + gId);
-		gd.timeZoneProperty().onChange((zo, zn) -> sendScheduleToGuild());
+		jd.timeZoneProperty().onChange((zo, zn) -> sendScheduleToGuild());
 		this.man = man;
 	}
 
 	public void sendScheduleToGuild() {
 		try {
 			log.info("Sending schedule");
-			GuildData gd = Core.GDM.get(gId);
-			ZoneId zone = gd.getTimeZone();
-			TextChannel tc = BotUtils.getTextChannelChecked(gId, gd.getScheduleChannelId());
+			ZoneId zone = jd.getTimeZone();
+			TextChannel tc = j.getScheduleChannel();
 			log.debug("TextChannel=" + tc.getName() + "#" + tc.getId());
 			List<MessageEmbed> embeds = man.embedsForTimeZone(zone);
-			if (gd.hasScheduleMessageIds()) {
+			if (jd.hasScheduleMessageIds()) {
 				log.debug("Old schedule is present");
-				List<String> ids = gd.getScheduleMessageIds();
+				List<String> ids = jd.getScheduleMessageIds();
 				if (ids.size() == embeds.size()) {
 					log.debug("Editing old schedule");
-					editScheduleMsgs(tc, gd.getScheduleMessageIds(), embeds);
+					editScheduleMsgs(tc, ids, embeds);
 					return;
 				} else {
 					log.debug("Size difference between new and old schedule, deleting old one");
 					deleteSchedule(tc, ids);
 				}
 			}
-			sendSchedImpl(tc, embeds, gd);
-			gd.save(true);
-		} catch (BotException e) {
-			log.error("Exception while sending schedule, passing it on.", e);
-			//TODO handle Exceptions
-		}
+			sendSchedImpl(tc, embeds);
+			jd.save(true);
+		} catch (Exception e) {}
 	}
 
 	void update() {
 		try {
 			sendScheduleToGuild();
-			TextChannel tc = BotUtils.getTextChannelChecked(gId, gd.getInfoChannelId());
-			tc.sendMessage("Schedule has been updated!").queue();
-		} catch (BotException e) {
-			log.error("Exception while sending schedule, passing it on.", e);
-			//TODO handle Exceptions
-		}
+			j.getInfoChannel().sendMessage("Schedule has been updated!").queue();
+		} catch (Exception e) {}
 	}
 
-	private void sendSchedImpl(TextChannel tc, List<MessageEmbed> embeds, GuildData gd) {
+	private void sendSchedImpl(TextChannel tc, List<MessageEmbed> embeds) {
 		AtomicInteger count = new AtomicInteger(0);
 		List<String> ids = new LinkedList<>();
 		embeds.forEach(me -> {
@@ -89,7 +82,7 @@ public class Scheduler extends JikaiManaged {
 				e.printStackTrace();
 			}
 		});
-		gd.setScheduleMessageIds(ids);
+		jd.setScheduleMessageIds(ids);
 	}
 
 	private void deleteSchedule(TextChannel tc, List<String> ids) {

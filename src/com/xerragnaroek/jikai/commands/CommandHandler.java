@@ -1,7 +1,5 @@
 package com.xerragnaroek.jikai.commands;
 
-import static com.xerragnaroek.jikai.core.Core.CHM;
-
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -10,10 +8,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.GuildData;
+import com.xerragnaroek.jikai.data.Jikai;
+import com.xerragnaroek.jikai.data.JikaiData;
 import com.xerragnaroek.jikai.util.Initilizable;
-import com.xerragnaroek.jikai.util.JikaiManaged;
-import com.xerragnaroek.jikai.util.Property;
+import com.xerragnaroek.jikai.util.prop.Property;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
@@ -23,30 +21,33 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
  * @author XerRagnarök
  *
  */
-public class CommandHandler extends JikaiManaged implements Initilizable {
+public class CommandHandler implements Initilizable {
 	private Set<Command> commands;
 	private final Logger log;
 	private final String gId;
 	private Property<String> trigger = new Property<>();
 	private Property<Boolean> comsEnabled = new Property<>();
 	private AtomicBoolean initialized = new AtomicBoolean(false);
+	private Jikai j;
 
 	CommandHandler(String g) {
 		gId = g;
 		log = LoggerFactory.getLogger(CommandHandler.class.getName() + "#" + gId);
+		j = Core.JM.get(g);
+		j.setCH(this);
 		init();
 	}
 
 	public void init() {
-		GuildData gd = Core.GDM.get(gId);
-		gd.triggerProperty().bindAndSet(trigger);
-		gd.comsEnabledProperty().bind(comsEnabled);
-		if (gd.hasExplicitCommandSetting()) {
-			comsEnabled.set(gd.areCommandsEnabled());
+		JikaiData jd = j.getJikaiData();
+		jd.triggerProperty().bindAndSet(trigger);
+		jd.comsEnabledProperty().bind(comsEnabled);
+		if (jd.hasExplicitCommandSetting()) {
+			comsEnabled.set(jd.areCommandsEnabled());
 		} else {
-			comsEnabled.set(CHM.areCommandsEnabledByDefault());
+			comsEnabled.set(Core.JM.getCHM().areCommandsEnabledByDefault());
 		}
-		commands = CHM.getCommands();
+		commands = Core.JM.getCHM().getCommands();
 		initialized.set(true);
 		log.info("Initialized");
 	}
@@ -70,7 +71,7 @@ public class CommandHandler extends JikaiManaged implements Initilizable {
 					tmp = (String[]) ArrayUtils.subarray(tmp, 1, tmp.length);
 					if (CommandHandlerManager.checkPermissions(com, event.getMember())) {
 						if (comsEnabled.get() || com.isAlwaysEnabled()) {
-							Core.GDM.get(gId).incrementAndGetExecComs();
+							j.getJikaiData().incrementAndGetExecComs();
 							com.executeCommand(this, event, tmp);
 						}
 					}

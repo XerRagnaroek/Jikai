@@ -1,8 +1,6 @@
 package com.xerragnaroek.jikai.data;
 
-import static com.xerragnaroek.jikai.core.Core.ALRHM;
-import static com.xerragnaroek.jikai.core.Core.GDM;
-import static com.xerragnaroek.jikai.core.Core.RTKM;
+import static com.xerragnaroek.jikai.core.Core.JM;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,15 +29,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.xerragnaroek.jikai.anime.alrh.ALRHData;
 import com.xerragnaroek.jikai.anime.alrh.ALRHandler;
-import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.timer.ReleaseTimeKeeper;
 import com.xerragnaroek.jikai.util.BotUtils;
-import com.xerragnaroek.jikai.util.JikaiManaged;
-import com.xerragnaroek.jikai.util.Property;
+import com.xerragnaroek.jikai.util.prop.IntegerProperty;
+import com.xerragnaroek.jikai.util.prop.Property;
 
 @JsonInclude(Include.NON_EMPTY)
 @JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "trigger", "timezone", "exec_command_count", "list_channel_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "last_mentioned", "alrh_data" })
-public class GuildData extends JikaiManaged {
+public class JikaiData {
 	private Property<String> aniChId = new Property<>();
 	private AtomicBoolean changed = new AtomicBoolean(false);
 	private Property<Boolean> completedSetup = new Property<>(false);
@@ -53,16 +50,16 @@ public class GuildData extends JikaiManaged {
 	private List<String> schedMsgIds;
 	private Property<String> trigger = new Property<>();
 	private Property<ZoneId> zone = new Property<>();
-	private Property<Integer> execComs = new Property<>(0);
-	private BotData bd = Core.GDM.getBotData();
+	private IntegerProperty execComs = new IntegerProperty(0);
+	private BotData bd = JM.getJDM().getBotData();
 
-	public GuildData(String guildId, boolean save) {
-		log = LoggerFactory.getLogger(GuildData.class + "#" + guildId);
+	public JikaiData(String guildId, boolean save) {
+		log = LoggerFactory.getLogger(JikaiData.class + "#" + guildId);
 		gId = guildId;
 		fileLoc = Paths.get(String.format("./data/%s.json", guildId));
 		setTrigger(bd.getDefaultTrigger());
 		setTimeZone(bd.getDefaultTimeZone());
-		setCommandsEnabled(Core.CHM.areCommandsEnabledByDefault());
+		setCommandsEnabled(JM.getCHM().areCommandsEnabledByDefault());
 		changed.set(save);
 		log.info("Made configuration for {}", guildId);
 	}
@@ -73,11 +70,7 @@ public class GuildData extends JikaiManaged {
 
 	@JsonProperty("commands_enabled")
 	public boolean areCommandsEnabled() {
-		if (comsEnabled.hasNonNullValue()) {
-			return comsEnabled.get();
-		} else {
-			return Core.CHM.areCommandsEnabledByDefault();
-		}
+		return comsEnabled.get();
 	}
 
 	public Property<Boolean> comsEnabledProperty() {
@@ -86,7 +79,7 @@ public class GuildData extends JikaiManaged {
 
 	@JsonProperty("alrh_data")
 	public Set<ALRHData> getALRHData() {
-		return ALRHM.get(gId).getData();
+		return JM.get(gId).getALRHandler().getData();
 	}
 
 	@JsonProperty("anime_channel_id")
@@ -96,13 +89,13 @@ public class GuildData extends JikaiManaged {
 
 	@JsonIgnore
 	public Map<String, ZonedDateTime> getAnimesLastMentioned() {
-		return RTKM.get(gId).getLastMentionedMap();
+		return JM.get(gId).getReleaseTimeKeeper().getLastMentionedMap();
 	}
 
 	@JsonProperty("last_mentioned")
 	public Map<String, String> getAnimesLastMentionedString() {
 		Map<String, String> tmp = new TreeMap<>();
-		RTKM.get(gId).getLastMentionedMap().forEach((id, zdt) -> tmp.put(id, zdt.toString()));
+		JM.get(gId).getReleaseTimeKeeper().getLastMentionedMap().forEach((id, zdt) -> tmp.put(id, zdt.toString()));
 		return tmp;
 	}
 
@@ -138,21 +131,17 @@ public class GuildData extends JikaiManaged {
 
 	@JsonIgnore
 	public ZoneId getTimeZone() {
-		return Objects.requireNonNullElse(zone.get(), GDM.getBotData().getDefaultTimeZone());
+		return zone.get();
 	}
 
 	@JsonProperty("timezone")
 	public String getTimeZoneString() {
-		if (zone.hasNonNullValue()) {
-			return zone.get().getId();
-		} else {
-			return GDM.getBotData().getDefaultTimeZoneString();
-		}
+		return zone.get().getId();
 	}
 
 	@JsonProperty("trigger")
 	public String getTrigger() {
-		return Objects.requireNonNullElse(trigger.get(), GDM.getBotData().getDefaultTrigger());
+		return trigger.get();
 	}
 
 	@JsonProperty("completed_setup")
@@ -272,12 +261,12 @@ public class GuildData extends JikaiManaged {
 			log.debug("GuildData changed");
 			tmp = true;
 		}
-		ALRHandler h = ALRHM.get(gId);
+		ALRHandler h = JM.get(gId).getALRHandler();
 		if (h.isInitialized() && h.hasUpdateFlagAndReset()) {
 			log.debug("ALHRData changed");
 			tmp = true;
 		}
-		ReleaseTimeKeeper rtk = RTKM.get(gId);
+		ReleaseTimeKeeper rtk = JM.get(gId).getReleaseTimeKeeper();
 		if (rtk != null && rtk.hasUpdateFlagAndReset()) {
 			log.debug("ReleaseTimeKeeper changed");
 			tmp = true;
@@ -294,8 +283,8 @@ public class GuildData extends JikaiManaged {
 	}
 
 	@JsonCreator
-	public static GuildData of(@JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") String gId, @JsonProperty("trigger") Property<String> trig, @JsonProperty("anime_channel_id") Property<String> aniChId, @JsonProperty("list_channel_id") Property<String> listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("last_mentioned") Map<String, String> lastMentioned, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") Property<String> icId, @JsonProperty("schedule_channel_id") Property<String> schId, @JsonProperty("schedule_message_ids") List<String> schedMsgIds) {
-		GuildData gd = new GuildData(gId, false);
+	public static JikaiData of(@JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") String gId, @JsonProperty("trigger") Property<String> trig, @JsonProperty("anime_channel_id") Property<String> aniChId, @JsonProperty("list_channel_id") Property<String> listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("last_mentioned") Map<String, String> lastMentioned, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") Property<String> icId, @JsonProperty("schedule_channel_id") Property<String> schId, @JsonProperty("schedule_message_ids") List<String> schedMsgIds) {
+		JikaiData gd = new JikaiData(gId, false);
 		setIfNonNull(gd.trigger, trig);
 		setIfNonNull(gd.aniChId, aniChId);
 		setIfNonNull(gd.listChId, listChId);
@@ -308,8 +297,8 @@ public class GuildData extends JikaiManaged {
 		setIfNonNull(gd.schedChId, schId);
 		gd.schedMsgIds = schedMsgIds;
 		setIfNonNull(gd.execComs, execComs);
-		ALRHM.addToInitMap(gId, data);
-		RTKM.addToInitMap(gId, lastMentioned);
+		JM.getALHRM().addToInitMap(gId, data);
+		JM.getRTKM().addToInitMap(gId, lastMentioned);
 		return gd;
 	}
 
@@ -318,10 +307,9 @@ public class GuildData extends JikaiManaged {
 	}
 
 	public int incrementAndGetExecComs() {
-		int tmp = execComs.get();
-		tmp++;
-		setData(execComs, tmp, "exec_command_count");
-		return tmp;
+		log.info("exec_command_count updated to '{}'", execComs.incrementAndGet());
+		hasChanged();
+		return execComs.get();
 	}
 
 	private static <T> void setIfNonNull(Property<T> gdp, Property<T> prop) {

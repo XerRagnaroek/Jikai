@@ -6,10 +6,10 @@ import org.slf4j.LoggerFactory;
 import com.xerragnaroek.jikai.commands.Command;
 import com.xerragnaroek.jikai.commands.CommandHandler;
 import com.xerragnaroek.jikai.core.Core;
+import com.xerragnaroek.jikai.data.Jikai;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import net.dv8tion.jda.internal.utils.PermissionUtil;
 
 /**
  * Command that changes the trigger String.
@@ -31,21 +31,16 @@ public class SetTriggerCommand implements Command {
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		String content = arguments[0];
 		//only high ranking lads can use this command
-		if (PermissionUtil.checkPermission(event.getMember(), Permission.MANAGE_ROLES)) {
-			//pad it with a whitespace at the end so words can be used better: foo bar instead of foobar
-			if (content.length() > 1) {
-				content += " ";
-			}
-			if (content.length() >= 1) {
-				Core.GDM.get(event.getGuild().getId()).setTrigger(content);
-				event.getChannel().sendMessageFormat("Trigger was changed to \"%s\"", content).queue();
-			}
-		} else {
-			//obligatory trash talk
-			event.getChannel().sendMessageFormat(	"Who the **fuck** do you think you are, %s? Permission **DENIED**",
-													event.getAuthor().getAsMention())
-					.queue();
-			log.info("User {} has insufficient permissions", event.getAuthor());
+		//pad it with a whitespace at the end so words can be used better: foo bar instead of foobar
+		if (content.length() > 1) {
+			content += " ";
+		}
+		if (content.length() >= 1) {
+			Jikai j = Core.JM.get(event.getGuild());
+			j.getJikaiData().setTrigger(content);
+			try {
+				j.getInfoChannel().sendMessageFormat("Trigger was changed to \"%s\"", content).queue();
+			} catch (Exception e) {}
 		}
 
 	}

@@ -30,7 +30,7 @@ public class SetInfoChannelCommand implements Command {
 		List<TextChannel> tc = g.getTextChannelsByName(chan, false);
 		if (!tc.isEmpty()) {
 			TextChannel textC = tc.get(0);
-			Core.GDM.get(g.getId()).setInfoChannelId(textC.getId());
+			Core.JM.get(g.getId()).getJikaiData().setInfoChannelId(textC.getId());
 			textC.sendMessage("Channel for bot information messages set.\nFeel free to delete this message").queue();
 		}
 	}

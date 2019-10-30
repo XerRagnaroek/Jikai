@@ -4,56 +4,28 @@ import java.awt.Color;
 import java.time.DayOfWeek;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.ForkJoinPool;
 
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
-import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.util.Manager;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 
-public class ScheduleManager extends Manager<Scheduler> {
+public class Schedule {
 
-	private final Map<ZoneId, List<MessageEmbed>> schedEmbeds = Collections.synchronizedMap(new HashMap<>());
-	private final DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm");
+	private ZoneId zone;
+	private List<MessageEmbed> embeds = new LinkedList<>();
+	private final static DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm");
 
-	public ScheduleManager() {
-		super(Scheduler.class);
-
-	}
-
-	@Override
-	public void init() {
-		Core.JM.getGuildIds().forEach(this::registerNew);
-		updateScheduleEmbeds();
-		AnimeDB.dbVersionProperty().onChange((ov, nv) -> {
-			if (isInitialized()) {
-				updateScheduleEmbeds();
-				updateSchedules();
-			}
-		});
-		init.set(true);
-	}
-
-	@Override
-	protected Scheduler makeNew(String gId) {
-		return new Scheduler(this, gId);
-	}
-
-	private void updateScheduleEmbeds() {
-		Core.JM.getJDM().getUsedTimeZones().forEach(z -> {
-			schedEmbeds.put(z, makeEmbedsForWeek(z));
-		});
+	public Schedule(ZoneId z) {
+		zone = z;
+		embeds = makeEmbedsForWeek(zone);
 	}
 
 	private List<MessageEmbed> makeEmbedsForWeek(ZoneId zone) {
@@ -83,12 +55,12 @@ public class ScheduleManager extends Manager<Scheduler> {
 		});
 	}
 
-	List<MessageEmbed> embedsForTimeZone(ZoneId z) {
-		return new LinkedList<>(schedEmbeds.get(z));
+	void updateEmbeds() {
+		embeds = makeEmbedsForWeek(zone);
 	}
 
-	private void updateSchedules() {
-		impls.values().forEach(sch -> ForkJoinPool.commonPool().execute(() -> sch.update()));
+	public List<MessageEmbed> getEmbeds() {
+		return embeds;
 	}
 
 }

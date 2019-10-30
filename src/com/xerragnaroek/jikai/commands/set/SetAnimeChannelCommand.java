@@ -38,7 +38,7 @@ public class SetAnimeChannelCommand implements Command {
 		List<TextChannel> tc = g.getTextChannelsByName(chan, false);
 		if (!tc.isEmpty()) {
 			TextChannel textC = tc.get(0);
-			Core.GDM.get(g.getId()).setAnimeChannelId(textC.getId());
+			Core.JM.get(g.getId()).getJikaiData().setAnimeChannelId(textC.getId());
 			textC.sendMessage("Channel for upcoming release messages set.\nFeel free to delete this message").queue();
 		}
 	}

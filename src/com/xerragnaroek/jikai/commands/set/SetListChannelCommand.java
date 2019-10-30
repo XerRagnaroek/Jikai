@@ -37,7 +37,7 @@ public class SetListChannelCommand implements Command {
 		List<TextChannel> tc = g.getTextChannelsByName(chan, false);
 		if (!tc.isEmpty()) {
 			TextChannel textC = tc.get(0);
-			Core.GDM.get(g.getId()).setListChannelId(textC.getId());
+			Core.JM.get(g.getId()).getJikaiData().setListChannelId(textC.getId());
 			textC.sendMessage("Channel for the anime list set.\nFeel free to delete this message").queue();
 		}
 	}

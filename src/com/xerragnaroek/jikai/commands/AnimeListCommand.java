@@ -23,7 +23,7 @@ public class AnimeListCommand implements Command {
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		log.debug("Executing ListCommand");
 		AnimeDB.waitUntilLoaded();
-		ALRHandler h = Core.ALRHM.get(event.getGuild());
+		ALRHandler h = Core.JM.get(event.getGuild()).getALRHandler();
 		if (!h.isSendingList()) {
 			h.sendList();
 		} else {

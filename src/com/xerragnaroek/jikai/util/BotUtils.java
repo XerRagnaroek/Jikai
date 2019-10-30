@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.core.Core;
+import com.xerragnaroek.jikai.data.Jikai;
 
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.MessageBuilder.SplitPolicy;
@@ -148,37 +149,35 @@ public class BotUtils {
 		return futures;
 	}
 
-	public static TextChannel getTextChannelChecked(Guild g, String id) throws BotException {
+	public static TextChannel getTextChannelChecked(Guild g, String id) throws Exception {
 		if (id != null) {
 			TextChannel tc = g.getTextChannelById(id);
 			if (tc != null) {
 				return tc;
 			}
 		}
-		throw new BotException((id == null ? "Id can not be null!" : "Id is invalid!"), null, BotException.UTIL);
+		throw new Exception((id == null ? "Id can not be null!" : "Id is invalid!"));
 	}
 
-	public static TextChannel getTextChannelChecked(String gId, String id) throws BotException {
+	public static TextChannel getTextChannelChecked(String gId, String id) throws Exception {
 		return getTextChannelChecked(Core.JDA.getGuildById(gId), id);
 	}
 
 	public static List<CompletableFuture<Message>> sendToAllInfoChannels(String msg) {
 		List<CompletableFuture<Message>> cf = new ArrayList<>();
-		Core.GDM.data().forEach(gd -> {
-			Guild g = Core.JDA.getGuildById(gd.getGuildId());
-			if (g != null) {
-				TextChannel info = g.getTextChannelById(gd.getInfoChannelId());
-				if (info != null) {
-					cf.add(info.sendMessage(msg).submit().whenComplete((m, e) -> {
-						log.debug("Sent to infochannel on guild {}: '{}'", g.getName(), msg);
-					}));
-				} else {
-					//TODO handle info channel null
-				}
-			} else {
-				//TODO handle guild null
+		for (Jikai j : Core.JM) {
+			try {
+				cf.add(j.getInfoChannel().sendMessage(msg).submit().whenComplete((m, e) -> {
+					try {
+						log.debug("Sent to infochannel on guild {}: '{}'", j.getGuild().getName(), msg);
+					} catch (Exception e1) {
+						//guild doesn't exist, already being handled
+					}
+				}));
+			} catch (Exception e) {
+				//info channel doesn't exist, already being handled
 			}
-		});
+		}
 		return cf;
 	}
 }

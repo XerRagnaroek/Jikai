@@ -1,8 +1,6 @@
 package com.xerragnaroek.jikai.core;
 
-import static com.xerragnaroek.jikai.core.Core.ALRHM;
-import static com.xerragnaroek.jikai.core.Core.CHM;
-import static com.xerragnaroek.jikai.core.Core.GDM;
+import static com.xerragnaroek.jikai.core.Core.JM;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -12,6 +10,8 @@ import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.xerragnaroek.jikai.data.Jikai;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.ReadyEvent;
@@ -30,8 +30,9 @@ public class EventListener extends ListenerAdapter {
 	public void onMessageReceived(MessageReceivedEvent event) {
 		//ignore bots
 		if (!event.getAuthor().isBot() && event.isFromGuild()) {
-			if (GDM.hasCompletedSetup(event.getGuild())) {
-				runAsync(event.getGuild(), () -> CHM.get(event.getGuild()).handleMessage(event));
+			Jikai j = JM.get(event.getGuild());
+			if (j.hasCompletedSetup()) {
+				runAsync(event.getGuild(), () -> j.getCommandHandler().handleMessage(event));
 			}
 		}
 	}
@@ -39,23 +40,26 @@ public class EventListener extends ListenerAdapter {
 	@Override
 	public void onMessageReactionAdd(MessageReactionAddEvent event) {
 		if (!event.getUser().isBot()) {
-			if (GDM.hasCompletedSetup(event.getGuild())) {
-				runAsync(event.getGuild(), () -> ALRHM.get(event.getGuild()).handleReactionAdded(event));
+			Jikai j = JM.get(event.getGuild());
+			if (j.hasCompletedSetup()) {
+				runAsync(event.getGuild(), () -> j.getALRHandler().handleReactionAdded(event));
 			}
 		}
 	}
 
 	@Override
 	public void onMessageReactionRemove(MessageReactionRemoveEvent event) {
-		if (GDM.hasCompletedSetup(event.getGuild())) {
-			runAsync(event.getGuild(), () -> ALRHM.get(event.getGuild()).handleReactionRemoved(event));
+		Jikai j = JM.get(event.getGuild());
+		if (j.hasCompletedSetup()) {
+			runAsync(event.getGuild(), () -> j.getALRHandler().handleReactionRemoved(event));
 		}
 	}
 
 	@Override
 	public void onMessageReactionRemoveAll(MessageReactionRemoveAllEvent event) {
-		if (GDM.hasCompletedSetup(event.getGuild())) {
-			runAsync(event.getGuild(), () -> ALRHM.get(event.getGuild()).handleReactionRemovedAll(event));
+		Jikai j = JM.get(event.getGuild());
+		if (j.hasCompletedSetup()) {
+			runAsync(event.getGuild(), () -> j.getALRHandler().handleReactionRemovedAll(event));
 		}
 	}
 
@@ -70,7 +74,7 @@ public class EventListener extends ListenerAdapter {
 	@Override
 	public void onGuildJoin(GuildJoinEvent event) {
 		String gId = event.getGuild().getId();
-		if (!GDM.isKnownGuild(gId)) {
+		if (!JM.isKnownGuild(gId)) {
 			onNewGuild(event.getGuild());
 		}
 	}

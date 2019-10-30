@@ -12,25 +12,28 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.core.Core;
+import com.xerragnaroek.jikai.data.Jikai;
 import com.xerragnaroek.jikai.data.UpdatableData;
-import com.xerragnaroek.jikai.util.JikaiManaged;
 
 import net.dv8tion.jda.api.entities.Guild;
 
-public class ReleaseTimeKeeper extends JikaiManaged implements UpdatableData {
+public class ReleaseTimeKeeper implements UpdatableData {
 	private final String gId;
 	private Map<String, ZonedDateTime> lastMentioned;
 	private final Logger log;
 	private final AtomicBoolean changed = new AtomicBoolean(false);
+	private final Jikai j;
 
 	ReleaseTimeKeeper(String gId) {
 		this.gId = gId;
 		lastMentioned = new TreeMap<>();
+		j = Core.JM.get(gId);
+		j.setRTK(this);
 		log = LoggerFactory.getLogger(ReleaseTimeKeeper.class + "#" + gId);
 	}
 
 	private void updateReactedAnimes(ZonedDateTime now, Guild g, ZoneId zone, boolean ignoreThresholds) {
-		Set<String> reactedAnimes = Core.ALRHM.get(g).getReactedAnimes();
+		Set<String> reactedAnimes = j.getALRHandler().getReactedAnimes();
 		AnimeDB.getSeasonalAnimesAdjusted(zone).forEach(adt -> {
 			String title = adt.getAnime().title;
 			if (reactedAnimes.contains(title)) {
@@ -64,7 +67,7 @@ public class ReleaseTimeKeeper extends JikaiManaged implements UpdatableData {
 
 	public void updateAnimes(boolean ignoreThresholds, boolean allAnimes) {
 		log.info("Sending anime release times to guild {}{}{}", gId, (ignoreThresholds ? " ignoring thresholds" : ""), (allAnimes ? " for all animes" : ""));
-		ZoneId zone = Core.GDM.get(gId).getTimeZone();
+		ZoneId zone = j.getJikaiData().getTimeZone();
 		Guild g = Core.JDA.getGuildById(gId);
 		updateAnimesZone(g, zone, ignoreThresholds, allAnimes);
 	}

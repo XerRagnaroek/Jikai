@@ -3,7 +3,6 @@ package com.xerragnaroek.jikai.core;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.login.LoginException;
 
@@ -11,12 +10,8 @@ import org.apache.commons.collections4.IteratorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.jikai.anime.alrh.ALRHManager;
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
-import com.xerragnaroek.jikai.anime.schedule.ScheduleManager;
-import com.xerragnaroek.jikai.commands.CommandHandlerManager;
-import com.xerragnaroek.jikai.data.GuildDataManager;
-import com.xerragnaroek.jikai.timer.RTKManager;
+import com.xerragnaroek.jikai.data.JikaiManager;
 import com.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.AccountType;
@@ -32,11 +27,7 @@ public class Core {
 	public static String DEV_ID;
 	private static long saveDelay;
 	public final static Logger ERROR_LOG = LoggerFactory.getLogger("ERROR");
-	public static final GuildDataManager GDM = new GuildDataManager();
-	public static final ALRHManager ALRHM = new ALRHManager();
-	public static final CommandHandlerManager CHM = new CommandHandlerManager();
-	public static final RTKManager RTKM = new RTKManager();
-	public static final ScheduleManager SM = new ScheduleManager();
+	public static final JikaiManager JM = new JikaiManager();
 
 	public static void main(String[] args) throws LoginException, InterruptedException, ExecutionException, ClassNotFoundException, IOException {
 		handleArgs(args);
@@ -51,15 +42,8 @@ public class Core {
 	private static void init(String[] args) {
 		log.info("Initializing");
 		RestAction.setDefaultFailure(e -> BotUtils.logAndSendToDev(ERROR_LOG, "", e));
-		GDM.init();
-		AnimeDB.init();
-		AnimeDB.waitUntilLoaded();
-		CHM.init();
-		RTKM.init();
-		ALRHM.init();
-		SM.init();
-		GDM.startSaveThread(saveDelay, TimeUnit.MINUTES);
-		RTKM.startReleaseUpdateThread();
+		JM.init();
+		JM.startSaveThread(saveDelay);
 	}
 
 	private static void handleArgs(String args[]) {
@@ -87,22 +71,22 @@ public class Core {
 				log.info("Set save_delay to " + saveDelay);
 				break;
 			case "-commands_default_enabled":
-				CHM.setCommandsEnabledDefault(true);
+				JM.getCHM().setCommandsEnabledDefault(true);
 				log.info("Commands are now enabled by default");
 				break;
 			case "-release_update_rate":
 				tmp = Long.parseLong(it.next());
-				RTKM.setUpdateRate(tmp);
+				JM.getRTKM().setUpdateRate(tmp);
 				log.info("Set release_update_rate to " + tmp);
 				break;
 			case "-day_threshold":
 				t = Integer.parseInt(it.next());
-				RTKM.setDayThreshold(t);
+				JM.getRTKM().setDayThreshold(t);
 				log.info("Set day_threshold to " + t);
 				break;
 			case "-hour_threshold":
 				t = Integer.parseInt(it.next());
-				RTKM.setHourThreshold(t);
+				JM.getRTKM().setHourThreshold(t);
 				log.info("Set hour_threshold to " + t);
 				break;
 			case "-anime_base_update_rate":

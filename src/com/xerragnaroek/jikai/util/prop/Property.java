@@ -1,4 +1,4 @@
-package com.xerragnaroek.jikai.util;
+package com.xerragnaroek.jikai.util.prop;
 
 import java.util.ArrayList;
 import java.util.Collections;

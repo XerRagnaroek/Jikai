@@ -1,7 +1,5 @@
 package com.xerragnaroek.jikai.anime.db;
 
-import static com.xerragnaroek.jikai.core.Core.GDM;
-
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -49,12 +47,14 @@ class AnimeDBImpl implements Initilizable {
 	private static final Logger log = LoggerFactory.getLogger(AnimeDBImpl.class);
 	private AtomicBoolean loading = new AtomicBoolean(true);
 	private AtomicBoolean initialized = new AtomicBoolean(false);
+	private BotData bd;
 
 	AnimeDBImpl() {}
 
 	public void init() {
 		log.info("Initializing AnimeBase");
 		animes.put(jst, new ZoneAnimeBase(jst));
+		bd = Core.JM.getJDM().getBotData();
 		loadSeason();
 		initialized.set(true);
 	}
@@ -71,19 +71,17 @@ class AnimeDBImpl implements Initilizable {
 		loading.set(true);
 		Core.JDA.getPresence().setActivity(Activity.watching("the AnimeDataBase load"));
 		try {
-			BotData bData = GDM.getBotData();
 			SeasonSearch ss = new Connector().seasonSearch(zdt.getYear(), getSeason(zdt)).get();
 			log.info("Retrieving season search for {} {}", ss.season_name, ss.season_year);
 			//compare hashs, so only new data will be used
-			String hash = Objects.requireNonNullElse(bData.getCurrentSeasonHash(), "");
+			String hash = Objects.requireNonNullElse(bd.getCurrentSeasonHash(), "");
 			log.debug("Current search hash = " + hash);
 			if (!ss.request_hash.equals(hash) || !animes.get(jst).hasEntries()) {
 				loadSeasonImpl(ss, zdt);
 				if (!ss.request_hash.equals(hash)) {
-					bData.incrementAnimeBaseVersion();
-					BotUtils.sendToAllInfoChannels("AnimeDB has updated to version " + bData.getAnimeBaseVersion());
-					GDM.getBotData().setCurrentSeasonHash(ss.request_hash);
-					log.info("AnimeDB has updated to version {}", bData.getAnimeBaseVersion());
+					BotUtils.sendToAllInfoChannels("AnimeDB has updated to version " + AnimeDB.incrementAndGetDBVersion());
+					bd.setCurrentSeasonHash(ss.request_hash);
+					log.info("AnimeDB has updated to version {}", AnimeDB.getAnimeDBVersion());
 				}
 			} else {
 				log.info("Current schedule is up to date.");
@@ -157,7 +155,7 @@ class AnimeDBImpl implements Initilizable {
 	}*/
 
 	void zoneAnimes(boolean overwrite) {
-		GDM.getUsedTimeZones().forEach(z -> {
+		Core.JM.getJDM().getUsedTimeZones().forEach(z -> {
 			addTimeZone(z, overwrite);
 		});
 	}
@@ -259,7 +257,7 @@ class AnimeDBImpl implements Initilizable {
 	}
 
 	Set<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
-		return getAnimesAiringOnWeekday(day, GDM.get(g).getTimeZone());
+		return getAnimesAiringOnWeekday(day, Core.JM.get(g).getJikaiData().getTimeZone());
 	}
 
 	Set<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, ZoneId zone) {

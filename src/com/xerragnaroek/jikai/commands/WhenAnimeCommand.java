@@ -1,8 +1,8 @@
 package com.xerragnaroek.jikai.commands;
 
-import static com.xerragnaroek.jikai.core.Core.RTKM;
-
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.xerragnaroek.jikai.core.Core;
+import com.xerragnaroek.jikai.timer.RTKManager;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -24,12 +24,13 @@ public class WhenAnimeCommand implements Command {
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
 		AnimeDB.waitUntilLoaded();
+		RTKManager rtkm = Core.JM.getRTKM();
 		if (arguments.length > 1) {
-			RTKM.get(g).updateAnimes(Boolean.parseBoolean(arguments[0]), Boolean.parseBoolean(arguments[1]));
+			rtkm.get(g).updateAnimes(Boolean.parseBoolean(arguments[0]), Boolean.parseBoolean(arguments[1]));
 		} else if (arguments.length == 1) {
-			RTKM.get(g).updateAnimes(Boolean.parseBoolean(arguments[0]), false);
+			rtkm.get(g).updateAnimes(Boolean.parseBoolean(arguments[0]), false);
 		} else {
-			RTKM.get(g).updateAnimes(false, false);
+			rtkm.get(g).updateAnimes(false, false);
 		}
 	}
 

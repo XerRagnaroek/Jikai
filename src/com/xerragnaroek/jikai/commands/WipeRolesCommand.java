@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.xerragnaroek.jikai.anime.alrh.ALRHandler;
 import com.xerragnaroek.jikai.core.Core;
+import com.xerragnaroek.jikai.data.Jikai;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -20,11 +21,14 @@ public class WipeRolesCommand implements Command {
 	@Override
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
-		Message m1 = event.getTextChannel().sendMessage("Deleting all anime roles...").complete();
-		AtomicInteger count = new AtomicInteger(0);
-		ALRHandler alrh = Core.ALRHM.get(g);
-		g.getRoles().stream().filter(r -> r.getPermissionsRaw() == 0l).peek(r -> count.incrementAndGet()).forEach(r -> alrh.deleteRole(r));
-		m1.editMessageFormat("Deleted %d roles", count.get()).queue();
+		Jikai j = Core.JM.get(g);
+		try {
+			Message m1 = j.getInfoChannel().sendMessage("Deleting all anime roles...").complete();
+			AtomicInteger count = new AtomicInteger(0);
+			ALRHandler alrh = Core.JM.get(g).getALRHandler();
+			g.getRoles().stream().filter(r -> r.getPermissionsRaw() == 0l).peek(r -> count.incrementAndGet()).forEach(r -> alrh.deleteRole(r));
+			m1.editMessageFormat("Deleted %d roles", count.get()).queue();
+		} catch (Exception e) {}
 	}
 
 	@Override

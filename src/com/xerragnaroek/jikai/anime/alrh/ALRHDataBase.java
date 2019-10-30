@@ -45,7 +45,7 @@ public class ALRHDataBase {
 	}
 
 	private void updateVariables(ALRHData data) {
-		sentABVersion = AnimeDB.getAnimeBaseVersion();
+		sentABVersion = AnimeDB.getAnimeDBVersion();
 		sentTcId = data.getTextChannelId();
 	}
 

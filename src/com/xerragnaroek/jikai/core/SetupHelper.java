@@ -1,15 +1,12 @@
 package com.xerragnaroek.jikai.core;
 
-import static com.xerragnaroek.jikai.core.Core.GDM;
-
 import java.util.Arrays;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.jikai.anime.alrh.ALRHandler;
-import com.xerragnaroek.jikai.anime.schedule.Scheduler;
-import com.xerragnaroek.jikai.data.GuildData;
+import com.xerragnaroek.jikai.data.Jikai;
+import com.xerragnaroek.jikai.data.JikaiData;
 import com.xerragnaroek.jikai.timer.RTKManager;
 
 import net.dv8tion.jda.api.MessageBuilder;
@@ -66,7 +63,7 @@ public class SetupHelper extends ListenerAdapter {
 
 	private String releaseString() {
 		StringBuilder bob = new StringBuilder("Updates for releases will be sent daily");
-		RTKManager rtkm = Core.RTKM;
+		RTKManager rtkm = Core.JM.getRTKM();
 		int dt = rtkm.getDayThreshold();
 		int ht = rtkm.getHourThreshold();
 		long rate = rtkm.getUpdateRate();
@@ -113,33 +110,30 @@ public class SetupHelper extends ListenerAdapter {
 	private void setup() {
 		listen = false;
 		log.info("Owner agreed to setup");
-		GuildData gd = GDM.registerNew(g);
-		ALRHandler alrh = Core.ALRHM.registerNew(g);
-		Core.CHM.registerNew(g);
-		Core.RTKM.registerNew(g);
-		Scheduler sched = Core.SM.registerNew(g);
+		Jikai j = Core.JM.registerNew(g);
+		JikaiData jd = j.getJikaiData();
 		Category cat = g.createCategory("jikai").addPermissionOverride(g.getPublicRole(), Arrays.asList(Permission.VIEW_CHANNEL, Permission.MESSAGE_ADD_REACTION), Arrays.asList(Permission.MESSAGE_WRITE)).addPermissionOverride(g.getSelfMember(), Permission.ALL_CHANNEL_PERMISSIONS, 0l).complete();
 		TextChannel tc = cat.createTextChannel("jikai_list").complete();
 		log.debug("Made jikai_list channel");
-		gd.setListChannelId(tc.getId());
+		jd.setListChannelId(tc.getId());
 		tc = cat.createTextChannel("jikai_schedule").complete();
 		log.debug("Made jikai_schedule channel");
-		gd.setScheduleChannelId(tc.getId());
+		jd.setScheduleChannelId(tc.getId());
 		tc = cat.createTextChannel("jikai_anime").complete();
 		log.debug("Made jikai_anime channel");
-		gd.setAnimeChannelId(tc.getId());
+		jd.setAnimeChannelId(tc.getId());
 		tc = cat.createTextChannel("jikai_info").complete();
 		log.debug("Made jikai_info channel");
-		gd.setInfoChannelId(tc.getId());
-		gd.setSetupCompleted(true);
-		gd.save(true);
+		jd.setInfoChannelId(tc.getId());
+		jd.setSetupCompleted(true);
+		jd.save(true);
 		log.info("Setup completed");
-		setTc.sendMessage("The setup is complete. Commands are by default " + (gd.areCommandsEnabled() ? "enabled" : "disabled") + ".\nYou can change that by calling !enable/disable_commands").complete();
+		setTc.sendMessage("The setup is complete. Commands are by default " + (jd.areCommandsEnabled() ? "enabled" : "disabled") + ".\nYou can change that by calling !enable/disable_commands").complete();
 		setTc.sendMessage("Send `!help` for a list of all commands you have permissions to run (which are all because you're the owner).").complete();
 		setTc.sendMessage("Also I ask you to set the bot role ('Jikai') color to #12e5a8 or R18 G229 B168. Thank you!").complete();
 		//ForkJoinPool.commonPool().execute(() -> {
-		alrh.sendList();
-		sched.sendScheduleToGuild();
+		j.getALRHandler().sendList();
+		j.getScheduler().sendScheduleToGuild();
 		//});
 	}
 }

@@ -5,6 +5,7 @@ import java.time.ZoneId;
 import com.xerragnaroek.jikai.commands.Command;
 import com.xerragnaroek.jikai.commands.CommandHandler;
 import com.xerragnaroek.jikai.core.Core;
+import com.xerragnaroek.jikai.data.Jikai;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
@@ -26,12 +27,14 @@ public class SetTimeZoneCommand implements Command {
 	@Override
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		String zone = arguments[0];
+		Jikai j = Core.JM.get(event.getGuild());
 		try {
-			Core.GDM.get(event.getGuild()).setTimeZone(ZoneId.of(zone));
+			ZoneId z = ZoneId.of(zone);
+			j.getJikaiData().setTimeZone(z);
+			j.getInfoChannel().sendMessage("Timezone has been changed to '" + z.getId() + "'").queue();
 		} catch (Exception e) {
 			EmbedBuilder eb = new EmbedBuilder();
-			eb.setDescription(event.getAuthor().getAsMention()
-					+ " that's an invalid zoneid. \nPlease refer to this [list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), specifically the row \"TZ database name\"!");
+			eb.setDescription(event.getAuthor().getAsMention() + " that's an invalid zoneid. \nPlease refer to this [list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), specifically the row \"TZ database name\"!");
 			event.getTextChannel().sendMessage(eb.build()).queue();
 		}
 	}

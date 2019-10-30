@@ -1,16 +1,18 @@
 package com.xerragnaroek.jikai.util;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.dv8tion.jda.api.entities.Guild;
 
-public abstract class JikaiManager<T> implements Initilizable {
+public abstract class Manager<T> implements Initilizable, Iterable<T> {
 
 	protected final Map<String, T> impls = Collections.synchronizedMap(new TreeMap<>());
 	protected AtomicBoolean init = new AtomicBoolean(false);
@@ -19,7 +21,7 @@ public abstract class JikaiManager<T> implements Initilizable {
 
 	protected abstract T makeNew(String gId);
 
-	protected JikaiManager(Class<T> clazz) {
+	protected Manager(Class<T> clazz) {
 		this.typeName = clazz.getTypeName();
 		log = LoggerFactory.getLogger(this.getClass());
 
@@ -62,5 +64,14 @@ public abstract class JikaiManager<T> implements Initilizable {
 
 	public boolean hasManagerFor(String g) {
 		return impls.containsKey(g);
+	}
+
+	public void forEach(BiConsumer<String, ? super T> con) {
+		impls.forEach(con);
+	}
+
+	@Override
+	public Iterator<T> iterator() {
+		return impls.values().iterator();
 	}
 }

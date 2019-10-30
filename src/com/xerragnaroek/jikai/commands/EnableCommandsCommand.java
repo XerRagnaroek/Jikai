@@ -4,11 +4,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.GuildData;
+import com.xerragnaroek.jikai.data.Jikai;
+import com.xerragnaroek.jikai.data.JikaiData;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
 public class EnableCommandsCommand implements Command {
@@ -28,16 +28,13 @@ public class EnableCommandsCommand implements Command {
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
 		log.debug("Executing EnableCommandsCommand on guild {}#{}", g.getName(), g.getId());
-		GuildData gd = Core.GDM.get(g);
-		if (!gd.areCommandsEnabled()) {
-			gd.setCommandsEnabled(true);
-			String id = gd.getInfoChannelId();
-			TextChannel tc = null;
-			if (id != null) {
-				tc = g.getTextChannelById(id);
-			}
-			tc = (tc == null) ? event.getTextChannel() : tc;
-			tc.sendMessage("Commands have been enabled. Call `" + gd.getTrigger() + "disable_commands` to disable them.").queue();
+		Jikai j = Core.JM.get(g);
+		JikaiData jd = j.getJikaiData();
+		if (jd.areCommandsEnabled()) {
+			jd.setCommandsEnabled(false);
+			try {
+				j.getInfoChannel().sendMessage("Commands have been enabled. Call `" + jd.getTrigger() + "disable_commands` to disable them.").queue();
+			} catch (Exception e) {}
 		}
 	}
 

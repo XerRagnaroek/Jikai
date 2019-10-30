@@ -20,7 +20,7 @@ public class ScheduleCommand implements Command {
 
 	@Override
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
-		Core.SM.get(event.getGuild()).sendScheduleToGuild();
+		Core.JM.get(event.getGuild()).getScheduler().sendScheduleToGuild();
 	}
 
 	@Override

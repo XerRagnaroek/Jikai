@@ -17,9 +17,9 @@ import org.slf4j.LoggerFactory;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.util.BotUtils;
-import com.xerragnaroek.jikai.util.JikaiManager;
+import com.xerragnaroek.jikai.util.Manager;
 
-public class RTKManager extends JikaiManager<ReleaseTimeKeeper> {
+public class RTKManager extends Manager<ReleaseTimeKeeper> {
 
 	public RTKManager() {
 		super(ReleaseTimeKeeper.class);
@@ -112,7 +112,7 @@ public class RTKManager extends JikaiManager<ReleaseTimeKeeper> {
 			long minDif = now.until(nextHour, ChronoUnit.MINUTES) + 1;
 			exec.scheduleAtFixedRate(() -> {
 				impls.forEach((id, rtk) -> {
-					if (Core.GDM.get(id).hasCompletedSetup()) {
+					if (Core.JM.get(id).hasCompletedSetup()) {
 						CompletableFuture.runAsync(() -> rtk.updateAnimes(false, false)).whenComplete((v, e) -> {
 							if (e != null) {
 								BotUtils.logAndSendToDev(Core.ERROR_LOG, "", e);
