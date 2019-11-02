@@ -6,6 +6,7 @@ import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAdjusters;
 
 import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
+import com.xerragnaroek.jikai.user.TitleType;
 
 /**
  * Stores an anime, it's broadcast day and time.
@@ -62,6 +63,22 @@ public class AnimeDayTime implements Comparable<AnimeDayTime> {
 
 	public static boolean isKnown(AnimeDayTime adt) {
 		return !adt.equals(UNKNOWN);
+	}
+
+	public String getTitle(TitleType tt) {
+		String str;
+		switch (tt) {
+		case ENGLISH:
+			str = a.title_english;
+			if (str == null || str.isEmpty()) {
+				str = a.title_synonyms.get(0);
+			}
+			return str;
+		case JAPANESE:
+			return a.title_japanese;
+		default:
+			return a.title;
+		}
 	}
 
 	@Override

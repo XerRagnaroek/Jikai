@@ -13,6 +13,10 @@ public class ReleaseTime {
 		hours = TimeUnit.MILLISECONDS.toHours(millis);
 		millis -= TimeUnit.HOURS.toMillis(hours);
 		mins = TimeUnit.MILLISECONDS.toMinutes(millis);
+		if (mins == 59) {
+			mins = 0;
+			hours++;
+		}
 	}
 
 	public long days() {

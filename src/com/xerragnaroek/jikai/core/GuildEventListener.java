@@ -22,8 +22,8 @@ import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
-public class EventListener extends ListenerAdapter {
-	private final Logger log = LoggerFactory.getLogger(EventListener.class);
+public class GuildEventListener extends ListenerAdapter {
+	private final Logger log = LoggerFactory.getLogger(GuildEventListener.class);
 	private final Map<String, ExecutorService> execMap = new TreeMap<>();
 
 	@Override

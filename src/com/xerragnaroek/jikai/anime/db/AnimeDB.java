@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
-import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.util.prop.IntegerProperty;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -31,7 +30,6 @@ public class AnimeDB {
 		if (!initialized) {
 			aDB.init();
 			initialized = true;
-			Core.JM.getJDM().registerOnUniversalTimeZoneChanged((gId, zone) -> AnimeDB.addTimeZone(zone));
 		} else {
 			log.error("Already initialized!");
 			throw new IllegalStateException("Already initialized!");
@@ -39,12 +37,10 @@ public class AnimeDB {
 	}
 
 	public static Set<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
-		assertInitialisation();
 		return aDB.getAnimesAiringOnWeekday(day, g);
 	}
 
 	public static Set<AnimeDayTime> getAnimesAiringOnWeekday(DayOfWeek day, ZoneId z) {
-		assertInitialisation();
 		return aDB.getAnimesAiringOnWeekday(day, z);
 	}
 
@@ -57,35 +53,27 @@ public class AnimeDB {
 	}
 
 	public static Set<AnimeDayTime> getSeasonalAnimes() {
-		assertInitialisation();
 		return aDB.getSeasonalAnimes();
 	}
 
 	public static void addTimeZone(ZoneId z) {
-		assertInitialisation();
 		aDB.addTimeZone(z, false);
 	}
 
 	public static void waitUntilLoaded() {
-		assertInitialisation();
 		while (aDB.isLoading()) {}
 	}
 
 	public static Set<AnimeDayTime> getSeasonalAnimesAdjusted(ZoneId tz) {
-		assertInitialisation();
 		return aDB.getSeasonalAnimesAdjusted(tz);
 	}
 
 	public static Anime getAnime(String title) {
-		assertInitialisation();
 		return aDB.getAnime(title);
 	}
 
-	private static void assertInitialisation() {
-		if (!initialized) {
-			log.error("AnimeBase hasn't been initialized yet!");
-			throw new IllegalStateException("AnimeBase hasn't been initialized yet!");
-		}
+	public static AnimeDayTime getADT(ZoneId zone, String title) {
+		return aDB.getADT(zone, title);
 	}
 
 	public static int getAnimeDBVersion() {
@@ -118,5 +106,17 @@ public class AnimeDB {
 
 	public static void setDBVersionProperty(IntegerProperty prop) {
 		version = prop;
+	}
+
+	public static Anime getAnimeByNumber(int n) {
+		return aDB.getAnimeByNum(n);
+	}
+
+	public static AnimeDayTime getADTByNumber(ZoneId zone, int n) {
+		return aDB.getADTByNum(zone, n);
+	}
+
+	public static int titleToNumber(String title) {
+		return aDB.titleToNumber(title);
 	}
 }

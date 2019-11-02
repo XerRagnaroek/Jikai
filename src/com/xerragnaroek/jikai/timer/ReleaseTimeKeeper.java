@@ -13,11 +13,10 @@ import org.slf4j.LoggerFactory;
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.data.Jikai;
-import com.xerragnaroek.jikai.data.UpdatableData;
 
 import net.dv8tion.jda.api.entities.Guild;
 
-public class ReleaseTimeKeeper implements UpdatableData {
+public class ReleaseTimeKeeper {
 	private final String gId;
 	private Map<String, ZonedDateTime> lastMentioned;
 	private final Logger log;
@@ -81,7 +80,6 @@ public class ReleaseTimeKeeper implements UpdatableData {
 		}
 	}
 
-	@Override
 	public boolean hasUpdateFlagAndReset() {
 		return changed.getAndSet(false);
 	}

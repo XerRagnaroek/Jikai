@@ -8,8 +8,10 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
@@ -29,6 +31,7 @@ import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearchAnime;
 import com.github.Doomsdayrs.Jikan4java.types.Support.Prop.From;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.data.BotData;
+import com.xerragnaroek.jikai.data.Jikai;
 import com.xerragnaroek.jikai.util.BotUtils;
 import com.xerragnaroek.jikai.util.Initilizable;
 
@@ -48,6 +51,7 @@ class AnimeDBImpl implements Initilizable {
 	private AtomicBoolean loading = new AtomicBoolean(true);
 	private AtomicBoolean initialized = new AtomicBoolean(false);
 	private BotData bd;
+	private Map<Integer, String> mapToNum;
 
 	AnimeDBImpl() {}
 
@@ -56,6 +60,8 @@ class AnimeDBImpl implements Initilizable {
 		animes.put(jst, new ZoneAnimeBase(jst));
 		bd = Core.JM.getJDM().getBotData();
 		loadSeason();
+		Jikai.timeZoneMapProperty().onPut((z, v) -> addTimeZone(z, false));
+		Jikai.timeZoneMapProperty().onRemove((z, v) -> removeTimeZone(z));
 		initialized.set(true);
 	}
 
@@ -102,22 +108,20 @@ class AnimeDBImpl implements Initilizable {
 			}
 			return null;
 		}).filter(Objects::nonNull).filter(a -> a.airing).map(this::makeAnimeDayTime).filter(AnimeDayTime::isKnown).collect(Collectors.toList());
-		//TODO remove limit above for final version!!!
+		Collections.sort(tmp);
 		animes.get(jst).setAnimeDayTimes(tmp);
-
+		mapToNum(tmp);
 		loading.set(false);
 		zoneAnimes(true);
 		log.info("Loaded {} animes in {}ms", tmp.size(), Duration.between(start, Instant.now()).toMillis());
 	}
 
-	private void putInMap(Map<ZoneId, Map<String, AnimeDayTime>> m, AnimeDayTime adt, ZoneId z) {
-		m.compute(z, (zone, map) -> {
-			if (map == null) {
-				map = new ConcurrentHashMap<>();
-			}
-			map.put(adt.getAnime().title, adt);
-			return map;
-		});
+	private void mapToNum(List<AnimeDayTime> adts) {
+		Map<Integer, String> tmp = new ConcurrentHashMap<>();
+		for (int n = 0; n < adts.size(); n++) {
+			tmp.put(n, adts.get(n).getAnime().title);
+		}
+		mapToNum = tmp;
 	}
 
 	/**
@@ -155,9 +159,7 @@ class AnimeDBImpl implements Initilizable {
 	}*/
 
 	void zoneAnimes(boolean overwrite) {
-		Core.JM.getJDM().getUsedTimeZones().forEach(z -> {
-			addTimeZone(z, overwrite);
-		});
+		Jikai.getUsedTimeZones().forEach(z -> addTimeZone(z, overwrite));
 	}
 
 	void addTimeZone(ZoneId z, boolean overwrite) {
@@ -167,6 +169,14 @@ class AnimeDBImpl implements Initilizable {
 			animes.put(z, zab);
 			log.info("Adjusted animes for zone {}", z.toString());
 		}
+	}
+
+	AnimeDayTime getADT(ZoneId zone, String title) {
+		if (!animes.containsKey(zone)) {
+			addTimeZone(zone, false);
+		}
+		return animes.get(zone).getADT(title);
+
 	}
 
 	private ZonedDateTime makeZDT(Anime a) {
@@ -267,10 +277,6 @@ class AnimeDBImpl implements Initilizable {
 		return animes.get(zone).getAnimesOnDayOfWeek(day);
 	}
 
-	private List<AnimeDayTime> filterForWeekDay(List<AnimeDayTime> list, DayOfWeek day) {
-		return list.stream().filter(adt -> adt.releasesOnDay(day)).collect(Collectors.toList());
-	}
-
 	Set<AnimeDayTime> getSeasonalAnimes() {
 		return animes.get(jst).getAnimes().stream().sorted((a1, a2) -> a1.getAnime().title.compareTo(a2.getAnime().title)).collect(Collectors.toSet());
 	}
@@ -285,6 +291,27 @@ class AnimeDBImpl implements Initilizable {
 
 	int size() {
 		return animes.get(jst).size();
+	}
+
+	Anime getAnimeByNum(int num) {
+		return getAnime(mapToNum.get(num));
+	}
+
+	AnimeDayTime getADTByNum(ZoneId zone, int num) {
+		return getADT(zone, mapToNum.get(num));
+	}
+
+	int titleToNumber(String title) {
+		for (Entry<Integer, String> pair : mapToNum.entrySet()) {
+			if (pair.getValue().equals(title)) {
+				return pair.getKey();
+			}
+		}
+		return -1;
+	}
+
+	private void removeTimeZone(ZoneId z) {
+		animes.remove(z).clear();
 	}
 
 	@Override

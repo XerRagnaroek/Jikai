@@ -1,5 +1,8 @@
 package com.xerragnaroek.jikai.data;
 
+import java.time.ZoneId;
+import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,8 +11,10 @@ import com.xerragnaroek.jikai.anime.schedule.Scheduler;
 import com.xerragnaroek.jikai.commands.CommandHandler;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.timer.ReleaseTimeKeeper;
+import com.xerragnaroek.jikai.user.JikaiUserManager;
 import com.xerragnaroek.jikai.util.BotUtils;
 import com.xerragnaroek.jikai.util.Shutdownable;
+import com.xerragnaroek.jikai.util.prop.MapProperty;
 import com.xerragnaroek.jikai.util.prop.Property;
 
 import net.dv8tion.jda.api.MessageBuilder;
@@ -28,6 +33,9 @@ public class Jikai implements Shutdownable {
 	private Property<Boolean> shutdown = new Property<>(false);
 	private Property<Boolean> forceShutdown = new Property<>(false);
 	private final Logger log;
+
+	private static MapProperty<ZoneId, Integer> usedZones = new MapProperty<>();
+	private static JikaiUserManager jum = new JikaiUserManager();
 
 	public Jikai(String gId, JikaiManager jm) {
 		this.jd = jm.jdm.get(gId);
@@ -189,4 +197,32 @@ public class Jikai implements Shutdownable {
 		this.ch = ch;
 	}
 
+	public static void addTimeZone(ZoneId zone) {
+		usedZones.compute(zone, (z, c) -> {
+			c = (c == null ? 1 : c + 1);
+			return c;
+		});
+	}
+
+	public static void removeTimeZone(ZoneId zone) {
+		usedZones.compute(zone, (z, c) -> {
+			c--;
+			if (c == 0) {
+				return null;
+			}
+			return c;
+		});
+	}
+
+	public static MapProperty<ZoneId, Integer> timeZoneMapProperty() {
+		return usedZones;
+	}
+
+	public static Set<ZoneId> getUsedTimeZones() {
+		return usedZones.keySet();
+	}
+
+	public static JikaiUserManager getUserManager() {
+		return jum;
+	}
 }

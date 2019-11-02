@@ -234,6 +234,10 @@ public class JikaiData {
 	}
 
 	public ZoneId setTimeZone(ZoneId z) {
+		if (!zone.get().equals(z)) {
+			Jikai.removeTimeZone(zone.get());
+			Jikai.addTimeZone(z);
+		}
 		return setData(zone, z, "timezone");
 	}
 

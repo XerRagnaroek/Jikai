@@ -4,20 +4,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.ZoneId;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xerragnaroek.jikai.util.BotUtils;
@@ -34,10 +28,8 @@ import net.dv8tion.jda.api.entities.Guild;
  */
 public class JikaiDataManager extends Manager<JikaiData> implements Initilizable {
 
-	final Map<ZoneId, List<String>> usedZones = Collections.synchronizedMap(new HashMap<>());
 	private BotData botData;
 	private final ScheduledExecutorService saver = Executors.newSingleThreadScheduledExecutor();
-	private Set<BiConsumer<String, ZoneId>> zoneCons = Collections.synchronizedSet(new HashSet<>());
 
 	public JikaiDataManager() {
 		super(JikaiData.class);
@@ -46,7 +38,6 @@ public class JikaiDataManager extends Manager<JikaiData> implements Initilizable
 	@Override
 	public void init() {
 		initBotData();
-		registerOnUniversalTimeZoneChanged(this::addTimeZone);
 		loadData();
 	}
 
@@ -59,10 +50,6 @@ public class JikaiDataManager extends Manager<JikaiData> implements Initilizable
 		return copy;
 	}
 
-	public Set<ZoneId> getUsedTimeZones() {
-		return new HashSet<>(usedZones.keySet());
-	}
-
 	public boolean hasCompletedSetup(Guild g) {
 		JikaiData gd = get(g);
 
@@ -73,20 +60,8 @@ public class JikaiDataManager extends Manager<JikaiData> implements Initilizable
 		return getGuildIds().contains(gId);
 	}
 
-	public void registerOnUniversalTimeZoneChanged(BiConsumer<String, ZoneId> con) {
-		zoneCons.add(con);
-		impls.values().forEach(gd -> gd.timeZoneProperty().onChange((ov, nv) -> con.accept(gd.getGuildId(), nv)));
-		log.debug("Registered a new universal consumer for TimeZone");
-	}
-
 	public void startSaveThread(long delay, TimeUnit unit) {
 		saver.scheduleAtFixedRate(this::save, delay, delay, unit);
-	}
-
-	public Map<ZoneId, List<String>> timeZoneGuildMap() {
-		Map<ZoneId, List<String>> tmp = new HashMap<>();
-		tmp.putAll(usedZones);
-		return tmp;
 	}
 
 	@Override
@@ -94,26 +69,8 @@ public class JikaiDataManager extends Manager<JikaiData> implements Initilizable
 		return new JikaiData(gId, true);
 	}
 
-	/**
-	 * Get the ZoneID from the given String, add it to the set and the AnimeBase
-	 * 
-	 * @param zone
-	 *            - the TimeZone's id
-	 */
-	private void addTimeZone(String gId, ZoneId zone) {
-		usedZones.compute(zone, (k, v) -> {
-			if (v == null) {
-				v = new LinkedList<String>();
-			}
-			v.add(gId);
-			return v;
-		});
-		log.debug("Added zone {}", zone);
-	}
-
 	private void initBotData() {
 		botData = new BotData(true);
-		usedZones.put(botData.getDefaultTimeZone(), new LinkedList<>());
 	}
 
 	private void loadData() {
@@ -125,12 +82,12 @@ public class JikaiDataManager extends Manager<JikaiData> implements Initilizable
 				long count = Files.walk(loc).filter(Files::isRegularFile).peek(path -> {
 					if (path.endsWith("BOT.json")) {
 						botData = readFromPath(path, mapper, BotData.class);
-						usedZones.put(botData.getDefaultTimeZone(), new LinkedList<>());
+						Jikai.addTimeZone(botData.getDefaultTimeZone());
 					} else {
-						JikaiData gd = readFromPath(path, mapper, JikaiData.class);
-						if (gd != null) {
-							impls.put(gd.getGuildId(), gd);
-							addTimeZone(gd.getGuildId(), gd.getTimeZone());
+						JikaiData jd = readFromPath(path, mapper, JikaiData.class);
+						if (jd != null) {
+							impls.put(jd.getGuildId(), jd);
+							Jikai.addTimeZone(jd.getTimeZone());
 						}
 					}
 				}).count();
@@ -140,7 +97,7 @@ public class JikaiDataManager extends Manager<JikaiData> implements Initilizable
 				log.info("No configurations found, falling back to default settings");
 
 				botData = new BotData(true);
-				usedZones.put(botData.getDefaultTimeZone(), new LinkedList<>());
+				Jikai.addTimeZone(botData.getDefaultTimeZone());
 				Files.createDirectory(loc);
 			}
 		} catch (IOException e) {

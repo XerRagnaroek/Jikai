@@ -17,6 +17,7 @@ import java.util.concurrent.ForkJoinPool;
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
 import com.xerragnaroek.jikai.core.Core;
+import com.xerragnaroek.jikai.data.Jikai;
 import com.xerragnaroek.jikai.util.Manager;
 
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -51,7 +52,7 @@ public class ScheduleManager extends Manager<Scheduler> {
 	}
 
 	private void updateScheduleEmbeds() {
-		Core.JM.getJDM().getUsedTimeZones().forEach(z -> {
+		Jikai.getUsedTimeZones().forEach(z -> {
 			schedEmbeds.put(z, makeEmbedsForWeek(z));
 		});
 	}

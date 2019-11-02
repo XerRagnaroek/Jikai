@@ -33,7 +33,7 @@ public class Core {
 		handleArgs(args);
 		JDABuilder builder = new JDABuilder(AccountType.BOT);
 		builder.setToken(token);
-		builder.addEventListeners(new EventListener());
+		builder.addEventListeners(new GuildEventListener());
 		JDA = builder.build();
 		JDA.awaitReady();
 		init(args);

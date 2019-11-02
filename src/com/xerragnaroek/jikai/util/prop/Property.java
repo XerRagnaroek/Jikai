@@ -36,9 +36,11 @@ public class Property<T> {
 	}
 
 	public void set(T newValue) {
-		T tmp = syncSet(newValue);
-		synchronized (cons) {
-			cons.forEach(biCon -> biCon.accept(tmp, value));
+		if (!value.equals(newValue)) {
+			T tmp = syncSet(newValue);
+			synchronized (cons) {
+				cons.forEach(biCon -> biCon.accept(tmp, value));
+			}
 		}
 	}
 
@@ -75,12 +77,16 @@ public class Property<T> {
 		value = newVal;
 	}
 
+	public void clearConsumer() {
+		cons.clear();
+	}
+
 	@Override
 	public boolean equals(Object obj) {
 		if (obj instanceof Property<?>) {
 			return ((Property<?>) obj).get().equals(value);
 		} else {
-			return false;
+			return value.equals(obj);
 		}
 	}
 

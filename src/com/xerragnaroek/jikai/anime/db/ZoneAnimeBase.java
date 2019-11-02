@@ -14,6 +14,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,7 +134,21 @@ public class ZoneAnimeBase {
 		return animes.size();
 	}
 
+	@Nullable
 	Anime getAnime(String title) {
-		return animes.get(title).getAnime();
+		AnimeDayTime adt = animes.get(title);
+		if (adt != null) {
+			return adt.getAnime();
+		}
+		return null;
+	}
+
+	AnimeDayTime getADT(String title) {
+		return animes.get(title);
+	}
+
+	public void clear() {
+		animes.clear();
+		animeWeek.clear();
 	}
 }

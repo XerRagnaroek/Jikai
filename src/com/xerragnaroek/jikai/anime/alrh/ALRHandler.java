@@ -13,7 +13,6 @@ import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.data.Jikai;
 import com.xerragnaroek.jikai.data.JikaiData;
-import com.xerragnaroek.jikai.data.UpdatableData;
 import com.xerragnaroek.jikai.util.BotUtils;
 import com.xerragnaroek.jikai.util.Initilizable;
 import com.xerragnaroek.jikai.util.prop.Property;
@@ -32,7 +31,7 @@ import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
  * @author XerRagnaroek
  *
  */
-public class ALRHandler implements UpdatableData, Initilizable {
+public class ALRHandler implements Initilizable {
 	final JikaiData jData;
 	final String gId;
 	private final Logger log;
@@ -193,7 +192,6 @@ public class ALRHandler implements UpdatableData, Initilizable {
 		}
 	}
 
-	@Override
 	public boolean hasUpdateFlagAndReset() {
 		return changed.getAndSet(false);
 	}
