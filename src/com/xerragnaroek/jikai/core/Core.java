@@ -1,8 +1,12 @@
 package com.xerragnaroek.jikai.core;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import javax.security.auth.login.LoginException;
 
@@ -11,7 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
-import com.xerragnaroek.jikai.data.JikaiManager;
+import com.xerragnaroek.jikai.jikai.JikaiManager;
 import com.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.AccountType;
@@ -28,8 +32,11 @@ public class Core {
 	private static long saveDelay;
 	public final static Logger ERROR_LOG = LoggerFactory.getLogger("ERROR");
 	public static final JikaiManager JM = new JikaiManager();
+	public static final Path DATA_LOC = Paths.get("./data/");
+	public static final ScheduledExecutorService EXEC = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors() * 2);
 
 	public static void main(String[] args) throws LoginException, InterruptedException, ExecutionException, ClassNotFoundException, IOException {
+		System.out.println(DATA_LOC.toAbsolutePath());
 		handleArgs(args);
 		JDABuilder builder = new JDABuilder(AccountType.BOT);
 		builder.setToken(token);
@@ -44,6 +51,7 @@ public class Core {
 		RestAction.setDefaultFailure(e -> BotUtils.logAndSendToDev(ERROR_LOG, "", e));
 		JM.init();
 		JM.startSaveThread(saveDelay);
+		BotUtils.sendToAllInfoChannels("I'm up and running again, please treat me kindly ;3 ||OwO I can see your bulgy wulgy... ~nya||");
 	}
 
 	private static void handleArgs(String args[]) {
@@ -54,7 +62,6 @@ public class Core {
 	}
 
 	private static void handleArg(Iterator<String> it, String arg) {
-		int t;
 		long tmp;
 		try {
 			switch (arg) {
@@ -73,21 +80,6 @@ public class Core {
 			case "-commands_default_enabled":
 				JM.getCHM().setCommandsEnabledDefault(true);
 				log.info("Commands are now enabled by default");
-				break;
-			case "-release_update_rate":
-				tmp = Long.parseLong(it.next());
-				JM.getRTKM().setUpdateRate(tmp);
-				log.info("Set release_update_rate to " + tmp);
-				break;
-			case "-day_threshold":
-				t = Integer.parseInt(it.next());
-				JM.getRTKM().setDayThreshold(t);
-				log.info("Set day_threshold to " + t);
-				break;
-			case "-hour_threshold":
-				t = Integer.parseInt(it.next());
-				JM.getRTKM().setHourThreshold(t);
-				log.info("Set hour_threshold to " + t);
 				break;
 			case "-anime_base_update_rate":
 				tmp = Long.parseLong(it.next());

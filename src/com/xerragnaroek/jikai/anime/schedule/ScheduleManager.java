@@ -17,7 +17,7 @@ import java.util.concurrent.ForkJoinPool;
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.Jikai;
+import com.xerragnaroek.jikai.jikai.Jikai;
 import com.xerragnaroek.jikai.util.Manager;
 
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -26,7 +26,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 public class ScheduleManager extends Manager<Scheduler> {
 
 	private final Map<ZoneId, List<MessageEmbed>> schedEmbeds = Collections.synchronizedMap(new HashMap<>());
-	private final DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm");
+	private static final DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm");
 
 	public ScheduleManager() {
 		super(Scheduler.class);
@@ -47,7 +47,7 @@ public class ScheduleManager extends Manager<Scheduler> {
 	}
 
 	@Override
-	protected Scheduler makeNew(String gId) {
+	protected Scheduler makeNew(long gId) {
 		return new Scheduler(this, gId);
 	}
 
@@ -57,13 +57,13 @@ public class ScheduleManager extends Manager<Scheduler> {
 		});
 	}
 
-	private List<MessageEmbed> makeEmbedsForWeek(ZoneId zone) {
+	public static List<MessageEmbed> makeEmbedsForWeek(ZoneId zone) {
 		List<MessageEmbed> embeds = new LinkedList<>();
 		AnimeDB.getAnimesMappedToDayOfAiring(zone).forEach((day, animes) -> embeds.add(makeEmbedForDay(day, animes)));
 		return embeds;
 	}
 
-	private MessageEmbed makeEmbedForDay(DayOfWeek day, Set<AnimeDayTime> animes) {
+	private static MessageEmbed makeEmbedForDay(DayOfWeek day, Set<AnimeDayTime> animes) {
 		EmbedBuilder eb = new EmbedBuilder();
 		eb.setTitle(day.toString()).setColor(Color.red);
 		Map<String, Set<String>> timeMap = new TreeMap<>();
@@ -74,7 +74,7 @@ public class ScheduleManager extends Manager<Scheduler> {
 		return eb.build();
 	}
 
-	private void mapToTime(AnimeDayTime adt, Map<String, Set<String>> map) {
+	private static void mapToTime(AnimeDayTime adt, Map<String, Set<String>> map) {
 		map.compute((adt.hasBroadcastTime()) ? timeFormat.format(adt.getBroadcastTime()) : "Unknown", (k, s) -> {
 			if (s == null) {
 				s = new TreeSet<>();

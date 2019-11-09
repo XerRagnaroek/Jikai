@@ -8,8 +8,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.Jikai;
-import com.xerragnaroek.jikai.data.JikaiData;
+import com.xerragnaroek.jikai.jikai.Jikai;
+import com.xerragnaroek.jikai.jikai.JikaiData;
+import com.xerragnaroek.jikai.util.Destroyable;
 import com.xerragnaroek.jikai.util.Initilizable;
 import com.xerragnaroek.jikai.util.prop.Property;
 
@@ -21,18 +22,16 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
  * @author XerRagnarök
  *
  */
-public class CommandHandler implements Initilizable {
+public class CommandHandler implements Initilizable, Destroyable {
 	private Set<Command> commands;
 	private final Logger log;
-	private final String gId;
 	private Property<String> trigger = new Property<>();
 	private Property<Boolean> comsEnabled = new Property<>();
 	private AtomicBoolean initialized = new AtomicBoolean(false);
 	private Jikai j;
 
-	CommandHandler(String g) {
-		gId = g;
-		log = LoggerFactory.getLogger(CommandHandler.class.getName() + "#" + gId);
+	CommandHandler(long g) {
+		log = LoggerFactory.getLogger(CommandHandler.class.getName() + "#" + g);
 		j = Core.JM.get(g);
 		j.setCH(this);
 		init();
@@ -91,6 +90,12 @@ public class CommandHandler implements Initilizable {
 	@Override
 	public boolean isInitialized() {
 		return initialized.get();
+	}
+
+	@Override
+	public void destroy() {
+		trigger.destroy();
+		comsEnabled.destroy();
 	}
 
 }

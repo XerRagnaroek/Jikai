@@ -2,11 +2,13 @@ package com.xerragnaroek.jikai.util;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -15,13 +17,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.Jikai;
+import com.xerragnaroek.jikai.jikai.Jikai;
 
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.MessageBuilder.SplitPolicy;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 
@@ -137,29 +140,28 @@ public class BotUtils {
 
 	public static List<CompletableFuture<Message>> sendPMs(User u, Queue<Message> msgs) {
 		List<CompletableFuture<Message>> futures = new LinkedList<>();
-		u.openPrivateChannel().submit().thenAccept(pc -> {
-			msgs.forEach(m -> futures.add(pc.sendMessage(m).submit().whenComplete((me, e) -> {
-				if (e != null) {
-					log.error("Failed sending message to {}", u.getName(), e);
-				} else {
-					log.info("Successfully sent message to {}", u.getName());
-				}
-			})));
-		});
+		PrivateChannel pc = u.openPrivateChannel().complete();
+		msgs.forEach(m -> futures.add(pc.sendMessage(m).submit().whenComplete((me, e) -> {
+			if (e != null) {
+				log.error("Failed sending message to {}", u.getName(), e);
+			} else {
+				log.info("Successfully sent message to {}", u.getName());
+			}
+		})));
 		return futures;
 	}
 
-	public static TextChannel getTextChannelChecked(Guild g, String id) throws Exception {
-		if (id != null) {
+	public static TextChannel getTextChannelChecked(Guild g, long id) throws Exception {
+		if (id != 0) {
 			TextChannel tc = g.getTextChannelById(id);
 			if (tc != null) {
 				return tc;
 			}
 		}
-		throw new Exception((id == null ? "Id can not be null!" : "Id is invalid!"));
+		throw new Exception((id == 0 ? "Id can not be null!" : "Id is invalid!"));
 	}
 
-	public static TextChannel getTextChannelChecked(String gId, String id) throws Exception {
+	public static TextChannel getTextChannelChecked(long gId, long id) throws Exception {
 		return getTextChannelChecked(Core.JDA.getGuildById(gId), id);
 	}
 
@@ -179,5 +181,9 @@ public class BotUtils {
 			}
 		}
 		return cf;
+	}
+
+	public static Iterable<String> collectionToIterableStr(Collection<?> col) {
+		return col.stream().map(Object::toString).collect(Collectors.toList());
 	}
 }

@@ -4,26 +4,26 @@ import com.xerragnaroek.jikai.jikai.Jikai;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
-public class ForceRegisterCommand implements Command {
+public class ForceUserUpdateCommand implements Command {
 
 	@Override
 	public String getName() {
-		return "register";
+		return "daily";
 	}
 
 	@Override
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
-		Jikai.getUserManager().registerUser(event.getAuthor().getIdLong());
+		Jikai.getUserManager().getUser(event.getAuthor().getIdLong()).sendDailyUpdate();
 	}
 
 	@Override
 	public String getIdentifier() {
-		return "frc";
+		return "fuuc"; //lol
 	}
 
 	@Override
 	public String getDescription() {
-		return "Only for development purposes.";
+		return "Sends your daily anime overview.";
 	}
 
 }

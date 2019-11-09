@@ -1,4 +1,4 @@
-package com.xerragnaroek.jikai.data;
+package com.xerragnaroek.jikai.jikai;
 
 import java.io.IOException;
 import java.nio.file.Files;

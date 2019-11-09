@@ -5,7 +5,7 @@ import java.time.ZoneId;
 import com.xerragnaroek.jikai.commands.Command;
 import com.xerragnaroek.jikai.commands.CommandHandler;
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.Jikai;
+import com.xerragnaroek.jikai.jikai.Jikai;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;

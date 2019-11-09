@@ -8,7 +8,7 @@
 
 		<rollingPolicy
 			class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-			<fileNamePattern>logs/archived/app_%d{yyyy-MM-dd}.%i.log.gz
+			<fileNamePattern>logs/archived/app_%d{yyyy-MM-dd}.%i.log
 			</fileNamePattern>
 			<!-- each archived file, size max 10MB -->
 			<maxFileSize>10MB</maxFileSize>

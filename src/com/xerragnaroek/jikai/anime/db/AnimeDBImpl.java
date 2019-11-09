@@ -30,8 +30,8 @@ import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearch;
 import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearchAnime;
 import com.github.Doomsdayrs.Jikan4java.types.Support.Prop.From;
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.BotData;
-import com.xerragnaroek.jikai.data.Jikai;
+import com.xerragnaroek.jikai.jikai.BotData;
+import com.xerragnaroek.jikai.jikai.Jikai;
 import com.xerragnaroek.jikai.util.BotUtils;
 import com.xerragnaroek.jikai.util.Initilizable;
 

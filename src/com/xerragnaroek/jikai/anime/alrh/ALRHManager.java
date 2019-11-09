@@ -38,7 +38,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 	private Map<String, List<String>> aniAlph = new TreeMap<>();
 	private Property<Set<DTO>> listMsgs = new Property<>();
 	private final Logger log = LoggerFactory.getLogger(ALRHManager.class);
-	private Map<String, Set<ALRHData>> initMap = new TreeMap<>();
+	private Map<Long, Set<ALRHData>> initMap = new TreeMap<>();
 
 	@Override
 	public void init() {
@@ -64,13 +64,13 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 
 	private void initImpls() {
 		log.debug("Loading ALRHs");
-		initMap.forEach((str, data) -> {
-			ALRHandler impl = new ALRHandler(str);
+		initMap.forEach((l, data) -> {
+			ALRHandler impl = new ALRHandler(l);
 			if (data != null) {
 				impl.setData(data);
 			}
 			impl.init();
-			impls.put(str, impl);
+			impls.put(l, impl);
 		});
 		//not needed anymore
 		initMap.clear();
@@ -140,12 +140,12 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		log.info("Mapped {} animes to {} letters", data.size(), aniAlph.size());
 	}
 
-	public void addToInitMap(String id, Set<ALRHData> data) {
+	public void addToInitMap(long id, Set<ALRHData> data) {
 		initMap.put(id, data);
 	}
 
 	@Override
-	protected ALRHandler makeNew(String gId) {
+	protected ALRHandler makeNew(long gId) {
 		return new ALRHandler(gId);
 	}
 

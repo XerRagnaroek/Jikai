@@ -5,9 +5,8 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xerragnaroek.jikai.data.Jikai;
-import com.xerragnaroek.jikai.data.JikaiData;
-import com.xerragnaroek.jikai.timer.RTKManager;
+import com.xerragnaroek.jikai.jikai.Jikai;
+import com.xerragnaroek.jikai.jikai.JikaiData;
 
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.Permission;
@@ -55,34 +54,9 @@ public class SetupHelper extends ListenerAdapter {
 		mb.append("You can change the latter settings via the set commands (see !help for more info)!\n");
 		mb.append("Feel free to move or rename the channels, the bot is using their unique ID, so the name doesn't matter.");
 		mb.append("Once the setup is done, the bot will send the anime list and the schedule.\n");
-		mb.append(releaseString());
 		mb.append("Commence setup? *yes(y)*");
 		setTc.sendMessage(mb.build()).complete();
 		listen = true;
-	}
-
-	private String releaseString() {
-		StringBuilder bob = new StringBuilder("Updates for releases will be sent daily");
-		RTKManager rtkm = Core.JM.getRTKM();
-		int dt = rtkm.getDayThreshold();
-		int ht = rtkm.getHourThreshold();
-		long rate = rtkm.getUpdateRate();
-		if (!(dt == 0 && ht == 0)) {
-			bob.append(" or every %3$03d minutes when the anime airs in ");
-			if (dt != 0) {
-				bob.append("%1$d days");
-				if (ht != 0) {
-					bob.append(" and ");
-				}
-			}
-			if (ht != 0) {
-				bob.append("%2$02d hours");
-			}
-			bob.append(" or less");
-		}
-		bob.append(".\n");
-		return String.format(bob.toString(), dt, ht, rate);
-
 	}
 
 	@Override
@@ -115,16 +89,16 @@ public class SetupHelper extends ListenerAdapter {
 		Category cat = g.createCategory("jikai").addPermissionOverride(g.getPublicRole(), Arrays.asList(Permission.VIEW_CHANNEL, Permission.MESSAGE_ADD_REACTION), Arrays.asList(Permission.MESSAGE_WRITE)).addPermissionOverride(g.getSelfMember(), Permission.ALL_CHANNEL_PERMISSIONS, 0l).complete();
 		TextChannel tc = cat.createTextChannel("jikai_list").complete();
 		log.debug("Made jikai_list channel");
-		jd.setListChannelId(tc.getId());
+		jd.setListChannelId(tc.getIdLong());
 		tc = cat.createTextChannel("jikai_schedule").complete();
 		log.debug("Made jikai_schedule channel");
-		jd.setScheduleChannelId(tc.getId());
+		jd.setScheduleChannelId(tc.getIdLong());
 		tc = cat.createTextChannel("jikai_anime").complete();
 		log.debug("Made jikai_anime channel");
-		jd.setAnimeChannelId(tc.getId());
+		jd.setAnimeChannelId(tc.getIdLong());
 		tc = cat.createTextChannel("jikai_info").complete();
 		log.debug("Made jikai_info channel");
-		jd.setInfoChannelId(tc.getId());
+		jd.setInfoChannelId(tc.getIdLong());
 		jd.setSetupCompleted(true);
 		jd.save(true);
 		log.info("Setup completed");

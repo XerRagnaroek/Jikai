@@ -16,17 +16,17 @@ import org.slf4j.LoggerFactory;
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 
 public class ALRHDataBase {
-	private Map<String, Set<ALRHData>> msgMap = Collections.synchronizedMap(new HashMap<>());
+	private Map<Long, Set<ALRHData>> msgMap = Collections.synchronizedMap(new HashMap<>());
 	private Map<String, ALRHData> titleMap = Collections.synchronizedMap(new TreeMap<>());
 	@SuppressWarnings("rawtypes")
 	private MultiKeyMap ucMsgMap = new MultiKeyMap();
 	private int sentABVersion;
-	private String sentTcId;
+	private long sentTcId;
 	private final Logger log = LoggerFactory.getLogger(ALRHDataBase.class);
 
 	ALRHDataBase() {}
 
-	void setDataForMessage(String msgId, Set<ALRHData> data) {
+	void setDataForMessage(long msgId, Set<ALRHData> data) {
 		updateVariables(data.iterator().next());
 		msgMap.put(msgId, data);
 		data.forEach(alrhd -> {
@@ -40,7 +40,7 @@ public class ALRHDataBase {
 		return sentABVersion;
 	}
 
-	String getSentTextChannelId() {
+	long getSentTextChannelId() {
 		return sentTcId;
 	}
 
@@ -97,7 +97,7 @@ public class ALRHDataBase {
 		return titleMap.values().stream().filter(ALRHData::isReacted).collect(Collectors.toSet());
 	}
 
-	void forEachMessage(BiConsumer<String, Set<ALRHData>> con) {
+	void forEachMessage(BiConsumer<Long, Set<ALRHData>> con) {
 		msgMap.forEach(con);
 	}
 

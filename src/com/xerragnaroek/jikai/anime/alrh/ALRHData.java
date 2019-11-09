@@ -7,26 +7,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-@JsonPropertyOrder({	"message_id", "sent_textchannel_id", "sent_ab_version", "title", "role_id", "uni_codepoint",
-						"reacted" })
+@JsonPropertyOrder({ "message_id", "sent_textchannel_id", "sent_ab_version", "title", "role_id", "uni_codepoint", "reacted" })
 public class ALRHData implements Comparable<ALRHData> {
 	private int abVersion;
-	private String tcId;
-	private String msgId;
+	private long tcId;
+	private long msgId;
 	private String title;
-	private String roleId;
 	private String codepoint;
 	private boolean reacted;
 	private final Logger log;
 
 	@JsonCreator
-	public ALRHData(@JsonProperty("message_id") String mId, @JsonProperty("title") String title,
-			@JsonProperty("role_id") String rId, @JsonProperty("uni_codepoint") String cp,
-			@JsonProperty("sent_textchannel_id") String tcId, @JsonProperty("sent_ab_version") int abVersion,
-			@JsonProperty("reacted") boolean reactedTo) {
+	public ALRHData(@JsonProperty("message_id") long mId, @JsonProperty("title") String title, @JsonProperty("uni_codepoint") String cp, @JsonProperty("sent_textchannel_id") long tcId, @JsonProperty("sent_ab_version") int abVersion, @JsonProperty("reacted") boolean reactedTo) {
 		msgId = mId;
 		this.title = title;
-		roleId = rId;
 		codepoint = cp;
 		this.tcId = tcId;
 		this.abVersion = abVersion;
@@ -41,7 +35,7 @@ public class ALRHData implements Comparable<ALRHData> {
 	}
 
 	@JsonProperty("message_id")
-	public String getMessageId() {
+	public long getMessageId() {
 		return msgId;
 	}
 
@@ -50,18 +44,13 @@ public class ALRHData implements Comparable<ALRHData> {
 		return title;
 	}
 
-	@JsonProperty("role_id")
-	public String getRoleId() {
-		return roleId;
-	}
-
 	@JsonProperty("uni_codepoint")
 	public String getUnicodeCodePoint() {
 		return codepoint;
 	}
 
 	@JsonProperty("sent_textchannel_id")
-	public String getTextChannelId() {
+	public long getTextChannelId() {
 		return tcId;
 	}
 
@@ -76,18 +65,13 @@ public class ALRHData implements Comparable<ALRHData> {
 	}
 
 	@JsonProperty("message_id")
-	public void setMessageId(String mId) {
+	public void setMessageId(long mId) {
 		msgId = mId;
 	}
 
 	@JsonProperty("title")
 	public void setTitle(String title) {
 		this.title = title;
-	}
-
-	@JsonProperty("role_id")
-	public void setRoleId(String id) {
-		roleId = id;
 	}
 
 	@JsonProperty("uni_codepoint")
@@ -102,17 +86,13 @@ public class ALRHData implements Comparable<ALRHData> {
 	}
 
 	@JsonProperty("sent_textchannel_id")
-	public void setTextChannelId(String tcId) {
+	public void setTextChannelId(long tcId) {
 		this.tcId = tcId;
 	}
 
 	@JsonProperty("sent_ab_version")
 	public void setABVersion(int version) {
 		abVersion = version;
-	}
-
-	public boolean hasRoleId() {
-		return roleId != null;
 	}
 
 	@Override

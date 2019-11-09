@@ -1,29 +1,29 @@
 package com.xerragnaroek.jikai.commands;
 
-import com.xerragnaroek.jikai.jikai.Jikai;
+import com.xerragnaroek.jikai.jikai.JikaiIO;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
-public class ForceRegisterCommand implements Command {
+public class ForceSaveCommand implements Command {
 
 	@Override
 	public String getName() {
-		return "register";
+		return "force_save";
 	}
 
 	@Override
 	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments) {
-		Jikai.getUserManager().registerUser(event.getAuthor().getIdLong());
+		JikaiIO.save(true);
 	}
 
 	@Override
 	public String getIdentifier() {
-		return "frc";
+		return "fsc";
 	}
 
 	@Override
 	public String getDescription() {
-		return "Only for development purposes.";
+		return "Forces the immediate saving of everything.";
 	}
 
 }

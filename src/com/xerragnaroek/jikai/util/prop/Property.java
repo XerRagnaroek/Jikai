@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.xerragnaroek.jikai.util.Destroyable;
 
 /**
  * A simple Value wrapper that allows for unidirectional binding.<br>
@@ -16,7 +17,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
  *
  * @param <T>
  */
-public class Property<T> {
+public class Property<T> implements Destroyable {
 	protected T value;
 	protected List<BiConsumer<T, T>> cons = Collections.synchronizedList(new ArrayList<>());
 	protected AtomicBoolean changed = new AtomicBoolean(false);
@@ -36,7 +37,7 @@ public class Property<T> {
 	}
 
 	public void set(T newValue) {
-		if (!value.equals(newValue)) {
+		if (!hasNonNullValue() || !value.equals(newValue)) {
 			T tmp = syncSet(newValue);
 			synchronized (cons) {
 				cons.forEach(biCon -> biCon.accept(tmp, value));
@@ -52,7 +53,7 @@ public class Property<T> {
 	}
 
 	public void bind(Property<T> prop) {
-		cons.add(prop::propChange);
+		cons.add(prop::changeProp);
 	}
 
 	public synchronized void bindAndSet(Property<T> prop) {
@@ -73,7 +74,7 @@ public class Property<T> {
 		cons.add(biCon);
 	}
 
-	protected void propChange(T oldVal, T newVal) {
+	protected void changeProp(T oldVal, T newVal) {
 		value = newVal;
 	}
 
@@ -86,6 +87,9 @@ public class Property<T> {
 		if (obj instanceof Property<?>) {
 			return ((Property<?>) obj).get().equals(value);
 		} else {
+			if (!hasNonNullValue()) {
+				return false;
+			}
 			return value.equals(obj);
 		}
 	}
@@ -103,5 +107,10 @@ public class Property<T> {
 	@JsonCreator
 	public static <T> Property<T> of(T value) {
 		return new Property<>(value);
+	}
+
+	@Override
+	public void destroy() {
+		cons.clear();
 	}
 }

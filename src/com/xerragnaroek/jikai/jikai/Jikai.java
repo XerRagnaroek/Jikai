@@ -1,4 +1,4 @@
-package com.xerragnaroek.jikai.data;
+package com.xerragnaroek.jikai.jikai;
 
 import java.time.ZoneId;
 import java.util.Set;
@@ -10,12 +10,10 @@ import com.xerragnaroek.jikai.anime.alrh.ALRHandler;
 import com.xerragnaroek.jikai.anime.schedule.Scheduler;
 import com.xerragnaroek.jikai.commands.CommandHandler;
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.timer.ReleaseTimeKeeper;
 import com.xerragnaroek.jikai.user.JikaiUserManager;
 import com.xerragnaroek.jikai.util.BotUtils;
-import com.xerragnaroek.jikai.util.Shutdownable;
+import com.xerragnaroek.jikai.util.Destroyable;
 import com.xerragnaroek.jikai.util.prop.MapProperty;
-import com.xerragnaroek.jikai.util.prop.Property;
 
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Guild;
@@ -23,24 +21,21 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 
-public class Jikai implements Shutdownable {
+public class Jikai implements Destroyable {
 	private JikaiData jd;
 	private BotData bd;
 	private ALRHandler alrh;
 	private CommandHandler ch;
-	private ReleaseTimeKeeper rtk;
 	private Scheduler sched;
-	private Property<Boolean> shutdown = new Property<>(false);
-	private Property<Boolean> forceShutdown = new Property<>(false);
 	private final Logger log;
-
+	private final static Logger sLog = LoggerFactory.getLogger(Jikai.class);
 	private static MapProperty<ZoneId, Integer> usedZones = new MapProperty<>();
 	private static JikaiUserManager jum = new JikaiUserManager();
 
-	public Jikai(String gId, JikaiManager jm) {
+	public Jikai(long gId, JikaiManager jm) {
 		this.jd = jm.jdm.get(gId);
 		this.bd = jm.jdm.getBotData();
-		log = LoggerFactory.getLogger(Jikai.class);
+		log = LoggerFactory.getLogger(Jikai.class + "#" + gId);
 	}
 
 	public TextChannel getInfoChannel() throws Exception {
@@ -94,6 +89,7 @@ public class Jikai implements Shutdownable {
 	public Guild getGuild() throws Exception {
 		Guild g = Core.JDA.getGuildById(jd.getGuildId());
 		if (g == null) {
+			Core.JM.remove(jd.getGuildId());
 			throw new Exception("Guild not found");
 		}
 		return g;
@@ -104,7 +100,7 @@ public class Jikai implements Shutdownable {
 			User owner = getGuildOwner().getUser();
 			log.debug("Sending to owner '{}':\"{}\"", owner.getName(), msg);
 			MessageBuilder bob = new MessageBuilder();
-			bob.append("こんにちは, ").append(owner).append("!\n").append(msg);
+			bob.append("Greetings, ").append(owner).append("!\n").append(msg);
 			BotUtils.sendPM(owner, bob.build());
 			return true;
 		} catch (Exception e) {
@@ -129,52 +125,37 @@ public class Jikai implements Shutdownable {
 		return ch;
 	}
 
-	public ReleaseTimeKeeper getReleaseTimeKeeper() {
-		return rtk;
-	}
-
 	public Scheduler getScheduler() {
 		return sched;
 	}
 
 	private void noInfoCh() {
-
+		try {
+			sendToOwner("Your server '" + getGuild().getName() + "' doesn't have an info channel for Jikai set. Please use `" + jd.getTrigger() + "set info_channel <channel>`, otherwise Jikai can't send status updates.");
+		} catch (Exception e) {}
 	}
 
 	private void noSchedCh() {
-
+		try {
+			getInfoChannel().sendMessage("No channel has been set for the schedule or it's been deleted! Set a new one with `" + jd.getTrigger() + "set schedule_channel <channel>`").queue();
+		} catch (Exception e) {}
 	}
 
 	private void noAnimeCh() {
-
+		try {
+			getInfoChannel().sendMessage("No channel has been set for the anime release or it's been deleted! Set a new one with `" + jd.getTrigger() + "set anime_channel <channel>`").queue();
+		} catch (Exception e) {}
 	}
 
 	private void noListCh() {
-
+		try {
+			getInfoChannel().sendMessage("No channel has been set for the anime list or it's been deleted! Set a new one with `" + jd.getTrigger() + "set list_channel <channel>`").queue();
+		} catch (Exception e) {}
 	}
 
 	@Override
-	public void shutdown(boolean now) {}
-
-	@Override
-	public void destroy() {}
-
-	@Override
-	public void waitForShutdown() {}
-
-	@Override
-	public Property<Boolean> shutdownProperty() {
-		return shutdown;
-	}
-
-	@Override
-	public boolean hasForceShutdownProperty() {
-		return true;
-	}
-
-	@Override
-	public Property<Boolean> forceShutdownProperty() {
-		return forceShutdown;
+	public void destroy() {
+		usedZones.clear();
 	}
 
 	public boolean hasCompletedSetup() {
@@ -189,10 +170,6 @@ public class Jikai implements Shutdownable {
 		this.sched = sched;
 	}
 
-	public void setRTK(ReleaseTimeKeeper rtk) {
-		this.rtk = rtk;
-	}
-
 	public void setCH(CommandHandler ch) {
 		this.ch = ch;
 	}
@@ -200,6 +177,7 @@ public class Jikai implements Shutdownable {
 	public static void addTimeZone(ZoneId zone) {
 		usedZones.compute(zone, (z, c) -> {
 			c = (c == null ? 1 : c + 1);
+			sLog.debug("{}={}", z, c);
 			return c;
 		});
 	}
@@ -207,7 +185,9 @@ public class Jikai implements Shutdownable {
 	public static void removeTimeZone(ZoneId zone) {
 		usedZones.compute(zone, (z, c) -> {
 			c--;
+			sLog.debug("{}={}", z, c);
 			if (c == 0) {
+				sLog.debug("Removed time zone");
 				return null;
 			}
 			return c;
@@ -225,4 +205,5 @@ public class Jikai implements Shutdownable {
 	public static JikaiUserManager getUserManager() {
 		return jum;
 	}
+
 }

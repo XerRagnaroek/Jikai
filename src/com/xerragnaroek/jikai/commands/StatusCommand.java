@@ -6,9 +6,8 @@ import java.time.Instant;
 
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.Jikai;
-import com.xerragnaroek.jikai.data.JikaiData;
-import com.xerragnaroek.jikai.timer.RTKManager;
+import com.xerragnaroek.jikai.jikai.Jikai;
+import com.xerragnaroek.jikai.jikai.JikaiData;
 
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.Permission;
@@ -35,8 +34,7 @@ public class StatusCommand implements Command {
 			Message m = tc.sendMessage("If you can see this, something broke along the lines.").complete();
 			long ping = Instant.now().toEpochMilli() - now.toEpochMilli();
 			MessageBuilder mb = new MessageBuilder();
-			RTKManager rtkm = Core.JM.getRTKM();
-			mb.appendCodeBlock(String.format("= Status =%nPing :: %d ms%nGateway-Ping :: %d ms%nExecuted Commands :: %d%nAnimes in DB :: %02d%nDB Version :: %d%nDay-Threshold :: %d%nHour-Threshold :: %d%nUpdate-Rate :: %d min%nConnected Servers :: %d", ping, JDA.getGatewayPing(), jd.getExecutedCommandCount(), AnimeDB.loadedAnimes(), AnimeDB.getAnimeDBVersion(), rtkm.getDayThreshold(), rtkm.getHourThreshold(), rtkm.getUpdateRate(), JDA.getGuildCache().size()), "asciidoc");
+			mb.appendCodeBlock(String.format("= Status =%nPing :: %d ms%nGateway-Ping :: %d ms%nExecuted Commands :: %d%nAnimes in DB :: %02d%nDB Version :: %d%nUpdate-Rate :: %d min%nConnected Servers :: %d%nUsers :: %d", ping, JDA.getGatewayPing(), jd.getExecutedCommandCount(), AnimeDB.loadedAnimes(), AnimeDB.getAnimeDBVersion(), JDA.getGuildCache().size(), Jikai.getUserManager().userAmount()), "asciidoc");
 			m.editMessage(mb.build()).queue();
 		} catch (Exception e) {}
 	}

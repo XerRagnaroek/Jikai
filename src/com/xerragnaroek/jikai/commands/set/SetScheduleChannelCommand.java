@@ -12,16 +12,18 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
-public class SetInfoChannelCommand implements Command {
+public class SetScheduleChannelCommand implements Command {
+
+	SetScheduleChannelCommand() {}
 
 	@Override
 	public String getName() {
-		return "info_channel";
+		return "schedule_channel";
 	}
 
 	@Override
 	public String getUsage() {
-		return "info_channel <textchannel name>";
+		return "schedule_channel <textchannel>";
 	}
 
 	@Override
@@ -34,14 +36,14 @@ public class SetInfoChannelCommand implements Command {
 			Jikai j = Core.JM.get(g);
 			j.getJikaiData().setScheduleChannelId(textC.getIdLong());
 			try {
-				j.getInfoChannel().sendMessage("This has been set as the new info channel!").queue();
+				j.getInfoChannel().sendMessage(textC.getAsMention() + " has been set as the new schedule channel!").queue();
 			} catch (Exception e) {}
 		}
 	}
 
 	@Override
 	public String getIdentifier() {
-		return "sicc";
+		return "sscc";
 	}
 
 	@Override
@@ -51,6 +53,6 @@ public class SetInfoChannelCommand implements Command {
 
 	@Override
 	public String getDescription() {
-		return "The channel for bot updates/status changes.";
+		return "The channel for the schedule.";
 	}
 }

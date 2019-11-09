@@ -4,8 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.Jikai;
-import com.xerragnaroek.jikai.data.JikaiData;
+import com.xerragnaroek.jikai.jikai.Jikai;
+import com.xerragnaroek.jikai.jikai.JikaiData;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;

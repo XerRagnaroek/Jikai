@@ -4,21 +4,19 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.Jikai;
-import com.xerragnaroek.jikai.data.JikaiData;
-import com.xerragnaroek.jikai.util.BotUtils;
+import com.xerragnaroek.jikai.jikai.Jikai;
+import com.xerragnaroek.jikai.jikai.JikaiData;
+import com.xerragnaroek.jikai.util.Destroyable;
 import com.xerragnaroek.jikai.util.Initilizable;
 import com.xerragnaroek.jikai.util.prop.Property;
 
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent;
@@ -31,12 +29,12 @@ import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
  * @author XerRagnaroek
  *
  */
-public class ALRHandler implements Initilizable {
+public class ALRHandler implements Initilizable, Destroyable {
 	final JikaiData jData;
-	final String gId;
+	final long gId;
 	private final Logger log;
 	ALRHDataBase alrhDB;
-	Property<String> tcId = new Property<>(); //Textchannel Id
+	Property<Long> tcId = new Property<>(); //Textchannel Id
 	private ALHandler alh;
 	private ARHandler arh;
 	private AtomicBoolean changed;
@@ -48,7 +46,7 @@ public class ALRHandler implements Initilizable {
 	 * 
 	 * @param gId
 	 */
-	ALRHandler(String gId) {
+	ALRHandler(long gId) {
 		this.gId = gId;
 		j = Core.JM.get(gId);
 		j.setALRH(this);
@@ -105,7 +103,7 @@ public class ALRHandler implements Initilizable {
 	@Override
 	public void init() {
 		log.debug("Initializing...");
-		setTextChannelId(jData.getListChannelId());
+		jData.animeChannelIdProperty().bindAndSet(tcId);
 		alrhDB.forEachMessage(this::checkIfListChanged);
 		jData.listChannelIdProperty().bind(tcId);
 		initialized.set(true);
@@ -128,10 +126,10 @@ public class ALRHandler implements Initilizable {
 		sendList();
 	}*/
 
-	private void checkIfListChanged(String msgId, Set<ALRHData> data) {
+	private void checkIfListChanged(long msgId, Set<ALRHData> data) {
 		Guild g = Core.JDA.getGuildById(gId);
-		String tcId = alrhDB.getSentTextChannelId();
-		if (tcId != null) {
+		long tcId = alrhDB.getSentTextChannelId();
+		if (tcId != 0) {
 			TextChannel tc = g.getTextChannelById(alrhDB.getSentTextChannelId());
 			if (tc != null) {
 				arh.validateReactions(g, tc, msgId, data);
@@ -141,17 +139,6 @@ public class ALRHandler implements Initilizable {
 
 	boolean roleExists(Guild g, String name) {
 		return !g.getRolesByName(name, false).isEmpty();
-	}
-
-	private void setTextChannelId(String id) {
-		if (tcId == null) {
-			tcId = Property.of(BotUtils.getChannelOrDefault(id, gId).getId());
-			log.debug("Set TextChannelId to {}", tcId);
-		} else {
-			if (!tcId.equals(id)) {
-				//moveList(tcId, id);
-			}
-		}
 	}
 
 	private boolean haveMessagesChanged(TextChannel oldTc, List<String> ids) {
@@ -174,22 +161,8 @@ public class ALRHandler implements Initilizable {
 		changed.set(true);
 	}
 
-	public String getRoleId(String title) {
-		return alrhDB.getDataForTitle(title).getRoleId();
-	}
-
-	public Set<String> getReactedAnimes() {
-		return alrhDB.getReactedAnimes().stream().map(ALRHData::getTitle).collect(Collectors.toSet());
-	}
-
 	public boolean isSendingList() {
 		return alh.isSending();
-	}
-
-	public void setReacted(String title, boolean reacted) {
-		if (alrhDB.hasDataForTitle(title)) {
-			alrhDB.getDataForTitle(title).setReacted(reacted);
-		}
 	}
 
 	public boolean hasUpdateFlagAndReset() {
@@ -220,7 +193,10 @@ public class ALRHandler implements Initilizable {
 		}
 	}
 
-	public void deleteRole(Role r) {
-		arh.deleteRole(r, alrhDB.getDataForTitle(r.getName()));
+	@Override
+	public void destroy() {
+		tcId.destroy();
+		alrhDB.clearData();
 	}
+
 }

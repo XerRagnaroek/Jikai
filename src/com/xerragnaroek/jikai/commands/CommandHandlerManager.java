@@ -46,7 +46,7 @@ public class CommandHandlerManager extends Manager<CommandHandler> {
 	 * Load the commands
 	 */
 	private void initCommands() {
-		Command[] coms = new Command[] { new StopCommand(), new StatusCommand(), new WhenAnimeCommand(), new PingCommand(), new SetCommand(), new ScheduleCommand(), new DebugCommand(), new AnimeListCommand(), new HelpCommand(), new WipeRolesCommand(), new EnableCommandsCommand(), new DisableCommandsCommand(), new RequestAssistanceCommand() };
+		Command[] coms = new Command[] { new ForceUserUpdateCommand(), new ForceSaveCommand(), new ForceRegisterCommand(), new StopCommand(), new StatusCommand(), new PingCommand(), new SetCommand(), new ScheduleCommand(), new DebugCommand(), new AnimeListCommand(), new HelpCommand(), new EnableCommandsCommand(), new DisableCommandsCommand(), new RequestAssistanceCommand() };
 		commands.addAll(Arrays.asList(coms));
 		log.info("Loaded {} commands", commands.size());
 	}
@@ -93,7 +93,7 @@ public class CommandHandlerManager extends Manager<CommandHandler> {
 	}
 
 	@Override
-	protected CommandHandler makeNew(String gId) {
+	protected CommandHandler makeNew(long gId) {
 		return new CommandHandler(gId);
 	}
 }

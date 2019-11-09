@@ -133,7 +133,7 @@ class ALHandler {
 					}
 				});
 			});
-			alrhDB.setDataForMessage(m.getId(), data);
+			alrhDB.setDataForMessage(m.getIdLong(), data);
 		});
 	}
 

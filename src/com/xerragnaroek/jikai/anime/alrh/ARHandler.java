@@ -1,19 +1,14 @@
 package com.xerragnaroek.jikai.anime.alrh;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
-import com.xerragnaroek.jikai.core.Core;
+import com.xerragnaroek.jikai.jikai.Jikai;
+import com.xerragnaroek.jikai.user.JikaiUser;
 import com.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -21,7 +16,6 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageReaction;
 import net.dv8tion.jda.api.entities.MessageReaction.ReactionEmote;
-import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent;
@@ -32,9 +26,6 @@ class ARHandler {
 	private ALRHandler alrh;
 	private ALRHDataBase alrhDB;
 	final Logger log;
-	private ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
-	private Map<String, Runnable> roleDeletion = new HashMap<>();
-	private ScheduledFuture<?> rDelete;
 	private boolean running = false;
 	private boolean enabled = true;
 
@@ -58,58 +49,12 @@ class ARHandler {
 					ALRHData data = alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
 					if (data != null) {
 						data.setReacted(true);
-						Guild g = event.getGuild();
-						roleDeletion.computeIfPresent(data.getTitle(), (t, r) -> {
-							log.debug("Unflagged {} for deletion", t);
-							return null;
-						});
-						if (data.hasRoleId()) {
-							roleExistsAdd(g, data, m);
-						} else {
-							roleNotExistAdd(g, data, m);
-						}
+						JikaiUser ju = Jikai.getUserManager().getUser(event.getUser().getIdLong());
+						ju.subscribeAnime(data.getTitle());
 					}
 				}
 			}
 		}
-	}
-
-	private void roleExistsAdd(Guild g, ALRHData data, Member m) {
-		String rId = data.getRoleId();
-		log.trace("Reaction has internally associated role {}", rId);
-		Role r = g.getRoleById(rId);
-		if (r != null) {
-			log.debug("Guild has associated role '{}'", r.getName());
-			if (!m.getRoles().contains(r)) {
-				log.debug("Adding role to member#{}", m.getId());
-				running = true;
-				g.addRoleToMember(m, r).submit().whenComplete((v, e) -> {
-					if (e != null) {
-						BotUtils.logAndSendToDev(log, "Failed adding role to member", e);
-					} else {
-						log.info("Succesfully added role {} to member#{}", r.getName(), m.getId());
-						alrh.dataChanged();
-					}
-					running = false;
-				});
-			} else {
-				log.debug("Member#{} already has that role", m.getId());
-			}
-		}
-	}
-
-	private void roleNotExistAdd(Guild g, ALRHData data, Member m) {
-		running = true;
-		g.createRole().setMentionable(true).setName(data.getTitle()).setPermissions(0l).queue(r -> {
-			log.debug("Created role for {}", data.getTitle());
-			data.setRoleId(r.getId());
-			alrh.dataChanged();
-			g.addRoleToMember(m, r).queue(v -> {
-				log.info("Added role {} to member", r.getName());
-			}, e -> BotUtils.logAndSendToDev(log, "Failed adding role to member", e));
-		}, e -> {
-			BotUtils.sendThrowableToDev("Failed creating role {}" + data.getTitle(), e);
-		});
 	}
 
 	void handleReactionRemoved(MessageReactionRemoveEvent event) {
@@ -121,22 +66,7 @@ class ARHandler {
 				ALRHData data = alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
 				String title = data.getTitle();
 				if (!event.getUser().isBot()) {
-					Member m = event.getMember();
-					log.debug("Member#{} removed reaction {} from the anime list", m.getId(), re.getName());
-					log.debug("Is Emoji? {}", re.isEmoji());
-					String rId = data.getRoleId();
-					if (rId != null) {
-						log.trace("Reaction has internally associated role {}", rId);
-						Role r = g.getRoleById(rId);
-						if (r != null) {
-							log.debug("Found associated role '{}'", r.getName());
-							if (m.getRoles().contains(r)) {
-								removeRoleFromMember(g, m, r);
-							} else {
-								log.debug("Member#{} doesn't have that role", m.getId());
-							}
-						}
-					}
+					Jikai.getUserManager().getUser(event.getUser().getIdLong()).unsubscribeAnime(title);
 				} else {
 					log.debug("Reaction was removed by a bot");
 				}
@@ -152,11 +82,6 @@ class ARHandler {
 			log.trace("Message is part of the anime list");
 			Guild g = event.getGuild();
 			alrhDB.getDataForMessage(msgId).forEach(data -> {
-				Role r = g.getRoleById(data.getRoleId());
-				log.debug("Guild has role '{}'? {}", data.getTitle(), r != null);
-				if (r != null) {
-					g.getMembersWithRoles(r).forEach(m -> removeRoleFromMember(g, m, r));
-				}
 				data.setReacted(false);
 				addReaction(event.getTextChannel(), event.getMessageId(), data.getUnicodeCodePoint());
 			});
@@ -167,11 +92,6 @@ class ARHandler {
 	private void addReaction(TextChannel tc, String msgId, String uniCode) {
 		log.debug("Adding {} to Message#{} in TextChannel#{}", uniCode, msgId, tc.getName());
 		tc.addReactionById(msgId, uniCode).queue(v -> log.info("Added Reaction {} to Message#{}", uniCode, msgId), e -> BotUtils.logAndSendToDev(log, "Failed adding Reaction to Message#{}" + msgId, e));
-	}
-
-	private void removeRoleFromMember(Guild g, Member m, Role r) {
-		log.debug("Removing role from member#{}", m.getId());
-		g.removeRoleFromMember(m, r).queue(v -> log.info("Succesfully removed role {} from member#{}", r.getName(), m.getId()), e -> BotUtils.logAndSendToDev(log, "Failed removing role", e));
 	}
 
 	private void validateReaction(Guild g, TextChannel tc, String msgId, String uni, String title) {
@@ -190,7 +110,6 @@ class ARHandler {
 						log.debug("No user reaction left for {}", title);
 						ALRHData data = alrhDB.getDataForTitle(title);
 						data.setReacted(false);
-						deleteRole(g, data);
 					}
 					found = true;
 					break;
@@ -202,26 +121,7 @@ class ARHandler {
 		}
 	}
 
-	void deleteRole(Guild g, ALRHData data) {
-		if (data.hasRoleId()) {
-			if (!roleDeletion.containsKey(data.getTitle())) {
-				roleDeletion.put(data.getTitle(), () -> deleteRole(g.getRoleById(data.getRoleId()), data));
-				deleteRolesInNSeconds(5);
-			}
-		}
-	}
-
-	void deleteRole(Role r, ALRHData data) {
-		if (r != null) {
-			r.delete().queue(v -> {
-				log.info("Deleted role {}", data.getTitle());
-				data.setRoleId(null);
-				alrh.dataChanged();
-			});
-		}
-	}
-
-	void validateReactions(Guild g, TextChannel tc, String msgId, Set<ALRHData> data) {
+	void validateReactions(Guild g, TextChannel tc, long msgId, Set<ALRHData> data) {
 		log.debug("Readding missing reactions on msg {} in TextChannel {}", msgId, tc.getName());
 		tc.retrieveMessageById(msgId).queue(m -> {
 			data.forEach(d -> validateReaction(g, m, d.getUnicodeCodePoint(), d.getTitle()));
@@ -234,24 +134,10 @@ class ARHandler {
 		reacted.forEach(data -> {
 			String title = data.getTitle();
 			if (!titles.contains(title)) {
-				Core.JDA.getGuildById(alrh.gId).getRoleById(data.getRoleId()).delete().queue();
 				alrhDB.deleteEntry(data);
 				log.info("Deleted obsolete Role and data for {}", title);
 			}
 		});
-	}
-
-	private synchronized void deleteRolesInNSeconds(long seconds) {
-		if (rDelete != null) {
-			rDelete.cancel(false);
-			log.debug("Cancelled ScheduledFuture");
-		}
-		rDelete = exec.schedule(() -> deleteFlaggedRoles(), seconds, TimeUnit.SECONDS);
-		log.debug("Roles will be deleted in {}s", seconds);
-	}
-
-	private void deleteFlaggedRoles() {
-		roleDeletion.values().forEach(Runnable::run);
 	}
 
 }

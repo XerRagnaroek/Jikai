@@ -3,6 +3,7 @@ package com.xerragnaroek.jikai.anime.db;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 
 import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
@@ -26,6 +27,8 @@ public class AnimeDayTime implements Comparable<AnimeDayTime> {
 	 * Unknown broadcast.
 	 */
 	static final AnimeDayTime UNKNOWN = new AnimeDayTime(null, null);
+	private static DateTimeFormatter date = DateTimeFormatter.ofPattern("dd.MM.uuuu");
+	private static DateTimeFormatter timeF = DateTimeFormatter.ofPattern("HH:mm");
 
 	AnimeDayTime(Anime a, ZonedDateTime zdt) {
 		this.a = a;
@@ -79,6 +82,10 @@ public class AnimeDayTime implements Comparable<AnimeDayTime> {
 		default:
 			return a.title;
 		}
+	}
+
+	public String getReleaseDateTimeFormatted() {
+		return String.format("%s, %s at %s\n", getDayOfWeek(), date.format(zdt), timeF.format(zdt));
 	}
 
 	@Override

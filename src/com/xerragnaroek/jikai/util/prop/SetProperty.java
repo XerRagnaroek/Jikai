@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class SetProperty<T> implements Set<T> {
 
@@ -157,4 +158,8 @@ public class SetProperty<T> implements Set<T> {
 		tmp.forEach(t -> remove(t));
 	}
 
+	@Override
+	public String toString() {
+		return "[" + set.stream().map(T::toString).collect(Collectors.joining(",")) + "]";
+	}
 }

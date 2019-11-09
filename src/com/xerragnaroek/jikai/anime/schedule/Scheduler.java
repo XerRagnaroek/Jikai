@@ -11,26 +11,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.data.Jikai;
-import com.xerragnaroek.jikai.data.JikaiData;
+import com.xerragnaroek.jikai.jikai.Jikai;
+import com.xerragnaroek.jikai.jikai.JikaiData;
+import com.xerragnaroek.jikai.util.Destroyable;
 
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
 
-public class Scheduler {
+public class Scheduler implements Destroyable {
 
 	private final Logger log;
-	private final String gId;
 	private final JikaiData jd;
 	private final ScheduleManager man;
 	private final Jikai j;
 
-	Scheduler(ScheduleManager man, String guildId) {
-		gId = guildId;
+	Scheduler(ScheduleManager man, long guildId) {
 		j = Core.JM.get(guildId);
 		j.setScheduler(this);
 		jd = j.getJikaiData();
-		log = LoggerFactory.getLogger(Scheduler.class + "#" + gId);
+		log = LoggerFactory.getLogger(Scheduler.class + "#" + guildId);
 		jd.timeZoneProperty().onChange((zo, zn) -> sendScheduleToGuild());
 		this.man = man;
 	}
@@ -44,7 +43,7 @@ public class Scheduler {
 			List<MessageEmbed> embeds = man.embedsForTimeZone(zone);
 			if (jd.hasScheduleMessageIds()) {
 				log.debug("Old schedule is present");
-				List<String> ids = jd.getScheduleMessageIds();
+				List<Long> ids = jd.getScheduleMessageIds();
 				if (ids.size() == embeds.size()) {
 					log.debug("Editing old schedule");
 					editScheduleMsgs(tc, ids, embeds);
@@ -68,7 +67,7 @@ public class Scheduler {
 
 	private void sendSchedImpl(TextChannel tc, List<MessageEmbed> embeds) {
 		AtomicInteger count = new AtomicInteger(0);
-		List<String> ids = new LinkedList<>();
+		List<Long> ids = new LinkedList<>();
 		embeds.forEach(me -> {
 			try {
 				ids.add(tc.sendMessage(me).submit().whenComplete((m, e) -> {
@@ -77,7 +76,7 @@ public class Scheduler {
 					} else {
 						log.debug("Sent schedule message " + count.incrementAndGet() + "/" + ids.size());
 					}
-				}).get().getId());
+				}).get().getIdLong());
 			} catch (InterruptedException | ExecutionException e) {
 				e.printStackTrace();
 			}
@@ -85,14 +84,14 @@ public class Scheduler {
 		jd.setScheduleMessageIds(ids);
 	}
 
-	private void deleteSchedule(TextChannel tc, List<String> ids) {
+	private void deleteSchedule(TextChannel tc, List<Long> ids) {
 		AtomicInteger count = new AtomicInteger(0);
 		ids.forEach(id -> {
 			tc.deleteMessageById(id).queue(v -> log.debug("Deleted schedule msg " + count.incrementAndGet() + "/" + ids.size()));
 		});
 	}
 
-	private void editScheduleMsgs(TextChannel tc, List<String> ids, List<MessageEmbed> embeds) {
+	private void editScheduleMsgs(TextChannel tc, List<Long> ids, List<MessageEmbed> embeds) {
 		AtomicInteger count = new AtomicInteger(0);
 		Iterator<MessageEmbed> it = embeds.iterator();
 		ids.forEach(id -> {
@@ -105,5 +104,8 @@ public class Scheduler {
 			});
 		});
 	}
+
+	@Override
+	public void destroy() {}
 
 }

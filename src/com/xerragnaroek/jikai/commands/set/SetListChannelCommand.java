@@ -5,6 +5,7 @@ import java.util.List;
 import com.xerragnaroek.jikai.commands.Command;
 import com.xerragnaroek.jikai.commands.CommandHandler;
 import com.xerragnaroek.jikai.core.Core;
+import com.xerragnaroek.jikai.jikai.Jikai;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -37,8 +38,11 @@ public class SetListChannelCommand implements Command {
 		List<TextChannel> tc = g.getTextChannelsByName(chan, false);
 		if (!tc.isEmpty()) {
 			TextChannel textC = tc.get(0);
-			Core.JM.get(g.getId()).getJikaiData().setListChannelId(textC.getId());
-			textC.sendMessage("Channel for the anime list set.\nFeel free to delete this message").queue();
+			Jikai j = Core.JM.get(g);
+			j.getJikaiData().setScheduleChannelId(textC.getIdLong());
+			try {
+				j.getInfoChannel().sendMessage(textC.getAsMention() + " has been set as the new list channel!").queue();
+			} catch (Exception e) {}
 		}
 	}
 

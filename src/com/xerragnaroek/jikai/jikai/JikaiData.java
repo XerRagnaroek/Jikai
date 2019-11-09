@@ -1,4 +1,4 @@
-package com.xerragnaroek.jikai.data;
+package com.xerragnaroek.jikai.jikai;
 
 import static com.xerragnaroek.jikai.core.Core.JM;
 
@@ -7,12 +7,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang.StringEscapeUtils;
@@ -29,31 +26,31 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.xerragnaroek.jikai.anime.alrh.ALRHData;
 import com.xerragnaroek.jikai.anime.alrh.ALRHandler;
-import com.xerragnaroek.jikai.timer.ReleaseTimeKeeper;
 import com.xerragnaroek.jikai.util.BotUtils;
+import com.xerragnaroek.jikai.util.Destroyable;
 import com.xerragnaroek.jikai.util.prop.IntegerProperty;
 import com.xerragnaroek.jikai.util.prop.Property;
 
 @JsonInclude(Include.NON_EMPTY)
 @JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "trigger", "timezone", "exec_command_count", "list_channel_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "last_mentioned", "alrh_data" })
-public class JikaiData {
-	private Property<String> aniChId = new Property<>();
+public class JikaiData implements Destroyable {
+	private Property<Long> aniChId = new Property<>();
 	private AtomicBoolean changed = new AtomicBoolean(false);
 	private Property<Boolean> completedSetup = new Property<>(false);
 	private Property<Boolean> comsEnabled = new Property<>();
 	private Path fileLoc;
-	private String gId;
-	private Property<String> infoChId = new Property<>();
-	private Property<String> listChId = new Property<>();
+	private long gId;
+	private Property<Long> infoChId = new Property<>();
+	private Property<Long> listChId = new Property<>();
 	private final Logger log;
-	private Property<String> schedChId = new Property<>();
-	private List<String> schedMsgIds;
+	private Property<Long> schedChId = new Property<>();
+	private List<Long> schedMsgIds;
 	private Property<String> trigger = new Property<>();
 	private Property<ZoneId> zone = new Property<>();
 	private IntegerProperty execComs = new IntegerProperty(0);
 	private BotData bd = JM.getJDM().getBotData();
 
-	public JikaiData(String guildId, boolean save) {
+	public JikaiData(long guildId, boolean save) {
 		log = LoggerFactory.getLogger(JikaiData.class + "#" + guildId);
 		gId = guildId;
 		fileLoc = Paths.get(String.format("./data/%s.json", guildId));
@@ -64,7 +61,7 @@ public class JikaiData {
 		log.info("Made configuration for {}", guildId);
 	}
 
-	public Property<String> animeChannelIdProperty() {
+	public Property<Long> animeChannelIdProperty() {
 		return aniChId;
 	}
 
@@ -83,39 +80,27 @@ public class JikaiData {
 	}
 
 	@JsonProperty("anime_channel_id")
-	public String getAnimeChannelId() {
+	public long getAnimeChannelId() {
 		return aniChId.get();
 	}
 
-	@JsonIgnore
-	public Map<String, ZonedDateTime> getAnimesLastMentioned() {
-		return JM.get(gId).getReleaseTimeKeeper().getLastMentionedMap();
-	}
-
-	@JsonProperty("last_mentioned")
-	public Map<String, String> getAnimesLastMentionedString() {
-		Map<String, String> tmp = new TreeMap<>();
-		JM.get(gId).getReleaseTimeKeeper().getLastMentionedMap().forEach((id, zdt) -> tmp.put(id, zdt.toString()));
-		return tmp;
-	}
-
 	@JsonProperty("guild_id")
-	public String getGuildId() {
+	public long getGuildId() {
 		return gId;
 	}
 
 	@JsonProperty("info_channel_id")
-	public String getInfoChannelId() {
+	public long getInfoChannelId() {
 		return infoChId.get();
 	}
 
 	@JsonProperty("list_channel_id")
-	public String getListChannelId() {
+	public long getListChannelId() {
 		return listChId.get();
 	}
 
 	@JsonProperty("schedule_channel_id")
-	public String getScheduleChannelId() {
+	public long getScheduleChannelId() {
 		return schedChId.get();
 	}
 
@@ -125,7 +110,7 @@ public class JikaiData {
 	}
 
 	@JsonProperty("schedule_message_ids")
-	public List<String> getScheduleMessageIds() {
+	public List<Long> getScheduleMessageIds() {
 		return schedMsgIds;
 	}
 
@@ -169,11 +154,11 @@ public class JikaiData {
 		return aniChId.hasNonNullValue();
 	}
 
-	public Property<String> infoChannelIdProperty() {
+	public Property<Long> infoChannelIdProperty() {
 		return infoChId;
 	}
 
-	public Property<String> listChannelIdProperty() {
+	public Property<Long> listChannelIdProperty() {
 		return listChId;
 	}
 
@@ -193,11 +178,11 @@ public class JikaiData {
 		return false;
 	}
 
-	public Property<String> scheduleChannelIdProperty() {
+	public Property<Long> scheduleChannelIdProperty() {
 		return schedChId;
 	}
 
-	public String setAnimeChannelId(String id) {
+	public long setAnimeChannelId(long id) {
 		return setData(aniChId, id, "anime_channel_id");
 	}
 
@@ -205,7 +190,7 @@ public class JikaiData {
 		return Objects.requireNonNullElse(setData(comsEnabled, enabled, "commands_enabled"), false);
 	}
 
-	public String setInfoChannelId(String id) {
+	public long setInfoChannelId(long id) {
 		return setData(infoChId, id, "info_channel_id");
 	}
 
@@ -213,16 +198,16 @@ public class JikaiData {
 		return setData(execComs, c, "exec_command_count");
 	}
 
-	public String setListChannelId(String id) {
+	public long setListChannelId(long id) {
 		return setData(listChId, id, "list_channel_id");
 	}
 
-	public String setScheduleChannelId(String id) {
+	public long setScheduleChannelId(long id) {
 		return setData(schedChId, id, "schedule_channel_id");
 	}
 
-	public List<String> setScheduleMessageIds(List<String> ids) {
-		List<String> tmp = schedMsgIds;
+	public List<Long> setScheduleMessageIds(List<Long> ids) {
+		List<Long> tmp = schedMsgIds;
 		schedMsgIds = ids;
 		hasChanged();
 		log.info("schedule_message_ids changed '{}' -> '{}'", tmp, schedMsgIds);
@@ -234,7 +219,7 @@ public class JikaiData {
 	}
 
 	public ZoneId setTimeZone(ZoneId z) {
-		if (!zone.get().equals(z)) {
+		if (zone.hasNonNullValue() && !zone.get().equals(z)) {
 			Jikai.removeTimeZone(zone.get());
 			Jikai.addTimeZone(z);
 		}
@@ -270,11 +255,6 @@ public class JikaiData {
 			log.debug("ALHRData changed");
 			tmp = true;
 		}
-		ReleaseTimeKeeper rtk = JM.get(gId).getReleaseTimeKeeper();
-		if (rtk != null && rtk.hasUpdateFlagAndReset()) {
-			log.debug("ReleaseTimeKeeper changed");
-			tmp = true;
-		}
 		return tmp;
 	}
 
@@ -287,7 +267,7 @@ public class JikaiData {
 	}
 
 	@JsonCreator
-	public static JikaiData of(@JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") String gId, @JsonProperty("trigger") Property<String> trig, @JsonProperty("anime_channel_id") Property<String> aniChId, @JsonProperty("list_channel_id") Property<String> listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("last_mentioned") Map<String, String> lastMentioned, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") Property<String> icId, @JsonProperty("schedule_channel_id") Property<String> schId, @JsonProperty("schedule_message_ids") List<String> schedMsgIds) {
+	public static JikaiData of(@JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") long gId, @JsonProperty("trigger") Property<String> trig, @JsonProperty("anime_channel_id") Property<Long> aniChId, @JsonProperty("list_channel_id") Property<Long> listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") Property<Long> icId, @JsonProperty("schedule_channel_id") Property<Long> schId, @JsonProperty("schedule_message_ids") List<Long> schedMsgIds) {
 		JikaiData gd = new JikaiData(gId, false);
 		setIfNonNull(gd.trigger, trig);
 		setIfNonNull(gd.aniChId, aniChId);
@@ -302,7 +282,6 @@ public class JikaiData {
 		gd.schedMsgIds = schedMsgIds;
 		setIfNonNull(gd.execComs, execComs);
 		JM.getALHRM().addToInitMap(gId, data);
-		JM.getRTKM().addToInitMap(gId, lastMentioned);
 		return gd;
 	}
 
@@ -320,5 +299,18 @@ public class JikaiData {
 		if (prop != null) {
 			gdp.set(prop.get());
 		}
+	}
+
+	@Override
+	public void destroy() {
+		aniChId.destroy();
+		completedSetup.destroy();
+		comsEnabled.destroy();
+		infoChId.destroy();
+		listChId.destroy();
+		schedChId.destroy();
+		schedMsgIds.clear();
+		trigger.destroy();
+		execComs.destroy();
 	}
 }

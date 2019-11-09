@@ -1,4 +1,4 @@
-package com.xerragnaroek.jikai.data;
+package com.xerragnaroek.jikai.jikai;
 
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -7,7 +7,6 @@ import com.xerragnaroek.jikai.anime.alrh.ALRHManager;
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.xerragnaroek.jikai.commands.CommandHandlerManager;
-import com.xerragnaroek.jikai.timer.RTKManager;
 import com.xerragnaroek.jikai.util.Manager;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -16,7 +15,6 @@ public class JikaiManager extends Manager<Jikai> {
 	final JikaiDataManager jdm = new JikaiDataManager();
 	final ALRHManager alrhm = new ALRHManager();
 	final CommandHandlerManager chm = new CommandHandlerManager();
-	final RTKManager rtkm = new RTKManager();
 	final ScheduleManager sm = new ScheduleManager();
 
 	public JikaiManager() {
@@ -25,24 +23,23 @@ public class JikaiManager extends Manager<Jikai> {
 
 	@Override
 	public void init() {
-		jdm.init();
-		jdm.getGuildIds().forEach(this::registerNew);
 		AnimeDB.init();
 		AnimeDB.waitUntilLoaded();
+		JikaiIO.load();
+		jdm.getGuildIds().forEach(this::registerNew);
 		chm.init();
-		rtkm.init();
 		alrhm.init();
 		sm.init();
-		rtkm.startReleaseUpdateThread();
+		log.info("Jikai initialized!");
 	}
 
 	@Override
-	protected Jikai makeNew(String gId) {
+	protected Jikai makeNew(long gId) {
 		return new Jikai(gId, this);
 	}
 
 	public void startSaveThread(long delay) {
-		jdm.startSaveThread(delay, TimeUnit.MINUTES);
+		JikaiIO.startSaveThread(delay, TimeUnit.MINUTES);
 	}
 
 	public JikaiDataManager getJDM() {
@@ -57,23 +54,28 @@ public class JikaiManager extends Manager<Jikai> {
 		return chm;
 	}
 
-	public RTKManager getRTKM() {
-		return rtkm;
-	}
-
 	public ScheduleManager getSM() {
 		return sm;
 	}
 
-	public boolean isKnownGuild(String gId) {
+	public boolean isKnownGuild(long gId) {
 		return impls.keySet().contains(gId);
 	}
 
 	public boolean isKnownGuild(Guild g) {
-		return impls.keySet().contains(g.getId());
+		return impls.keySet().contains(g.getIdLong());
 	}
 
-	public Set<String> getGuildIds() {
+	public Set<Long> getGuildIds() {
 		return impls.keySet();
+	}
+
+	@Override
+	public void remove(long id) {
+		super.remove(id);
+		jdm.remove(id);
+		alrhm.remove(id);
+		chm.remove(id);
+		sm.remove(id);
 	}
 }
