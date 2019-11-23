@@ -1,3 +1,23 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2019 github.com/XerRagnaroek
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ * associated documentation files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+ * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.xerragnaroek.jikai.anime.alrh;
 
 import java.util.Set;
@@ -13,6 +33,7 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 
 /**
+ * 
  * Handles the sending and updating of the anime list. <br>
  * Only used by the ALRHandler.
  * 
@@ -104,22 +125,16 @@ class ALHandler {
 					alrhd.setReacted(true);
 				}
 				alrhd.setTextChannelId(alrh.tcId.get());
-				/*List<Role> roles = g.getRolesByName(title, false);
-				if (roles.isEmpty()) {
-					log.info("Creating role for {}", title);
-					g.createRole().setName(title).setMentionable(true).setPermissions(0l).queue(r -> {
-						if (r != null) {
-							log.debug("Storing role {} with id {}", r.getName(), r.getId());
-							alrhd.setRoleId(r.getId());
-							alrhDB.addALRHData(alrhd);
-							incrementSuccesses();
-						}
-					}, rerr -> log.error("Failed creating role for {}", title, rerr));
-				} else {
-					log.debug("Role {} already exists, getting id", title);
-					alrhd.setRoleId(roles.get(0).getId());
-					incrementSuccesses();
-				}*/
+				/*
+				 * List<Role> roles = g.getRolesByName(title, false); if (roles.isEmpty()) {
+				 * log.info("Creating role for {}", title);
+				 * g.createRole().setName(title).setMentionable(true).setPermissions(0l).queue(r ->
+				 * { if (r != null) { log.debug("Storing role {} with id {}", r.getName(),
+				 * r.getId()); alrhd.setRoleId(r.getId()); alrhDB.addALRHData(alrhd);
+				 * incrementSuccesses(); } }, rerr -> log.error("Failed creating role for {}",
+				 * title, rerr)); } else { log.debug("Role {} already exists, getting id", title);
+				 * alrhd.setRoleId(roles.get(0).getId()); incrementSuccesses(); }
+				 */
 				String uniCP = alrhd.getUnicodeCodePoint();
 				log.debug("Adding reaction {} to message", uniCP);
 				m.addReaction(uniCP).queue(v -> {

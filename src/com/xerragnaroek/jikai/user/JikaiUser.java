@@ -1,9 +1,30 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2019 github.com/XerRagnaroek
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ * associated documentation files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+ * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.xerragnaroek.jikai.user;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +32,12 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
@@ -28,16 +54,23 @@ import net.dv8tion.jda.api.entities.User;
 public class JikaiUser {
 
 	private long id;
-	private TitleType tt;
+	private TitleLanguage tt;
 	private SetProperty<String> subscribedAnime = new SetProperty<>();
 	private Property<Boolean> sendDailyUpdate = new Property<>();
 	private SetProperty<Long> notifBeforeRelease = new SetProperty<>();
 	private Property<ZoneId> zone = new Property<>(ZoneId.of("Europe/Berlin"));
 	private boolean setupComplete = false;
 	boolean loading = true;
+	private final Logger log;
 
 	public JikaiUser(long id) {
 		this.id = id;
+		log = LoggerFactory.getLogger(JikaiUser.class + "#" + id);
+		subscribedAnime.onAdd(str -> log.debug("Subscribed to " + str));
+		subscribedAnime.onRemove(str -> log.debug("Unsubscribed from " + str));
+		notifBeforeRelease.onAdd(l -> log.debug("Added step " + l));
+		notifBeforeRelease.onRemove(l -> log.debug("Removed step " + l));
+		sendDailyUpdate.onChange((o, n) -> log.debug("Send daily update: " + n));
 	}
 
 	public long getId() {
@@ -50,18 +83,20 @@ public class JikaiUser {
 
 	public void setSetupCompleted(boolean comp) {
 		setupComplete = comp;
+		log.debug("SetupCompleted: " + comp);
 	}
 
 	public User getUser() {
 		return Core.JDA.getUserById(id);
 	}
 
-	public TitleType getTitleType() {
+	public TitleLanguage getTitleLanguage() {
 		return tt;
 	}
 
-	public void setTitleType(TitleType tt) {
+	public void setTitleLanguage(TitleLanguage tt) {
 		this.tt = tt;
+		log.debug("TitleLanguage set to " + tt);
 	}
 
 	public boolean isNotfiedOnRelease() {
@@ -102,6 +137,10 @@ public class JikaiUser {
 		}
 	}
 
+	public void unsubscribeAnime(Collection<String> titles) {
+		subscribedAnime.removeAll(titles);
+	}
+
 	public Set<Long> getPreReleaseNotifcationSteps() {
 		return notifBeforeRelease.get();
 	}
@@ -116,6 +155,10 @@ public class JikaiUser {
 
 	public void addPreReleaseNotificaionStep(long minutes) {
 		notifBeforeRelease.add(minutes);
+	}
+
+	public void removePreReleasNotificationStep(long minutes) {
+		notifBeforeRelease.remove(minutes);
 	}
 
 	public Property<Boolean> isUpdatedDailyProperty() {
@@ -148,6 +191,51 @@ public class JikaiUser {
 
 	public Property<ZoneId> timeZoneProperty() {
 		return zone;
+	}
+
+	private boolean stepImpl(String input, boolean add) {
+		int nfe = 0;
+		String[] tmp = input.split(",");
+		for (String s : tmp) {
+			try {
+				char end = s.charAt(s.length() - 1);
+				s = StringUtils.chop(s);
+				long l = Long.parseLong(s);
+				boolean right = false;
+				switch (end) {
+				case 'd':
+					if ((right = l <= 7)) {
+						l = TimeUnit.DAYS.toMinutes(l);
+					}
+					break;
+				case 'h':
+					if ((right = l <= 168)) {
+						l = l * 60;
+					}
+					break;
+				case 'm':
+					right = l >= 10080;
+				}
+				if (right) {
+					if (add) {
+						addPreReleaseNotificaionStep(l);
+					} else {
+						removePreReleasNotificationStep(l);
+					}
+				}
+			} catch (NumberFormatException e) {
+				nfe++;
+			}
+		}
+		return nfe < tmp.length;
+	}
+
+	public boolean removeReleaseSteps(String input) {
+		return stepImpl(input, false);
+	}
+
+	public boolean addReleaseSteps(String input) throws NumberFormatException {
+		return stepImpl(input, true);
 	}
 
 	void destroy() {

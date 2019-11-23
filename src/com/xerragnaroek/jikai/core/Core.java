@@ -1,3 +1,23 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2019 github.com/XerRagnaroek
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ * associated documentation files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+ * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.xerragnaroek.jikai.core;
 
 import java.io.IOException;
@@ -36,14 +56,15 @@ public class Core {
 	public static final ScheduledExecutorService EXEC = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors() * 2);
 
 	public static void main(String[] args) throws LoginException, InterruptedException, ExecutionException, ClassNotFoundException, IOException {
-		System.out.println(DATA_LOC.toAbsolutePath());
+		long mem = Runtime.getRuntime().freeMemory();
 		handleArgs(args);
 		JDABuilder builder = new JDABuilder(AccountType.BOT);
 		builder.setToken(token);
-		builder.addEventListeners(new GuildEventListener());
+		builder.addEventListeners(new EventListener());
 		JDA = builder.build();
 		JDA.awaitReady();
 		init(args);
+		log.info("Initialized, using a total of " + ((mem - Runtime.getRuntime().freeMemory()) / 1024) + " kb of memory");
 	}
 
 	private static void init(String[] args) {
@@ -76,10 +97,6 @@ public class Core {
 			case "-save_delay":
 				saveDelay = Long.parseLong(it.next());
 				log.info("Set save_delay to " + saveDelay);
-				break;
-			case "-commands_default_enabled":
-				JM.getCHM().setCommandsEnabledDefault(true);
-				log.info("Commands are now enabled by default");
 				break;
 			case "-anime_base_update_rate":
 				tmp = Long.parseLong(it.next());

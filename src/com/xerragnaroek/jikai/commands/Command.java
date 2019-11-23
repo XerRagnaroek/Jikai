@@ -1,14 +1,7 @@
 package com.xerragnaroek.jikai.commands;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
-/**
- * A recognized command of the bot.
- * 
- * @author XerRagnarök
- *
- */
 public interface Command extends Comparable<Command> {
 	/**
 	 * The command's "name", whatever triggers it.
@@ -31,16 +24,6 @@ public interface Command extends Comparable<Command> {
 		return getUsage() != null;
 	}
 
-	/**
-	 * Run the command.
-	 * 
-	 * @param event
-	 *            - Required to get whoever issued the command and to reply
-	 * @param arguments
-	 *            - what was written after the command
-	 */
-	public void executeCommand(CommandHandler chi, MessageReceivedEvent event, String[] arguments);
-
 	public default boolean hasAlternativeName() {
 		return false;
 	}
@@ -48,12 +31,6 @@ public interface Command extends Comparable<Command> {
 	public default String getAlternativeName() {
 		return null;
 	}
-
-	public default boolean isCommand(String identifier) {
-		return getIdentifier().equals(identifier);
-	}
-
-	public String getIdentifier();
 
 	public String getDescription();
 

@@ -1,3 +1,23 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2019 github.com/XerRagnaroek
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ * associated documentation files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+ * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.xerragnaroek.jikai.jikai;
 
 import java.util.Set;
@@ -6,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 import com.xerragnaroek.jikai.anime.alrh.ALRHManager;
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.schedule.ScheduleManager;
-import com.xerragnaroek.jikai.commands.CommandHandlerManager;
 import com.xerragnaroek.jikai.util.Manager;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -14,7 +33,6 @@ import net.dv8tion.jda.api.entities.Guild;
 public class JikaiManager extends Manager<Jikai> {
 	final JikaiDataManager jdm = new JikaiDataManager();
 	final ALRHManager alrhm = new ALRHManager();
-	final CommandHandlerManager chm = new CommandHandlerManager();
 	final ScheduleManager sm = new ScheduleManager();
 
 	public JikaiManager() {
@@ -27,7 +45,6 @@ public class JikaiManager extends Manager<Jikai> {
 		AnimeDB.waitUntilLoaded();
 		JikaiIO.load();
 		jdm.getGuildIds().forEach(this::registerNew);
-		chm.init();
 		alrhm.init();
 		sm.init();
 		log.info("Jikai initialized!");
@@ -48,10 +65,6 @@ public class JikaiManager extends Manager<Jikai> {
 
 	public ALRHManager getALHRM() {
 		return alrhm;
-	}
-
-	public CommandHandlerManager getCHM() {
-		return chm;
 	}
 
 	public ScheduleManager getSM() {
@@ -75,7 +88,6 @@ public class JikaiManager extends Manager<Jikai> {
 		super.remove(id);
 		jdm.remove(id);
 		alrhm.remove(id);
-		chm.remove(id);
 		sm.remove(id);
 	}
 }

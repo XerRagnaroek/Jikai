@@ -1,10 +1,29 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2019 github.com/XerRagnaroek
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ * associated documentation files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+ * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.xerragnaroek.jikai.user;
 
 import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -56,7 +75,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 						successful = notifyOnRelease(input);
 						break;
 					case 3:
-						successful = titleType(input);
+						successful = titleLanguage(input);
 						break;
 					case 4:
 						successful = releaseSteps(input);
@@ -130,9 +149,9 @@ public class JikaiUserSetup extends ListenerAdapter {
 		return true;
 	}
 
-	private boolean titleType(String input) throws InterruptedException, ExecutionException {
+	private boolean titleLanguage(String input) throws InterruptedException, ExecutionException {
 		if (input == null) {
-			log.debug("Stage TitleType: First Message");
+			log.debug("Stage TitleLanguage: First Message");
 			ju.sendPM("How do you want your titles to be displayed?\n**1. English** - 'Is This a Zombie?'\n**2. Japanese** - 'これはゾンビですか?'\n**3. Romanji** - 'Kore wa Zombie Desu ka?'").get();
 		} else {
 			try {
@@ -141,7 +160,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 					ju.sendPM("1, 2 or 3.").get();
 					return false;
 				}
-				ju.setTitleType(TitleType.values()[--tt]);
+				ju.setTitleLanguage(TitleLanguage.values()[--tt]);
 			} catch (NumberFormatException e) {
 				return false;
 			}
@@ -163,35 +182,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 				log.debug("Stage ReleaseSteps: Invalid format string");
 				return false;
 			} else {
-				String[] tmp = input.split(",");
-				int nfe = 0;
-				for (String s : tmp) {
-					char end = s.charAt(s.length() - 1);
-					s = StringUtils.chop(s);
-					try {
-						long l = Long.parseLong(s);
-						switch (end) {
-						case 'd':
-							if (l <= 7) {
-								ju.addPreReleaseNotificaionStep(TimeUnit.DAYS.toMinutes(l));
-							}
-							break;
-						case 'h':
-							if (l <= 168) {
-								ju.addPreReleaseNotificaionStep(l * 60);
-							}
-							break;
-						case 'm':
-							if (l <= 10080) {
-								ju.addPreReleaseNotificaionStep(l);
-							}
-							break;
-						}
-					} catch (NumberFormatException e) {
-						nfe++;
-					}
-				}
-				if (nfe == tmp.length) {
+				if (ju.addReleaseSteps(input)) {
 					ju.sendPM("None of those was a number. Try again or type \"no\" to not add any steps.").get();
 					log.debug("Stage ReleaseSteps: User didn't supply any valid numbers");
 					return false;
@@ -211,7 +202,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 		bob.append("Time zone :: " + ju.getTimeZone() + "\n");
 		bob.append("Send daily overview :: " + (ju.isUpdatedDaily() ? "yes" : "no") + "\n");
 		bob.append("Notified on release :: " + (ju.isNotfiedOnRelease() ? "yes" : "no") + "\n");
-		bob.append("Title language :: " + ju.getTitleType() + "\n");
+		bob.append("Title language :: " + ju.getTitleLanguage() + "\n");
 		Set<Long> steps = ju.getPreReleaseNotifcationSteps();
 		bob.append("Release update steps :: " + (steps.isEmpty() ? "None" : StringUtils.join(steps, "min, ") + "min before a release") + "\n");
 		bob.append("```\n");
@@ -237,7 +228,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 				notifyOnRelease(null);
 				break;
 			case 2:
-				titleType(null);
+				titleLanguage(null);
 				break;
 			case 3:
 				releaseSteps(null);

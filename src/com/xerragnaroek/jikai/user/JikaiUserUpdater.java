@@ -1,3 +1,23 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2019 github.com/XerRagnaroek
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ * associated documentation files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+ * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.xerragnaroek.jikai.user;
 
 import java.time.DayOfWeek;
@@ -9,10 +29,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +43,7 @@ import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
 import com.xerragnaroek.jikai.core.Core;
+import com.xerragnaroek.jikai.jikai.Jikai;
 import com.xerragnaroek.jikai.util.prop.MapProperty;
 import com.xerragnaroek.jikai.util.prop.Property;
 
@@ -48,6 +71,7 @@ public class JikaiUserUpdater {
 				dailyFutures.remove(z).cancel(false);
 			}
 		});
+		AnimeDB.dbVersionProperty().onChange((n1, n2) -> update());
 	}
 
 	public void registerUser(JikaiUser ju) {
@@ -75,31 +99,36 @@ public class JikaiUserUpdater {
 	private void subAdd(JikaiUser ju) {
 		ju.subscribedAnimesProperty().onAdd(title -> {
 			log.debug("{} subscribed to {}", ju.getId(), title);
-			AnimeDayTime adt = AnimeDB.getADT(ju.getTimeZone(), title);
-			dTSTUMap.putIfAbsent(adt.getDayOfWeek(), new ConcurrentHashMap<>());
-			dTSTUMap.compute(adt.getDayOfWeek(), (d, tstum) -> {
-				tstum.putIfAbsent(adt.getBroadcastTime(), new ConcurrentHashMap<>());
-				tstum.compute(adt.getBroadcastTime(), (time, stum) -> {
-					Property<Map<Long, Map<String, Set<JikaiUser>>>> wrapper = new Property<>(stum);
-					ju.getPreReleaseNotifcationSteps().forEach(step -> {
-						wrapper.get().putIfAbsent(step, new ConcurrentHashMap<>());
-						wrapper.get().compute(step, (st, tum) -> {
-							tum.putIfAbsent(title, Collections.synchronizedSet(new HashSet<>()));
-							tum.compute(title, (t, u) -> {
-								u.add(ju);
-								if (!hasFuture(d, time, step, title)) {
-									scheduleStepUpdate(d, adt.getBroadcastTime(), step, title, adt);
-								}
-								return u;
-							});
-							return tum;
-						});
-					});
-					return stum;
-				});
-				return tstum;
-			});
+			userTitleToMap(ju, title);
 		});
+	}
+
+	private void userTitleToMap(JikaiUser ju, String title) {
+		AnimeDayTime adt = AnimeDB.getADT(ju.getTimeZone(), title);
+		dTSTUMap.putIfAbsent(adt.getDayOfWeek(), new ConcurrentHashMap<>());
+		dTSTUMap.compute(adt.getDayOfWeek(), (d, tstum) -> {
+			tstum.putIfAbsent(adt.getBroadcastTime(), new ConcurrentHashMap<>());
+			tstum.compute(adt.getBroadcastTime(), (time, stum) -> {
+				Property<Map<Long, Map<String, Set<JikaiUser>>>> wrapper = new Property<>(stum);
+				ju.getPreReleaseNotifcationSteps().forEach(step -> {
+					wrapper.get().putIfAbsent(step, new ConcurrentHashMap<>());
+					wrapper.get().compute(step, (st, tum) -> {
+						tum.putIfAbsent(title, Collections.synchronizedSet(new HashSet<>()));
+						tum.compute(title, (t, u) -> {
+							u.add(ju);
+							if (!hasFuture(d, time, step, title)) {
+								scheduleStepUpdate(d, adt.getBroadcastTime(), step, title, adt);
+							}
+							return u;
+						});
+						return tum;
+					});
+				});
+				return stum;
+			});
+			return tstum;
+		});
+
 	}
 
 	private void subRem(JikaiUser ju) {
@@ -115,16 +144,29 @@ public class JikaiUserUpdater {
 								u.remove(ju);
 								if (u.isEmpty()) {
 									cancelFuture(d, time, step, title);
+									log.debug("User is empty for {}->{}->{}->{}", d, time, st, t);
 									return null;
 								}
 								return u;
 							});
-							return tum.isEmpty() ? null : tum;
+							if (tum.isEmpty()) {
+								log.debug("Title->User map is empty for {}->{}->{}", d, time, st);
+								return null;
+							}
+							return tum;
 						});
 					});
-					return stum.isEmpty() ? null : stum;
+					if (stum.isEmpty()) {
+						log.debug("Step->Title->User map is empty for {}->{}", d, time);
+						return null;
+					}
+					return stum;
 				});
-				return tstum.isEmpty() ? null : tstum;
+				if (tstum.isEmpty()) {
+					log.debug("Time->Step->Title->User map is empty for {}", d);
+					return null;
+				}
+				return tstum;
 			});
 		});
 	}
@@ -165,19 +207,32 @@ public class JikaiUserUpdater {
 				dTSTUMap.compute(adt.getDayOfWeek(), (d, tstum) -> {
 					tstum.compute(adt.getBroadcastTime(), (time, stum) -> {
 						stum.compute(step, (st, tum) -> {
-							tum.compute(title, (tit, u) -> {
+							tum.compute(title, (t, u) -> {
 								u.remove(ju);
 								if (u.isEmpty()) {
 									cancelFuture(d, time, step, title);
+									log.debug("User is empty for {}->{}->{}->{}", d, time, st, t);
 									return null;
 								}
 								return u;
 							});
-							return tum.isEmpty() ? null : tum;
+							if (tum.isEmpty()) {
+								log.debug("Title->User map is empty for {}->{}->{}", d, time, st);
+								return null;
+							}
+							return tum;
 						});
-						return stum.isEmpty() ? null : stum;
+						if (stum.isEmpty()) {
+							log.debug("Step->Title->User map is empty for {}->{}", d, time);
+							return null;
+						}
+						return stum;
 					});
-					return tstum.isEmpty() ? null : tstum;
+					if (tstum.isEmpty()) {
+						log.debug("Time->Step->Title->User map is empty for {}", d);
+						return null;
+					}
+					return tstum;
 				});
 			});
 		});
@@ -204,7 +259,28 @@ public class JikaiUserUpdater {
 
 	private void cancelFuture(DayOfWeek d, LocalTime time, long step, String title) {
 		if (hasFuture(d, time, step, title)) {
-			futureMap.get(d).get(time).get(step).get(title).cancel(false);
+			futureMap.compute(d, (day, tsts) -> {
+				tsts.compute(time, (t, sts) -> {
+					sts.compute(step, (st, ts) -> {
+						ts.remove(title).cancel(false);
+						if (ts.isEmpty()) {
+							log.debug("Title->Future map is empty for {}->{}->{}", d, time, step);
+							return null;
+						}
+						return ts;
+					});
+					if (sts.isEmpty()) {
+						log.debug("Step->Title->Future map is empty for {}->{}", d, time);
+						return null;
+					}
+					return sts;
+				});
+				if (tsts.isEmpty()) {
+					log.debug("Time->Step->Title->Future map is emptry for {}", d);
+					return null;
+				}
+				return tsts.isEmpty() ? null : tsts;
+			});
 			log.debug("Canceled future with step {} for {}", step, title);
 		}
 	}
@@ -252,6 +328,26 @@ public class JikaiUserUpdater {
 		long mins = TimeUnit.SECONDS.toMinutes(untilMidnight);
 		untilMidnight -= TimeUnit.MINUTES.toSeconds(mins);
 		log.info("Started daily update thread for time zone {}, midnight in {}m, {}s", z.getId(), mins, untilMidnight);
+	}
+
+	private void update() {
+		Set<JikaiUser> jus = Jikai.getUserManager().users();
+		Set<String> titles = AnimeDB.getSeasonalAnimes().stream().map(adt -> adt.getAnime().title).collect(Collectors.toSet());
+		jus.forEach(ju -> {
+			Set<String> old = new TreeSet<>();
+			StringBuilder bob = new StringBuilder();
+			bob.append("These anime have finished airing and you have been automatically unsubscribed from them:");
+			ju.getSubscribedAnimes().forEach(title -> {
+				if (!titles.contains(title)) {
+					old.add(title);
+					bob.append("\\n**" + title + "**");
+				}
+			});
+			if (!old.isEmpty()) {
+				ju.unsubscribeAnime(old);
+				ju.sendPM(bob.toString());
+			}
+		});
 	}
 
 	private static MessageEmbed makeNotifyEmbed(AnimeDayTime adt, long step) {

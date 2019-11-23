@@ -1,3 +1,23 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2019 github.com/XerRagnaroek
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ * associated documentation files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+ * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.xerragnaroek.jikai.anime.db;
 
 import java.time.DayOfWeek;
@@ -7,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
 import java.util.List;
@@ -141,22 +162,16 @@ class AnimeDBImpl implements Initilizable {
 		return adt;
 	}
 
-	/*private AnimeDayTime GetAdjustedADT(AnimeDayTime adt, ZoneId z) {
-		if (adt.getZonedDateTime().getZone().equals(z)) {
-			log.debug("Supplied ADT already has requested zone");
-			return adt;
-		}
-		if (animes.containsKey(z)) {
-			AnimeDayTime a = animes.get(z).get(adt.getAnime().title);
-			if (a != null) {
-				log.debug("Adt for anime {} has been adjusted into zone {} before", adt.getAnime().title, z.toString());
-				return a;
-			}
-		}
-		AnimeDayTime adjusted = adjust(adt, z);
-		log.debug("Adjusted adt for anime {} into zone {}", adjusted.getAnime().title, z);
-		return adjusted;
-	}*/
+	/*
+	 * private AnimeDayTime GetAdjustedADT(AnimeDayTime adt, ZoneId z) { if
+	 * (adt.getZonedDateTime().getZone().equals(z)) {
+	 * log.debug("Supplied ADT already has requested zone"); return adt; } if
+	 * (animes.containsKey(z)) { AnimeDayTime a = animes.get(z).get(adt.getAnime().title); if (a !=
+	 * null) { log.debug("Adt for anime {} has been adjusted into zone {} before",
+	 * adt.getAnime().title, z.toString()); return a; } } AnimeDayTime adjusted = adjust(adt, z);
+	 * log.debug("Adjusted adt for anime {} into zone {}", adjusted.getAnime().title, z); return
+	 * adjusted; }
+	 */
 
 	void zoneAnimes(boolean overwrite) {
 		Jikai.getUsedTimeZones().forEach(z -> addTimeZone(z, overwrite));
@@ -191,7 +206,7 @@ class AnimeDBImpl implements Initilizable {
 		}
 		//adjusted into the next time they air
 		ZonedDateTime now = ZonedDateTime.now(jst);
-		ZonedDateTime tmp = ZonedDateTime.of(LocalDate.now(jst), zdt.toLocalTime(), jst);
+		ZonedDateTime tmp = ZonedDateTime.of(LocalDate.now(jst), zdt.toLocalTime(), jst).truncatedTo(ChronoUnit.MINUTES);
 		if (now.isBefore(tmp)) {
 			return tmp.with(TemporalAdjusters.nextOrSame(zdt.getDayOfWeek()));
 		} else {

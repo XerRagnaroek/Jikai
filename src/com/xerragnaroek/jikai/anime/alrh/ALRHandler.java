@@ -1,3 +1,23 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2019 github.com/XerRagnaroek
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ * associated documentation files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+ * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.xerragnaroek.jikai.anime.alrh;
 
 import java.util.List;
@@ -110,21 +130,16 @@ public class ALRHandler implements Initilizable, Destroyable {
 		log.info("Initialized");
 	}
 
-	/*private void moveList(String oldTc, String newTc) {
-		log.info("Moving list...");
-		TextChannel tc = Core.getJDA().getGuildById(gId).getTextChannelById(oldTc);
-		new TreeMap<String, Map<String, String>>(msgUcTitMap).keySet().forEach(msg -> {
-			tc.retrieveMessageById(msg).queue(m -> {
-				log.debug("Found list message, deleting...");
-				m.delete().queue(	v -> log.info("Deleted an anime list message"),
-									e -> log.error("Failed deleting message {}", msg, e));
-			}, e -> log.error("Failed looking up list message {}", msg, e));
-			;
-		});
-		msgUcTitMap.clear();
-		tcId = newTc;
-		sendList();
-	}*/
+	/*
+	 * private void moveList(String oldTc, String newTc) { log.info("Moving list..."); TextChannel
+	 * tc = Core.getJDA().getGuildById(gId).getTextChannelById(oldTc); new TreeMap<String,
+	 * Map<String, String>>(msgUcTitMap).keySet().forEach(msg -> {
+	 * tc.retrieveMessageById(msg).queue(m -> { log.debug("Found list message, deleting...");
+	 * m.delete().queue( v -> log.info("Deleted an anime list message"), e ->
+	 * log.error("Failed deleting message {}", msg, e)); }, e ->
+	 * log.error("Failed looking up list message {}", msg, e)); ; }); msgUcTitMap.clear(); tcId =
+	 * newTc; sendList(); }
+	 */
 
 	private void checkIfListChanged(long msgId, Set<ALRHData> data) {
 		Guild g = Core.JDA.getGuildById(gId);
