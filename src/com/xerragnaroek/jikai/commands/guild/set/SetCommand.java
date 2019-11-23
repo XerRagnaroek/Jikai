@@ -75,7 +75,7 @@ public class SetCommand implements GuildCommand {
 
 	private void init() {
 		log = LoggerFactory.getLogger(this.getClass());
-		GuildCommand[] commands = new GuildCommand[] { new SetTriggerCommand(), new SetAnimeChannelCommand(), new SetTimeZoneCommand(), new SetListChannelCommand(), new SetInfoChannelCommand() };
+		GuildCommand[] commands = new GuildCommand[] { new SetScheduleChannelCommand(), new SetTriggerCommand(), new SetAnimeChannelCommand(), new SetTimeZoneCommand(), new SetListChannelCommand(), new SetInfoChannelCommand() };
 		setComs.addAll(Arrays.asList(commands));
 		log.info("Loaded {} SetCommands", setComs.size());
 	}

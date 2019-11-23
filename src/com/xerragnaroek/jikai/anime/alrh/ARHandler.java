@@ -46,8 +46,6 @@ class ARHandler {
 	private ALRHandler alrh;
 	private ALRHDataBase alrhDB;
 	final Logger log;
-	private boolean running = false;
-	private boolean enabled = true;
 
 	ARHandler(ALRHandler alrh) {
 		this.alrh = alrh;
@@ -56,29 +54,27 @@ class ARHandler {
 	}
 
 	void handleReactionAdded(MessageReactionAddEvent event) {
-		if (enabled) {
-			log.trace("Handling MessageReactionAdded event");
-			String msgId = event.getMessageId();
-			if (alrhDB.hasDataForMessage(msgId)) {
-				log.trace("Message is part of the anime list");
-				ReactionEmote re = event.getReactionEmote();
-				Member m = event.getMember();
-				log.debug("Member#{} added reaction {} to the anime list", m.getId(), re.getName());
-				log.debug("Is Emoji? {}", re.isEmoji());
-				if (re.isEmoji()) {
-					ALRHData data = alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
-					if (data != null) {
-						data.setReacted(true);
-						JikaiUser ju = Jikai.getUserManager().getUser(event.getUser().getIdLong());
-						ju.subscribeAnime(data.getTitle());
-					}
+		log.trace("Handling MessageReactionAdded event");
+		long msgId = event.getMessageIdLong();
+		if (alrhDB.hasDataForMessage(msgId)) {
+			log.trace("Message is part of the anime list");
+			ReactionEmote re = event.getReactionEmote();
+			Member m = event.getMember();
+			log.debug("Member#{} added reaction {} to the anime list", m.getId(), re.getName());
+			log.debug("Is Emoji? {}", re.isEmoji());
+			if (re.isEmoji()) {
+				ALRHData data = alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
+				if (data != null) {
+					data.setReacted(true);
+					JikaiUser ju = Jikai.getUserManager().getUser(event.getUser().getIdLong());
+					ju.subscribeAnime(data.getTitle());
 				}
 			}
 		}
 	}
 
 	void handleReactionRemoved(MessageReactionRemoveEvent event) {
-		String msgId = event.getMessageId();
+		long msgId = event.getMessageIdLong();
 		if (alrhDB.hasDataForMessage(msgId)) {
 			ReactionEmote re = event.getReactionEmote();
 			Guild g = event.getGuild();
@@ -97,7 +93,7 @@ class ARHandler {
 	}
 
 	void handleReactionRemovedAll(MessageReactionRemoveAllEvent event) {
-		String msgId = event.getMessageId();
+		long msgId = event.getMessageIdLong();
 		if (alrhDB.hasDataForMessage(msgId)) {
 			log.trace("Message is part of the anime list");
 			Guild g = event.getGuild();
@@ -116,11 +112,11 @@ class ARHandler {
 
 	private void validateReaction(Guild g, TextChannel tc, String msgId, String uni, String title) {
 		tc.retrieveMessageById(msgId).queue(m -> {
-			validateReaction(g, m, uni, title);
+			validateReaction(m, uni, title);
 		});
 	}
 
-	private void validateReaction(Guild g, Message m, String uni, String title) {
+	private void validateReaction(Message m, String uni, String title) {
 		boolean found = false;
 		for (MessageReaction mr : m.getReactions()) {
 			ReactionEmote re = mr.getReactionEmote();
@@ -143,14 +139,19 @@ class ARHandler {
 
 	void validateReactions(Guild g, TextChannel tc, long msgId, Set<ALRHData> data) {
 		log.debug("Readding missing reactions on msg {} in TextChannel {}", msgId, tc.getName());
-		tc.retrieveMessageById(msgId).queue(m -> {
-			data.forEach(d -> validateReaction(g, m, d.getUnicodeCodePoint(), d.getTitle()));
+		tc.retrieveMessageById(msgId).submit().whenComplete((m, t) -> {
+			long tmp = msgId;
+			if (t == null) {
+				data.forEach(d -> validateReaction(m, d.getUnicodeCodePoint(), d.getTitle()));
+			} else {
+				log.error("Message not found", t);
+			}
 		});
 	}
 
 	void update() {
 		Set<ALRHData> reacted = alrhDB.getReactedAnimes();
-		Set<String> titles = AnimeDB.getSeasonalAnimes().stream().map(adt -> adt.getAnime().title).collect(Collectors.toSet());
+		Set<String> titles = AnimeDB.getSeasonalAnime().stream().map(adt -> adt.getAnime().title).collect(Collectors.toSet());
 		reacted.forEach(data -> {
 			String title = data.getTitle();
 			if (!titles.contains(title)) {

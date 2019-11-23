@@ -34,12 +34,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
+import com.github.doomsdayrs.jikan4java.types.main.anime.Anime;
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
 import com.xerragnaroek.jikai.core.Core;
@@ -71,7 +70,7 @@ public class JikaiUserUpdater {
 				dailyFutures.remove(z).cancel(false);
 			}
 		});
-		AnimeDB.dbVersionProperty().onChange((n1, n2) -> update());
+		AnimeDB.runOnDBUpdate(this::update);
 	}
 
 	public void registerUser(JikaiUser ju) {
@@ -330,15 +329,14 @@ public class JikaiUserUpdater {
 		log.info("Started daily update thread for time zone {}, midnight in {}m, {}s", z.getId(), mins, untilMidnight);
 	}
 
-	private void update() {
+	private void update(Set<String> oldAnime) {
 		Set<JikaiUser> jus = Jikai.getUserManager().users();
-		Set<String> titles = AnimeDB.getSeasonalAnimes().stream().map(adt -> adt.getAnime().title).collect(Collectors.toSet());
 		jus.forEach(ju -> {
 			Set<String> old = new TreeSet<>();
 			StringBuilder bob = new StringBuilder();
 			bob.append("These anime have finished airing and you have been automatically unsubscribed from them:");
 			ju.getSubscribedAnimes().forEach(title -> {
-				if (!titles.contains(title)) {
+				if (oldAnime.contains(title)) {
 					old.add(title);
 					bob.append("\\n**" + title + "**");
 				}

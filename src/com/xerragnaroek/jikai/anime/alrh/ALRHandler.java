@@ -200,7 +200,7 @@ public class ALRHandler implements Initilizable, Destroyable {
 	void update() {
 		try {
 			TextChannel iTc = j.getInfoChannel();
-			iTc.sendMessage("The anime database has updated, sending a new list and deleting invalid roles.").queue();
+			iTc.sendMessage("The anime database has updated, sending a new list.").queue();
 			arh.update();
 			alh.update();
 		} catch (Exception e) {

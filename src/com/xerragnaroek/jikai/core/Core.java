@@ -41,14 +41,13 @@ import com.xerragnaroek.jikai.util.BotUtils;
 import net.dv8tion.jda.api.AccountType;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
-import net.dv8tion.jda.api.requests.RestAction;
 
 public class Core {
 
 	private final static Logger log = LoggerFactory.getLogger(Core.class);
 	public static JDA JDA;
 	private static String token;
-	public static String DEV_ID;
+	public static long DEV_ID;
 	private static long saveDelay;
 	public final static Logger ERROR_LOG = LoggerFactory.getLogger("ERROR");
 	public static final JikaiManager JM = new JikaiManager();
@@ -69,7 +68,7 @@ public class Core {
 
 	private static void init(String[] args) {
 		log.info("Initializing");
-		RestAction.setDefaultFailure(e -> BotUtils.logAndSendToDev(ERROR_LOG, "", e));
+		//RestAction.setDefaultFailure(e -> BotUtils.logAndSendToDev(ERROR_LOG, "", e));
 		JM.init();
 		JM.startSaveThread(saveDelay);
 		BotUtils.sendToAllInfoChannels("I'm up and running again, please treat me kindly ;3 ||OwO I can see your bulgy wulgy... ~nya||");
@@ -91,7 +90,7 @@ public class Core {
 				log.info("Set token to '{}'", token);
 				break;
 			case "-dev_id":
-				DEV_ID = it.next();
+				DEV_ID = Long.parseLong(it.next());
 				log.info("Set devId to '{}'", DEV_ID);
 				break;
 			case "-save_delay":

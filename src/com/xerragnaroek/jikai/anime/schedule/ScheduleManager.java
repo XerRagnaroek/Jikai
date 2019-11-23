@@ -56,7 +56,7 @@ public class ScheduleManager extends Manager<Scheduler> {
 	public void init() {
 		Core.JM.getGuildIds().forEach(this::registerNew);
 		updateScheduleEmbeds();
-		AnimeDB.dbVersionProperty().onChange((ov, nv) -> {
+		AnimeDB.runOnDBUpdate(oa -> {
 			if (isInitialized()) {
 				updateScheduleEmbeds();
 				updateSchedules();

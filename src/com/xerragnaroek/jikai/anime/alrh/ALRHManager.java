@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.doomsdayrs.jikan4java.types.main.anime.Anime;
 import com.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.xerragnaroek.jikai.anime.db.AnimeDayTime;
 import com.xerragnaroek.jikai.core.Core;
@@ -38,8 +39,8 @@ import com.xerragnaroek.jikai.util.Initilizable;
 import com.xerragnaroek.jikai.util.Manager;
 import com.xerragnaroek.jikai.util.prop.Property;
 
-import net.dv8tion.jda.api.MessageBuilder;
-import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.internal.utils.EncodingUtil;
 
 /**
@@ -66,7 +67,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 			update();
 			init.set(true);
 			initImpls();
-			AnimeDB.dbVersionProperty().onChange((ov, nv) -> {
+			AnimeDB.runOnDBUpdate(oa -> {
 				if (isInitialized()) {
 					update();
 				}
@@ -87,6 +88,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		initMap.forEach((l, data) -> {
 			ALRHandler impl = new ALRHandler(l);
 			if (data != null) {
+				removeOldEntries(data);
 				impl.setData(data);
 			}
 			impl.init();
@@ -97,6 +99,11 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		initMap = null;
 	}
 
+	private void removeOldEntries(Set<ALRHData> data) {
+		Set<String> anime = AnimeDB.getSeasonalAnime().stream().map(AnimeDayTime::getTitle).collect(Collectors.toSet());
+		new TreeSet<>(data).stream().filter(t -> !anime.contains(t.getTitle())).forEach(t -> data.remove(t));
+	}
+
 	Set<DTO> getListMessages() {
 		if (!listMsgs.hasNonNullValue()) {
 			makeListMessages();
@@ -105,7 +112,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 	}
 
 	private void makeListMessages() {
-		Set<DTO> tmp = new TreeSet<>((d1, d2) -> d1.getMessage().getContentRaw().compareTo(d2.getMessage().getContentRaw()));
+		Set<DTO> tmp = new TreeSet<>((d1, d2) -> d1.getMessage().getDescription().compareTo(d2.getMessage().getDescription()));
 		aniAlph.forEach((l, list) -> {
 			tmp.add(getLetterListMessage(l, list));
 		});
@@ -131,18 +138,21 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 	private DTO getLetterListMessage(String letter, List<String> titles) {
 		log.debug("Creating list for letter {} with {} titles", letter, titles.size());
 		Set<ALRHData> data = new TreeSet<>();
-		MessageBuilder mb = new MessageBuilder();
+		StringBuilder mb = new StringBuilder();
 		mb.append("**" + letter + "**\n");
 		//:regional_indicator_a:
 		int cp = 0x1F1E6;
 		String uni = "";
 		for (String t : titles) {
+			Anime a = AnimeDB.getAnime(t);
 			uni = new String(Character.toChars(cp));
 			data.add(new ALRHData(EncodingUtil.encodeCodepoints(uni), t));
-			mb.append(uni + " : **" + t + "**\n");
+			mb.append(uni + " : [**" + t + "**](" + a.url + ")\n");
 			cp++;
 		}
-		return new DTO(mb.build(), data);
+		EmbedBuilder eb = new EmbedBuilder();
+		eb.setDescription(mb);
+		return new DTO(eb.build(), data);
 	}
 
 	Property<Set<DTO>> listMessagesProperty() {
@@ -154,7 +164,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 	 */
 	private void mapAnimesToStartingLetter() {
 		log.debug("Mapping animes to starting letter");
-		Set<AnimeDayTime> data = AnimeDB.getSeasonalAnimes();
+		Set<AnimeDayTime> data = AnimeDB.getSeasonalAnime();
 		aniAlph = new TreeMap<>(data.stream().map(a -> a.getAnime().title).collect(Collectors.groupingBy(a -> "" + a.charAt(0))));
 		aniAlph.values().forEach(Collections::sort);
 		log.info("Mapped {} animes to {} letters", data.size(), aniAlph.size());
@@ -176,14 +186,14 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
  */
 class DTO {
 	Set<ALRHData> data;
-	Message me;
+	MessageEmbed me;
 
-	DTO(Message message, Set<ALRHData> data) {
+	DTO(MessageEmbed message, Set<ALRHData> data) {
 		me = message;
 		this.data = data;
 	}
 
-	Message getMessage() {
+	MessageEmbed getMessage() {
 		return me;
 	}
 

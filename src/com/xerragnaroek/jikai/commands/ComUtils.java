@@ -28,7 +28,7 @@ public class ComUtils {
 			}
 		}
 		if (c.isDevOnly()) {
-			tmp = m.getId().equals(Core.DEV_ID);
+			tmp = m.getIdLong() == Core.DEV_ID;
 		}
 		LoggerFactory.getLogger(CommandHandler.class).debug("Member has {}sufficient permission for command {}", (tmp ? "" : "in"), c.getName());
 		return tmp;

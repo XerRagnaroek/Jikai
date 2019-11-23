@@ -92,7 +92,7 @@ public class Jikai implements Destroyable {
 	public TextChannel getListChannel() throws Exception {
 		log.debug("Getting Status channel");
 		try {
-			return BotUtils.getTextChannelChecked(jd.getGuildId(), jd.getScheduleChannelId());
+			return BotUtils.getTextChannelChecked(jd.getGuildId(), jd.getListChannelId());
 		} catch (Exception e) {
 			noListCh();
 			throw e;

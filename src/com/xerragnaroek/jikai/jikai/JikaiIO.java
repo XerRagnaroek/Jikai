@@ -59,6 +59,8 @@ public class JikaiIO {
 					case "user.db":
 						Jikai.getUserManager().load(path);
 						break;
+					case "titles.txt":
+						break;
 					default:
 						JM.getJDM().loadData(path);
 					}

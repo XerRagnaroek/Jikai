@@ -20,33 +20,43 @@
  */
 package com.xerragnaroek.jikai.commands.user;
 
-import com.xerragnaroek.jikai.core.Core;
-import com.xerragnaroek.jikai.user.JikaiUser;
+import java.util.concurrent.CompletableFuture;
 
-import net.dv8tion.jda.api.EmbedBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.xerragnaroek.jikai.jikai.JikaiIO;
+import com.xerragnaroek.jikai.user.JikaiUser;
+import com.xerragnaroek.jikai.util.BotUtils;
 
 /**
  * @author XerRagnaroek
  *
  */
-public class HelpCommand implements JUCommand {
+public class StopCommand implements JUCommand {
+	private final Logger log = LoggerFactory.getLogger(StopCommand.class);
 
 	@Override
 	public String getName() {
-		return "help";
+		return "stop";
 	}
 
 	@Override
 	public String getDescription() {
-		return "help";
+		return "Stops the bot";
 	}
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		EmbedBuilder eb = new EmbedBuilder();
-		boolean userIsDev = ju.getId() == Core.DEV_ID;
-		JUCommandHandler.getCommands().stream().filter(com -> !com.isDevOnly() || userIsDev).forEach(com -> eb.addField("**!" + (com.hasUsage() ? com.getUsage() : com.getName()) + "**", com.getDescription(), false));
-		ju.sendPM(eb.build());
+		log.info("Shutting the bot down...\n Saving data...");
+		JikaiIO.save(true);
+		BotUtils.sendToAllInfoChannels("The dev has shut the bot down. Downtime shouldn't be long. ||(Hopefully)||").forEach(CompletableFuture::join);
+		log.info("Goodbye :)");
+		System.exit(1);
 	}
 
+	@Override
+	public boolean isDevOnly() {
+		return true;
+	}
 }

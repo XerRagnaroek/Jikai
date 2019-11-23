@@ -82,7 +82,7 @@ public class BotData {
 	}
 
 	public boolean hasSeasonSearchHash() {
-		return curSeasonHash.hasNonNullValue();
+		return curSeasonHash.hasNonNullValue() && !getCurrentSeasonHash().isEmpty();
 	}
 
 	public String setCurrentSeasonHash(String hash) {

@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import com.xerragnaroek.jikai.core.Core;
 
-import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
 
 /**
@@ -72,17 +72,21 @@ class ALHandler {
 	void sendList() {
 		sending.set(true);
 		try {
-			TextChannel tc = alrh.j.getAnimeChannel();
-			log.info("Sending list messages to channel {}", tc.getName() + "#" + alrh.tcId);
+
 			Set<DTO> dtos = Core.JM.getALHRM().getListMessages();
 			successes.set(0);
 			expectedNumSuccesses = calcExpectedSuccesses(dtos);
 			log.info("Deleting old messages and data");
-			alrhDB.forEachMessage((id, dat) -> {
-				tc.deleteMessageById(id).queue(v -> log.info("Deleted old list message"));
-			});
+			TextChannel tc = alrh.j.getGuild().getTextChannelById(alrhDB.getSentTextChannelId());
+			if (tc != null) {
+				alrhDB.forEachMessage((id, dat) -> {
+					tc.deleteMessageById(id).queue(v -> log.info("Deleted old list message"));
+				});
+			}
 			alrhDB.clearUcMsgMap();
-			dtos.forEach(dto -> handleDTO(tc, dto));
+			TextChannel lc = alrh.j.getListChannel();
+			log.info("Sending list messages to channel {}", lc.getName() + "#" + alrh.tcId);
+			dtos.forEach(dto -> handleDTO(lc, dto));
 		} catch (Exception e) {}
 	}
 
@@ -115,7 +119,7 @@ class ALHandler {
 	 *            - The DTO containing the data to send
 	 */
 	private void handleDTO(TextChannel tc, DTO dto) {
-		Message me = dto.getMessage();
+		MessageEmbed me = dto.getMessage();
 		Set<ALRHData> data = dto.getALRHData();
 		log.debug("Sending list message...");
 		tc.sendMessage(me).queue(m -> {
@@ -124,7 +128,7 @@ class ALHandler {
 				if (alrhDB.isReacted(alrhd)) {
 					alrhd.setReacted(true);
 				}
-				alrhd.setTextChannelId(alrh.tcId.get());
+				alrhd.setTextChannelId(tc.getIdLong());
 				/*
 				 * List<Role> roles = g.getRolesByName(title, false); if (roles.isEmpty()) {
 				 * log.info("Creating role for {}", title);

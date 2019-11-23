@@ -120,8 +120,7 @@ public class JikaiUser {
 	}
 
 	public void subscribeAnime(String title) {
-		subscribedAnime.add(title);
-		if (!loading) {
+		if (subscribedAnime.add(title) && !loading) {
 			sendPM("You have subscribed to '**" + AnimeDB.getADT(zone.get(), title).getTitle(tt) + "**'");
 		}
 	}
@@ -131,8 +130,7 @@ public class JikaiUser {
 	}
 
 	public void unsubscribeAnime(String title) {
-		subscribedAnime.remove(title);
-		if (!loading) {
+		if (subscribedAnime.remove(title) && !loading) {
 			sendPM("You have unsubscribed from '**" + AnimeDB.getADT(zone.get(), title).getTitle(tt) + "**'");
 		}
 	}
@@ -260,7 +258,7 @@ public class JikaiUser {
 		adts = new TreeMap<>(adts);
 		StringBuilder bob = new StringBuilder();
 		if (adts.isEmpty()) {
-			bob.append("Jikai tried her best but couldn't find any anime airing on " + today.toString().toLowerCase() + "s" + " you have subscribed to :(");
+			bob.append("Jikai tried her best but couldn't find any anime airing on " + today.toString().toLowerCase() + "s" + "that you are subscribed to :(");
 		} else {
 			for (Entry<LocalTime, List<String>> entries : adts.entrySet()) {
 				String time = entries.getKey().toString();

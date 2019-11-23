@@ -93,7 +93,7 @@ public class ALRHDataBase {
 		}
 	}
 
-	Set<ALRHData> getDataForMessage(String msgId) {
+	Set<ALRHData> getDataForMessage(long msgId) {
 		return msgMap.get(msgId);
 	}
 
@@ -101,7 +101,7 @@ public class ALRHDataBase {
 		return titleMap.get(title);
 	}
 
-	ALRHData getDataForUnicodeCodePoint(String msgId, String uccp) {
+	ALRHData getDataForUnicodeCodePoint(long msgId, String uccp) {
 		return (ALRHData) ucMsgMap.get(msgId, uccp);
 	}
 
@@ -109,7 +109,7 @@ public class ALRHDataBase {
 		return new TreeSet<>(titleMap.values());
 	}
 
-	boolean hasDataForMessage(String msgId) {
+	boolean hasDataForMessage(long msgId) {
 		return msgMap.containsKey(msgId);
 	}
 

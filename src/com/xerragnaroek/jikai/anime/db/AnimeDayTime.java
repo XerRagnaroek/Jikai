@@ -26,7 +26,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 
-import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
+import com.github.doomsdayrs.jikan4java.types.main.anime.Anime;
 import com.xerragnaroek.jikai.user.TitleLanguage;
 
 /**
@@ -116,5 +116,9 @@ public class AnimeDayTime implements Comparable<AnimeDayTime> {
 	@Override
 	public String toString() {
 		return "[" + String.join(";", a.title, getDayOfWeek().toString(), (!hasBroadcastTime() ? "Unknown" : getBroadcastTime().toString())) + "]";
+	}
+
+	public String getTitle() {
+		return getTitle(TitleLanguage.ROMANJI);
 	}
 }

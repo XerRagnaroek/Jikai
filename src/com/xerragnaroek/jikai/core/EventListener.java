@@ -66,7 +66,7 @@ public class EventListener extends ListenerAdapter {
 
 	@Override
 	public void onMessageReactionAdd(MessageReactionAddEvent event) {
-		if (!event.getUser().isBot() && event.isFromGuild()) {
+		if (!event.getUser().isBot() && event.isFromType(ChannelType.TEXT)) {
 			Jikai j = JM.get(event.getGuild());
 			if (j.hasCompletedSetup()) {
 				runAsync(() -> j.getALRHandler().handleReactionAdded(event));

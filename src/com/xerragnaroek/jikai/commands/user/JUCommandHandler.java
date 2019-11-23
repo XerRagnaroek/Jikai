@@ -17,7 +17,7 @@ public class JUCommandHandler {
 	private static Set<JUCommand> commands = Collections.synchronizedSet(new TreeSet<>());
 	private static final Logger log = LoggerFactory.getLogger(JUCommandHandler.class);
 	static {
-		JUCommand coms[] = new JUCommand[] { new HelpCommand(), new ConfigCommand(), new DailyUpdateCommand(), new NotifyReleaseCommand(), new ReleaseStepCommand(), new TimeZoneCommand(), new TitleLanguageCommand() };
+		JUCommand coms[] = new JUCommand[] { new StopCommand(), new HelpCommand(), new ConfigCommand(), new DailyUpdateCommand(), new NotifyReleaseCommand(), new ReleaseStepCommand(), new TimeZoneCommand(), new TitleLanguageCommand() };
 		commands.addAll(Arrays.asList(coms));
 	}
 

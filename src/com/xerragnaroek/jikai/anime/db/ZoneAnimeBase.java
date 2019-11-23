@@ -39,7 +39,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
+import com.github.doomsdayrs.jikan4java.types.main.anime.Anime;
 
 /**
  * Stores ADTs adjusted to a specific timezone.

@@ -59,7 +59,7 @@ public class SetAnimeChannelCommand implements GuildCommand {
 		if (!tc.isEmpty()) {
 			TextChannel textC = tc.get(0);
 			Jikai j = Core.JM.get(g);
-			j.getJikaiData().setScheduleChannelId(textC.getIdLong());
+			j.getJikaiData().setAnimeChannelId(textC.getIdLong());
 			try {
 				j.getInfoChannel().sendMessage(textC.getAsMention() + " has been set as the new anime channel!").queue();
 			} catch (Exception e) {}

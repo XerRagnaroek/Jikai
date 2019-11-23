@@ -10,9 +10,19 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.8.0</version>
         <configuration>
-          <release>12</release>
+          <release>13</release>
         </configuration>
       </plugin>
+      <plugin>
+      <groupId>org.codehaus.mojo</groupId>
+        <artifactId>versions-maven-plugin</artifactId>
+        <version>2.7</version>
+         <configuration>
+                <excludes>
+                    <exclude>ch.qos.logback:logback-classic</exclude>
+                </excludes>
+            </configuration>
+        </plugin>
     </plugins>
   </build>
   <repositories>
@@ -29,12 +39,12 @@
   	<dependency>
   		<groupId>net.dv8tion</groupId>
   		<artifactId>JDA</artifactId>
-  		<version>4.0.0_56</version>
+  		<version>4.0.0_62</version>
   	</dependency>
   		<dependency>
 	    <groupId>com.github.Doomsdayrs</groupId>
 	    <artifactId>Jikan4java</artifactId>
-	    <version>master-SNAPSHOT</version>
+	    <version>v1.4.0</version>
   		</dependency>	
   		<dependency>
     <groupId>ch.qos.logback</groupId>

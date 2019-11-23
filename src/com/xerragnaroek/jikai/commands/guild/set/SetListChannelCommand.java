@@ -58,7 +58,7 @@ public class SetListChannelCommand implements GuildCommand {
 		if (!tc.isEmpty()) {
 			TextChannel textC = tc.get(0);
 			Jikai j = Core.JM.get(g);
-			j.getJikaiData().setScheduleChannelId(textC.getIdLong());
+			j.getJikaiData().setListChannelId(textC.getIdLong());
 			try {
 				j.getInfoChannel().sendMessage(textC.getAsMention() + " has been set as the new list channel!").queue();
 			} catch (Exception e) {}

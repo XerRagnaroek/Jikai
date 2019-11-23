@@ -29,10 +29,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
@@ -44,12 +42,12 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.Doomsdayrs.Jikan4java.core.Connector;
-import com.github.Doomsdayrs.Jikan4java.enums.Season;
-import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
-import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearch;
-import com.github.Doomsdayrs.Jikan4java.types.Main.Season.SeasonSearchAnime;
-import com.github.Doomsdayrs.Jikan4java.types.Support.Prop.From;
+import com.github.doomsdayrs.jikan4java.core.Connector;
+import com.github.doomsdayrs.jikan4java.enums.Season;
+import com.github.doomsdayrs.jikan4java.types.main.anime.Anime;
+import com.github.doomsdayrs.jikan4java.types.main.season.SeasonSearch;
+import com.github.doomsdayrs.jikan4java.types.main.season.SeasonSearchAnime;
+import com.github.doomsdayrs.jikan4java.types.support.prop.From;
 import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.jikai.BotData;
 import com.xerragnaroek.jikai.jikai.Jikai;
@@ -72,7 +70,7 @@ class AnimeDBImpl implements Initilizable {
 	private AtomicBoolean loading = new AtomicBoolean(true);
 	private AtomicBoolean initialized = new AtomicBoolean(false);
 	private BotData bd;
-	private Map<Integer, String> mapToNum;
+	private AnimeTitleNumberDB atndb;
 
 	AnimeDBImpl() {}
 
@@ -80,6 +78,7 @@ class AnimeDBImpl implements Initilizable {
 		log.info("Initializing AnimeBase");
 		animes.put(jst, new ZoneAnimeBase(jst));
 		bd = Core.JM.getJDM().getBotData();
+		atndb = new AnimeTitleNumberDB();
 		loadSeason();
 		Jikai.timeZoneMapProperty().onPut((z, v) -> addTimeZone(z, false));
 		Jikai.timeZoneMapProperty().onRemove((z, v) -> removeTimeZone(z));
@@ -101,22 +100,31 @@ class AnimeDBImpl implements Initilizable {
 			SeasonSearch ss = new Connector().seasonSearch(zdt.getYear(), getSeason(zdt)).get();
 			log.info("Retrieving season search for {} {}", ss.season_name, ss.season_year);
 			//compare hashs, so only new data will be used
-			String hash = Objects.requireNonNullElse(bd.getCurrentSeasonHash(), "");
-			log.debug("Current search hash = " + hash);
-			if (!ss.request_hash.equals(hash) || !animes.get(jst).hasEntries()) {
-				loadSeasonImpl(ss, zdt);
+			if (bd.hasSeasonSearchHash()) {
+				String hash = bd.getCurrentSeasonHash();
+				log.debug("Current search hash = " + hash);
 				if (!ss.request_hash.equals(hash)) {
+					Set<String> oldTitles = titles();
+					loadSeasonImpl(ss, zdt);
+					oldTitles.removeAll(titles());
+					AnimeDB.dBUpdated(oldTitles);
 					BotUtils.sendToAllInfoChannels("AnimeDB has updated to version " + AnimeDB.incrementAndGetDBVersion());
 					bd.setCurrentSeasonHash(ss.request_hash);
 					log.info("AnimeDB has updated to version {}", AnimeDB.getAnimeDBVersion());
+				} else {
+					log.info("Current schedule is up to date.");
 				}
 			} else {
-				log.info("Current schedule is up to date.");
+				loadSeasonImpl(ss, zdt);
 			}
 		} catch (InterruptedException | ExecutionException e1) {
 			BotUtils.sendThrowableToDev("Error while loading season", e1);
 		}
 		Core.JDA.getPresence().setActivity(null);
+	}
+
+	private Set<String> titles() {
+		return getSeasonalAnimes().stream().map(AnimeDayTime::getTitle).collect(Collectors.toSet());
 	}
 
 	private void loadSeasonImpl(SeasonSearch ss, ZonedDateTime zdt) throws InterruptedException, ExecutionException {
@@ -128,21 +136,11 @@ class AnimeDBImpl implements Initilizable {
 				log.error("Exception while getting anime", e);
 			}
 			return null;
-		}).filter(Objects::nonNull).filter(a -> a.airing).map(this::makeAnimeDayTime).filter(AnimeDayTime::isKnown).collect(Collectors.toList());
-		Collections.sort(tmp);
+		}).filter(Objects::nonNull).filter(a -> a.airing).map(this::makeAnimeDayTime).filter(AnimeDayTime::isKnown).sorted().peek(adt -> atndb.store(adt.getTitle())).collect(Collectors.toList());
 		animes.get(jst).setAnimeDayTimes(tmp);
-		mapToNum(tmp);
 		loading.set(false);
 		zoneAnimes(true);
 		log.info("Loaded {} animes in {}ms", tmp.size(), Duration.between(start, Instant.now()).toMillis());
-	}
-
-	private void mapToNum(List<AnimeDayTime> adts) {
-		Map<Integer, String> tmp = new ConcurrentHashMap<>();
-		for (int n = 0; n < adts.size(); n++) {
-			tmp.put(n, adts.get(n).getAnime().title);
-		}
-		mapToNum = tmp;
 	}
 
 	/**
@@ -308,21 +306,8 @@ class AnimeDBImpl implements Initilizable {
 		return animes.get(jst).size();
 	}
 
-	Anime getAnimeByNum(int num) {
-		return getAnime(mapToNum.get(num));
-	}
-
-	AnimeDayTime getADTByNum(ZoneId zone, int num) {
-		return getADT(zone, mapToNum.get(num));
-	}
-
-	int titleToNumber(String title) {
-		for (Entry<Integer, String> pair : mapToNum.entrySet()) {
-			if (pair.getValue().equals(title)) {
-				return pair.getKey();
-			}
-		}
-		return -1;
+	AnimeTitleNumberDB getATNDB() {
+		return atndb;
 	}
 
 	private void removeTimeZone(ZoneId z) {

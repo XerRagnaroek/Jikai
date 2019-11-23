@@ -22,17 +22,21 @@ package com.xerragnaroek.jikai.anime.db;
 
 import java.time.DayOfWeek;
 import java.time.ZoneId;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.Doomsdayrs.Jikan4java.types.Main.Anime.Anime;
+import com.github.doomsdayrs.jikan4java.types.main.anime.Anime;
+import com.xerragnaroek.jikai.core.Core;
 import com.xerragnaroek.jikai.util.prop.IntegerProperty;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -45,6 +49,7 @@ public class AnimeDB {
 	private static long updateRate = 6;
 	private static ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
 	private static IntegerProperty version = new IntegerProperty(0);
+	private static Set<Consumer<Set<String>>> updateCon = Collections.synchronizedSet(new HashSet<>());
 
 	public static void init() {
 		if (!initialized) {
@@ -72,7 +77,7 @@ public class AnimeDB {
 		return map;
 	}
 
-	public static Set<AnimeDayTime> getSeasonalAnimes() {
+	public static Set<AnimeDayTime> getSeasonalAnime() {
 		return aDB.getSeasonalAnimes();
 	}
 
@@ -129,14 +134,22 @@ public class AnimeDB {
 	}
 
 	public static Anime getAnimeByNumber(int n) {
-		return aDB.getAnimeByNum(n);
+		return getAnime(aDB.getATNDB().getTitle(n));
 	}
 
 	public static AnimeDayTime getADTByNumber(ZoneId zone, int n) {
-		return aDB.getADTByNum(zone, n);
+		return getADT(zone, aDB.getATNDB().getTitle(n));
 	}
 
 	public static int titleToNumber(String title) {
-		return aDB.titleToNumber(title);
+		return aDB.getATNDB().getNumber(title);
+	}
+
+	public static void runOnDBUpdate(Consumer<Set<String>> con) {
+		updateCon.add(con);
+	}
+
+	static void dBUpdated(Set<String> removedAnime) {
+		updateCon.forEach(con -> Core.EXEC.execute(() -> con.accept(removedAnime)));
 	}
 }
