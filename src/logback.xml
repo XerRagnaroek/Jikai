@@ -53,7 +53,7 @@
 	
 	<root level="DEBUG">
 		<appender-ref ref="FILE-ROLLING" />
-		<appender-ref ref="STDOUT_INFO" />
+		<appender-ref ref="STDOUT" />
 	</root>
 
 </configuration>
