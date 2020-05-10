@@ -1,23 +1,3 @@
-/*
- * MIT License
- *
- * Copyright (c) 2019 github.com/XerRagnaroek
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
- * associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
- * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
 package com.github.xerragnaroek.jikai.anime.db;
 
 import java.util.ArrayList;
@@ -25,7 +5,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Pair;
 
 /**
@@ -38,23 +22,49 @@ import com.github.xerragnaroek.jikai.util.Pair;
 public class AnimeUpdate {
 	private List<Anime> removed;
 	private List<Anime> newA;
-	private List<Pair<Anime, Long>> postponed;
+	private List<Pair<Anime, Long>> changed = new ArrayList<>();
+	private List<Anime> nextEp = new ArrayList<>();
+	private final Logger log = LoggerFactory.getLogger(AnimeUpdate.class);
 
 	private AnimeUpdate() {}
 
 	private void listChanges(List<Anime> oldA, List<Anime> newAnime) {
 		removed = oldA.stream().filter(a -> !newAnime.contains(a)).collect(Collectors.toCollection(() -> Collections.synchronizedList(new ArrayList<>())));
+		//removed.addAll(newAnime.stream().filter(a -> !a.hasDataForNextEpisode()).collect(Collectors.toList()));
+		removed.forEach(a -> log.debug("{} has been removed!", a.getTitleRomaji()));
 		newA = newAnime.stream().filter(a -> !oldA.contains(a)).collect(Collectors.toCollection(() -> Collections.synchronizedList(new ArrayList<>())));
-		handlePostponed(newAnime, oldA);
+		newA.forEach(a -> log.debug("New anime: {}", a.getTitleRomaji()));
+		handleReleaseChanged(newAnime, oldA);
+		handleNextEp(newAnime, oldA);
+		String msg = String.format("Updated AnimeDB. Removed: %d, New: %d, Postponed: %d, Next Episode: %d", removed.size(), newA.size(), changed.size(), nextEp.size());
+		log.info(msg);
+		if (!removed.isEmpty() || !newA.isEmpty() || !changed.isEmpty() || !nextEp.isEmpty()) {
+			BotUtils.sendToAllInfoChannels(msg);
+		}
 	}
 
-	private void handlePostponed(List<Anime> newA, List<Anime> old) {
+	private void handleReleaseChanged(List<Anime> newA, List<Anime> old) {
 		newA.forEach(a -> {
 			if (old.contains(a)) {
 				Anime oldA = old.get(old.indexOf(a));
 				if (oldA.hasDataForNextEpisode() && a.hasDataForNextEpisode() && oldA.getNextEpisodeNumber() == a.getNextEpisodeNumber()) {
 					long delay = a.getNextEpisodesAirsAt() - oldA.getNextEpisodesAirsAt();
-					postponed.add(Pair.of(a, delay));
+					if (delay != 0) {
+						changed.add(Pair.of(a, delay));
+						log.info("{} has been {} by {}!", a.getTitleRomaji(), (delay > 0 ? "postponed" : "advanced"), BotUtils.formatSeconds(delay));
+					}
+				}
+			}
+		});
+	}
+
+	private void handleNextEp(List<Anime> newA, List<Anime> old) {
+		newA.forEach(a -> {
+			if (old.contains(a)) {
+				Anime oldA = old.get(old.indexOf(a));
+				if (oldA.hasDataForNextEpisode() && a.hasDataForNextEpisode() && a.getNextEpisodeNumber() > oldA.getNextEpisodeNumber()) {
+					nextEp.add(a);
+					log.info("{} has a new episode coming up!", a.getTitleRomaji());
 				}
 			}
 		});
@@ -76,12 +86,24 @@ public class AnimeUpdate {
 		return !newA.isEmpty();
 	}
 
-	public List<Pair<Anime, Long>> getPostponedAnime() {
-		return postponed;
+	public List<Pair<Anime, Long>> getChangedReleaseAnime() {
+		return changed;
 	}
 
-	public boolean hasPostponedAnime() {
-		return postponed != null && !postponed.isEmpty();
+	public List<Anime> getAnimeNextEp() {
+		return nextEp;
+	}
+
+	public boolean hasAnimeNextEp() {
+		return !nextEp.isEmpty();
+	}
+
+	public boolean hasChangedReleaseAnime() {
+		return changed != null && !changed.isEmpty();
+	}
+
+	public boolean hasChange() {
+		return hasAnimeNextEp() || hasNewAnime() || hasChangedReleaseAnime() || hasRemovedAnime();
 	}
 
 	public static AnimeUpdate categoriseUpdates(List<Anime> oldA, List<Anime> newA) {

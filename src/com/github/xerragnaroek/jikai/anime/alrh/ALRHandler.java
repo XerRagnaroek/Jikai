@@ -1,23 +1,3 @@
-/*
- * MIT License
- *
- * Copyright (c) 2019 github.com/XerRagnaroek
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
- * associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
- * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
 package com.github.xerragnaroek.jikai.anime.alrh;
 
 import java.util.List;
@@ -29,10 +9,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiData;
-import com.github.xerragnaroek.jikai.util.Destroyable;
 import com.github.xerragnaroek.jikai.util.Initilizable;
 import com.github.xerragnaroek.jikai.util.prop.Property;
 
@@ -49,7 +29,7 @@ import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
  * @author XerRagnaroek
  *
  */
-public class ALRHandler implements Initilizable, Destroyable {
+public class ALRHandler implements Initilizable {
 	JikaiData jData;
 	final long gId;
 	private final Logger log;
@@ -68,18 +48,16 @@ public class ALRHandler implements Initilizable, Destroyable {
 	 */
 	ALRHandler(long gId) {
 		this.gId = gId;
+		j = Core.JM.get(gId);
 		log = LoggerFactory.getLogger(ALRHandler.class.getName() + "#" + gId);
 		alrhDB = new ALRHDataBase();
 		changed = new AtomicBoolean(false);
 		alh = new ALHandler(this);
 		arh = new ARHandler(this);
-		initialized = new AtomicBoolean(false);
-	}
-
-	public void setJikai(Jikai j) {
-		this.j = j;
 		jData = j.getJikaiData();
-		jData.listChannelIdProperty().bind(tcId);
+		jData.listChannelIdProperty().bindAndSet(tcId);
+		initialized = new AtomicBoolean(false);
+		j.setALRH(this);
 	}
 
 	/**
@@ -119,15 +97,27 @@ public class ALRHandler implements Initilizable, Destroyable {
 	 * Send the anime list.
 	 */
 	public void sendList() {
-		alh.sendList();
+		try {
+			alh.sendList();
+		} catch (Exception e) {
+			log.error("", e);
+		}
 	}
 
 	@Override
 	public void init() {
 		log.debug("Initializing...");
 		jData.animeChannelIdProperty().bindAndSet(tcId);
-		alrhDB.forEachMessage(this::checkIfListChanged);
 		jData.listChannelIdProperty().bind(tcId);
+		if (alrhDB.getData().size() != AnimeDB.size()) {
+			try {
+				alh.sendList();
+			} catch (Exception e) {
+				log.error("", e);
+			}
+		} else {
+			alrhDB.forEachMessage(this::checkIfListChanged);
+		}
 		initialized.set(true);
 		log.info("Initialized");
 	}
@@ -199,19 +189,9 @@ public class ALRHandler implements Initilizable, Destroyable {
 		return initialized.get();
 	}
 
-	void update() {
-		try {
-			arh.update();
-			alh.update();
-		} catch (Exception e) {
-			//already handled
-		}
-	}
-
-	@Override
-	public void destroy() {
-		tcId.destroy();
-		alrhDB.clearData();
+	void update(AnimeUpdate au) {
+		arh.update(au);
+		alh.update(au);
 	}
 
 }

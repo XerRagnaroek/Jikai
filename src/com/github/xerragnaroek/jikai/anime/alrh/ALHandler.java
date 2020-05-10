@@ -1,34 +1,23 @@
-/*
- * MIT License
- *
- * Copyright (c) 2019 github.com/XerRagnaroek
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
- * associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
- * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
 package com.github.xerragnaroek.jikai.anime.alrh;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jasa.TitleLanguage;
+import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.core.Core;
 
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
 
@@ -42,7 +31,6 @@ import net.dv8tion.jda.api.entities.TextChannel;
  */
 class ALHandler {
 	private ALRHandler alrh;
-	private int expectedNumSuccesses = 0;
 	private final Logger log;
 	private ALRHDataBase alrhDB;
 	private AtomicBoolean sending = new AtomicBoolean(false);
@@ -68,44 +56,30 @@ class ALHandler {
 	 * Send the anime list.<br>
 	 * Deletes the old list (if existing) and replaces it with the new one. <br>
 	 * Once all RestActions have successfully completed, ALRH is set to updated.
-	 */
-	void sendList() {
-		sending.set(true);
-		try {
-			Set<DTO> dtos = Core.JM.getALHRM().getListMessages();
-			successes.set(0);
-			expectedNumSuccesses = calcExpectedSuccesses(dtos);
-			log.info("Deleting old messages and data");
-			TextChannel tc = alrh.j.getGuild().getTextChannelById(alrhDB.getSentTextChannelId());
-			if (tc != null) {
-				alrhDB.forEachMessage((id, dat) -> {
-					tc.deleteMessageById(id).queue(v -> log.info("Deleted old list message"));
-				});
-			}
-			alrhDB.clearUcMsgMap();
-			TextChannel lc = alrh.j.getListChannel();
-			log.info("Sending list messages to channel {}", lc.getName() + "#" + alrh.tcId);
-			dtos.forEach(dto -> handleDTO(lc, dto));
-		} catch (Exception e) {}
-		sending.set(false);
-	}
-
-	/**
-	 * Calculates how many RestActions will be made by sending the list and thus how many successes
-	 * are to be expected.
 	 * 
-	 * @param dtos
-	 *            - a set containing the DTOs with the data to send
-	 * @return How many successful RestActions will be had once everything is sent
+	 * @throws Exception
 	 */
-	private int calcExpectedSuccesses(Set<DTO> dtos) {
-		int c = 0;
-		for (DTO dto : dtos) {
-			//roles,reactions and 1 for the message
-			//c += dto.getALRHData().size() * 2 + 1;
-			c += dto.getALRHData().size() + 1;
+	CompletableFuture<Void> sendList() throws Exception {
+		sending.set(true);
+		Set<DTO> dtos = Core.JM.getALHRM().getListMessages();
+		successes.set(0);
+		log.info("Deleting old messages and data");
+		TextChannel tc = alrh.j.getGuild().getTextChannelById(alrhDB.getSentTextChannelId());
+		if (tc != null) {
+			alrhDB.forEachMessage((id, dat) -> {
+				tc.deleteMessageById(id).queue(v -> log.info("Deleted old list message"));
+			});
 		}
-		return c;
+		alrhDB.clearUcMsgMap();
+		TextChannel lc = alrh.j.getListChannel();
+		log.info("Sending list messages to channel {}", lc.getName() + "#" + alrh.tcId);
+		List<CompletableFuture<?>> cfs = dtos.stream().map(dto -> handleDTO(lc, dto)).collect(Collectors.toList());
+		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).thenAccept(v -> {
+			alrh.dataChanged();
+			//successes.set(0);
+			alrh.jData.save(true);
+			sending.set(false);
+		});
 	}
 
 	/**
@@ -118,49 +92,49 @@ class ALHandler {
 	 * @param dto
 	 *            - The DTO containing the data to send
 	 */
-	private void handleDTO(TextChannel tc, DTO dto) {
+	private CompletableFuture<Void> handleDTO(TextChannel tc, DTO dto) {
 		MessageEmbed me = dto.getMessage();
 		Set<ALRHData> data = dto.getALRHData();
 		log.debug("Sending list message...");
-		tc.sendMessage(me).queue(m -> {
-			incrementSuccesses();
-			data.forEach(alrhd -> {
+		return tc.sendMessage(me).submit().<CompletableFuture<Void>>thenApply(m -> {
+			List<CompletableFuture<Void>> cfs = new ArrayList<>(data.size());
+			data.stream().forEachOrdered(alrhd -> {
 				if (alrhDB.isReacted(alrhd)) {
 					alrhd.setReacted(true);
 				}
 				alrhd.setTextChannelId(tc.getIdLong());
-				/*
-				 * List<Role> roles = g.getRolesByName(title, false); if (roles.isEmpty()) {
-				 * log.info("Creating role for {}", title);
-				 * g.createRole().setName(title).setMentionable(true).setPermissions(0l).queue(r ->
-				 * { if (r != null) { log.debug("Storing role {} with id {}", r.getName(),
-				 * r.getId()); alrhd.setRoleId(r.getId()); alrhDB.addALRHData(alrhd);
-				 * incrementSuccesses(); } }, rerr -> log.error("Failed creating role for {}",
-				 * title, rerr)); } else { log.debug("Role {} already exists, getting id", title);
-				 * alrhd.setRoleId(roles.get(0).getId()); incrementSuccesses(); }
-				 */
+
 				String uniCP = alrhd.getUnicodeCodePoint();
 				log.debug("Adding reaction {} to message", uniCP);
-				m.addReaction(uniCP).queue(v -> {
-					incrementSuccesses();
-					log.debug("Added reaction {} to message", uniCP);
-					if (successes.get() == expectedNumSuccesses) {
-						alrh.dataChanged();
-						successes.set(0);
-						alrh.jData.save(true);
-						sending.set(false);
-					}
-				});
+				cfs.add(m.addReaction(uniCP).submit().thenAccept(v -> log.debug("Added reaction {} to message", uniCP)));
 			});
 			alrhDB.setDataForMessage(m.getIdLong(), data);
-		});
+			return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()]));
+		}).thenAccept(CompletableFuture::join);
 	}
 
-	private void incrementSuccesses() {
-		log.debug("Successful sends: {}/{}", successes.incrementAndGet(), expectedNumSuccesses);
+	void update(AnimeUpdate au) {
+		if (au.hasNewAnime() || au.hasRemovedAnime()) {
+			log.debug("Updating list");
+			try {
+				sendList().thenAccept(v -> sendUpdate(au));
+			} catch (Exception e) {
+				log.error("", e);
+			}
+		}
 	}
 
-	void update() {
-		sendList();
+	private void sendUpdate(AnimeUpdate au) {
+		log.debug("Sending new anime embeds to anime channel");
+		for (Anime a : au.getNewAnime()) {
+			EmbedBuilder eb = new EmbedBuilder();
+			eb.setThumbnail(a.getBiggestAvailableCoverImage());
+			try {
+				eb.setTitle(a.getTitle(TitleLanguage.ROMAJI), a.getAniUrl()).setDescription("has been added to the list! \n Subscribe to it here:" + alrh.j.getListChannel().getAsMention()).setTimestamp(Instant.now());
+				alrh.j.getAnimeChannel().sendMessage(eb.build()).submit().thenAccept(m -> log.debug("Sent embed for {}", a.getTitle(TitleLanguage.ROMAJI)));
+			} catch (Exception e) {
+				log.error("", e);
+			}
+		}
 	}
 }

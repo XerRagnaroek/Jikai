@@ -1,25 +1,6 @@
-/*
- * MIT License
- *
- * Copyright (c) 2019 github.com/XerRagnaroek
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
- * associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
- * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
 package com.github.xerragnaroek.jikai.anime.alrh;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,7 +13,9 @@ import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.util.Initilizable;
 import com.github.xerragnaroek.jikai.util.Manager;
 import com.github.xerragnaroek.jikai.util.prop.Property;
@@ -66,9 +49,10 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 			makeListMessages();
 			initImpls();
 			init.set(true);
-			AnimeDB.runOnDBUpdate(oa -> {
+			AnimeDB.runOnDBUpdate(au -> {
 				if (isInitialized()) {
-					update();
+					log.debug("Updating ALRHs");
+					update(au);
 				}
 			});
 		} else {
@@ -76,10 +60,12 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		}
 	}
 
-	private void update() {
-		mapAnimesToStartingLetter();
-		makeListMessages();
-		Core.EXEC.execute(() -> impls.values().forEach(ALRHandler::update));
+	private void update(AnimeUpdate au) {
+		if (au.hasChange()) {
+			mapAnimesToStartingLetter();
+			makeListMessages();
+			Core.EXEC.execute(() -> impls.values().forEach(impl -> impl.update(au)));
+		}
 	}
 
 	private void initImpls() {
@@ -90,7 +76,8 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 				removeOldEntries(data);
 				impl.setData(data);
 			}
-			impl.setJikai(Core.JM.get(impl.gId));
+			Jikai j = Core.JM.get(impl.gId);
+			j.setALRH(impl);
 			impl.init();
 			impls.put(l, impl);
 		});
@@ -101,7 +88,10 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 
 	private void removeOldEntries(Set<ALRHData> data) {
 		Set<String> anime = AnimeDB.getSeasonalAnime().stream().map(Anime::getTitleRomaji).collect(Collectors.toSet());
-		new TreeSet<>(data).stream().filter(t -> !anime.contains(t.getTitle())).forEach(t -> data.remove(t));
+		new TreeSet<>(data).stream().filter(t -> !anime.contains(t.getTitle())).forEach(t -> {
+			data.remove(t);
+			log.debug("Removed old ALRHData for '{}'", t);
+		});
 	}
 
 	Set<DTO> getListMessages() {
@@ -165,9 +155,30 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 	private void mapAnimesToStartingLetter() {
 		log.debug("Mapping animes to starting letter");
 		Set<Anime> data = AnimeDB.getSeasonalAnime();
-		aniAlph = new TreeMap<>(data.stream().map(Anime::getTitleRomaji).sorted().collect(Collectors.groupingBy(a -> "" + a.charAt(0))));
-		//aniAlph.values().forEach(Collections::sort);
+		aniAlph = checkReactionLimit(data.stream().map(Anime::getTitleRomaji).sorted(String.CASE_INSENSITIVE_ORDER).collect(Collectors.groupingBy(a -> "" + a.toUpperCase().charAt(0))));
 		log.info("Mapped {} anime to {} letters", data.size(), aniAlph.size());
+	}
+
+	/**
+	 * Discord has a limit of 20 reactions per message, so any grouping that has more than 20
+	 * elements has to be split
+	 */
+	private Map<String, List<String>> checkReactionLimit(Map<String, List<String>> map) {
+		Map<String, List<String>> checked = new TreeMap<>();
+		for (String l : map.keySet()) {
+			List<String> titles = map.get(l);
+			int c = 0;
+			for (int size = titles.size(); size > 20; size -= 20) {
+				c++;
+				List<String> tmp = new ArrayList<>(20);
+				for (int n = 0; n < 20; n++) {
+					tmp.add(titles.remove(0));
+				}
+				checked.put(l + c, tmp);
+			}
+			checked.put((c == 0 ? l : l + (++c)), titles);
+		}
+		return checked;
 	}
 
 	public void addToInitMap(long id, Set<ALRHData> data) {

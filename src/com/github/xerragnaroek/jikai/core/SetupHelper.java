@@ -1,23 +1,4 @@
-/*
- * MIT License
- *
- * Copyright (c) 2019 github.com/XerRagnaroek
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
- * associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
- * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+
 package com.github.xerragnaroek.jikai.core;
 
 import java.util.Arrays;
@@ -120,13 +101,13 @@ public class SetupHelper extends ListenerAdapter {
 		jd.setInfoChannelId(tc.getIdLong());
 		jd.setSetupCompleted(true);
 		jd.save(true);
+		j.setALRH(Core.JM.getALHRM().registerNew(g));
 		log.info("Setup completed");
 		setTc.sendMessage("The setup is complete. Commands are by default " + (jd.areCommandsEnabled() ? "enabled" : "disabled") + ".\nYou can change that by calling !enable/disable_commands").complete();
 		setTc.sendMessage("Send `!help` for a list of all commands you have permissions to run (which are all because you're the owner).").complete();
 		setTc.sendMessage("Also I ask you to set the bot role ('Jikai') color to #12e5a8 or R18 G229 B168. Thank you!").complete();
 		Core.EXEC.execute(() -> {
 			j.getALRHandler().sendList();
-			j.getScheduler().sendScheduleToGuild();
 		});
 	}
 }

@@ -25,7 +25,7 @@ public interface Command extends Comparable<Command> {
 	}
 
 	public default boolean hasAlternativeName() {
-		return false;
+		return getAlternativeName() != null;
 	}
 
 	public default String getAlternativeName() {

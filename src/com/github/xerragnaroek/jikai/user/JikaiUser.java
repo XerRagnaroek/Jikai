@@ -1,42 +1,12 @@
-/*
- * MIT License
- *
- * Copyright (c) 2019 github.com/XerRagnaroek
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
- * associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
- * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+
 package com.github.xerragnaroek.jikai.user;
 
-import java.time.DayOfWeek;
-import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,9 +19,9 @@ import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.Property;
 import com.github.xerragnaroek.jikai.util.prop.SetProperty;
 
-import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.User;
 
 public class JikaiUser {
@@ -86,6 +56,7 @@ public class JikaiUser {
 
 	public void setSetupCompleted(boolean comp) {
 		setupComplete = comp;
+		loading = false;
 		log.debug("SetupCompleted: " + comp);
 	}
 
@@ -129,7 +100,7 @@ public class JikaiUser {
 		}
 	}
 
-	public Set<Integer> getSubscribedAnimes() {
+	public Set<Integer> getSubscribedAnime() {
 		return subscribedAnime.get();
 	}
 
@@ -156,29 +127,35 @@ public class JikaiUser {
 		return subscribedAnime;
 	}
 
-	public void addPreReleaseNotificaionStep(int minutes) {
-		log.debug("User added new release notification step: {} minutes", minutes);
-		notifBeforeRelease.add(minutes * 60);
+	public void addPreReleaseNotificaionStep(int seconds) {
+		log.debug("User added new release notification step: {} minutes", seconds / 60);
+		notifBeforeRelease.add(seconds);
+		if (!loading) {
+			sendPM("You will be notified at " + BotUtils.formatSeconds(seconds) + " to a release!");
+		}
 	}
 
-	public void removePreReleasNotificationStep(int minutes) {
-		log.debug("User removed release notification step: {} minutes", minutes);
-		notifBeforeRelease.remove(minutes * 60);
+	public void removePreReleasNotificationStep(int seconds) {
+		log.debug("User removed release notification step: {} minutes", seconds / 60);
+		notifBeforeRelease.remove(seconds);
+		if (!loading) {
+			sendPM("You won't be notified at" + BotUtils.formatSeconds(seconds) + " to a release!");
+		}
 	}
 
 	public Property<Boolean> isUpdatedDailyProperty() {
 		return sendDailyUpdate;
 	}
 
-	public CompletableFuture<Message> sendPM(String message) {
+	public CompletableFuture<PrivateChannel> sendPM(String message) {
 		return BotUtils.sendPM(getUser(), message);
 	}
 
-	public CompletableFuture<Message> sendPMFormat(String message, Object... args) {
+	public CompletableFuture<PrivateChannel> sendPMFormat(String message, Object... args) {
 		return BotUtils.sendPM(getUser(), String.format(message, args));
 	}
 
-	public CompletableFuture<Message> sendPM(Message message) {
+	public CompletableFuture<PrivateChannel> sendPM(Message message) {
 		return BotUtils.sendPM(getUser(), message);
 	}
 
@@ -227,9 +204,9 @@ public class JikaiUser {
 				}
 				if (right) {
 					if (add) {
-						addPreReleaseNotificaionStep((int) l);
+						addPreReleaseNotificaionStep((int) l * 60);
 					} else {
-						removePreReleasNotificationStep((int) l);
+						removePreReleasNotificationStep((int) l * 60);
 					}
 				}
 			} catch (NumberFormatException e) {
@@ -256,50 +233,6 @@ public class JikaiUser {
 		sendDailyUpdate.clearConsumer();
 		zone.set(null);
 		zone.clearConsumer();
-	}
-
-	public CompletableFuture<Message> sendDailyUpdate() {
-		return sendPM(createDailyMessage(getUser()));
-	}
-
-	private Message createDailyMessage(User u) {
-		DayOfWeek today = ZonedDateTime.now(zone.get()).getDayOfWeek();
-		Set<Anime> anime = subscribedAnime.get().stream().map(a -> AnimeDB.getAnime(a)).collect(Collectors.toSet());
-		Map<LocalTime, Set<String>> mappedToTime = new TreeMap<>();
-		anime.forEach(a -> {
-			a.getNextEpisodeDateTime(getTimeZone()).ifPresent(ldt -> {
-				if (ldt.getDayOfWeek().equals(today)) {
-					mappedToTime.compute(ldt.toLocalTime(), (lt, l) -> {
-						if (l == null) {
-							l = new TreeSet<>();
-						}
-						l.add(a.getTitle(tt));
-						return l;
-					});
-				}
-			});
-		});
-		StringBuilder bob = new StringBuilder();
-		if (mappedToTime.isEmpty()) {
-			bob.append("Jikai tried her best but couldn't find any anime airing on " + today.toString().toLowerCase() + "s" + "that you are subscribed to :(");
-		} else {
-			for (Entry<LocalTime, Set<String>> entry : mappedToTime.entrySet()) {
-				String time = entry.getKey().toString();
-				bob.append("\n" + time + " :: ");
-				List<String> tmp = new ArrayList<>();
-				CollectionUtils.addAll(tmp, entry.getValue());
-				if (!tmp.isEmpty()) {
-					bob.append(tmp.remove(0) + "\n");
-					while (!tmp.isEmpty()) {
-						bob.append(" ".repeat(time.length() + 4) + tmp.remove(0) + "\n");
-					}
-				}
-			}
-		}
-		MessageBuilder mb = new MessageBuilder();
-		String str = "Your daily anime are:";
-		mb.appendCodeBlock(str + "\n" + "=".repeat(str.length()) + "\n" + bob.toString(), "asciidoc");
-		return mb.build();
 	}
 
 	@Override

@@ -1,23 +1,4 @@
-/*
- * MIT License
- *
- * Copyright (c) 2019 github.com/XerRagnaroek
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
- * associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
- * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+
 package com.github.xerragnaroek.jikai.core;
 
 import java.io.IOException;
@@ -55,6 +36,7 @@ public class Core {
 	public static final JikaiManager JM = new JikaiManager();
 	public static final Path DATA_LOC = Paths.get("./data/");
 	public static final ScheduledExecutorService EXEC = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors() * 2);
+	public static boolean INITIAL_LOAD = true;
 
 	public static void main(String[] args) throws LoginException, InterruptedException, ExecutionException, ClassNotFoundException, IOException {
 		long mem = Runtime.getRuntime().freeMemory();
@@ -73,7 +55,8 @@ public class Core {
 		//RestAction.setDefaultFailure(e -> BotUtils.logAndSendToDev(ERROR_LOG, "", e));
 		JM.init();
 		JM.startSaveThread(saveDelay);
-		BotUtils.sendToAllInfoChannels("I'm up and running again, please treat me kindly ;3 ||OwO I can see your bulgy wulgy... ~nya||");
+		BotUtils.sendToAllInfoChannels("I'm online again!");
+		INITIAL_LOAD = false;
 	}
 
 	private static void handleArgs(String args[]) {

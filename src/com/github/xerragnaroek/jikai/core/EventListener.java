@@ -1,23 +1,4 @@
-/*
- * MIT License
- *
- * Copyright (c) 2019 github.com/XerRagnaroek
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
- * associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
- * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+
 package com.github.xerragnaroek.jikai.core;
 
 import static com.github.xerragnaroek.jikai.core.Core.JM;
@@ -37,6 +18,7 @@ import net.dv8tion.jda.api.events.ReadyEvent;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
@@ -56,14 +38,17 @@ public class EventListener extends ListenerAdapter {
 					if (j.hasCompletedSetup()) {
 						runAsync(() -> j.getCommandHandler().handleMessage(event));
 					}
-				} else if (event.isFromType(ChannelType.PRIVATE)) {
-					JikaiUser ju = Jikai.getUserManager().getUser(event.getAuthor().getIdLong());
-					if (ju != null && ju.isSetupCompleted()) {
-						log.debug("Received pm from known jikai user");
-						runAsync(() -> JUCommandHandler.handleMessage(ju, event.getMessage().getContentRaw()));
-					}
 				}
 			}
+		}
+	}
+
+	@Override
+	public void onPrivateMessageReceived(PrivateMessageReceivedEvent event) {
+		JikaiUser ju = Jikai.getUserManager().getUser(event.getAuthor().getIdLong());
+		if (ju != null && ju.isSetupCompleted()) {
+			log.debug("Received pm from known jikai user");
+			runAsync(() -> JUCommandHandler.handleMessage(ju, event.getMessage().getContentRaw()));
 		}
 	}
 
@@ -133,4 +118,5 @@ public class EventListener extends ListenerAdapter {
 			}
 		});
 	}
+
 }

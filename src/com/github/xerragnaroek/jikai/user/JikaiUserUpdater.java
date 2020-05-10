@@ -1,54 +1,43 @@
-/*
- * MIT License
- *
- * Copyright (c) 2019 github.com/XerRagnaroek
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
- * associated documentation files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
- * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+
 package com.github.xerragnaroek.jikai.user;
 
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
+import com.github.xerragnaroek.jikai.anime.schedule.AnimeTable;
+import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
+import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Pair;
 import com.github.xerragnaroek.jikai.util.prop.MapProperty;
 
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.MessageBuilder;
+import net.dv8tion.jda.api.MessageBuilder.SplitPolicy;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 
 public class JikaiUserUpdater {
@@ -88,22 +77,34 @@ public class JikaiUserUpdater {
 		ju.subscribedAnimesProperty().onAdd(id -> {
 			log.debug("{} subscribed to {}", ju.getId(), id);
 			Anime a = AnimeDB.getAnime(id);
-			stepMap.putIfAbsent(id, new ConcurrentHashMap<>());
-			stepMap.compute(id, (idA, map) -> {
-				ju.getPreReleaseNotifcationSteps().forEach(step -> {
-					addToStepUserMap(map, step, a, id, ju);
-				});
-				return map;
+			if (a.hasDataForNextEpisode()) {
+				animeAddImpl(a, id, ju);
+			} else {
+				if (!Core.INITIAL_LOAD) {
+					ju.sendPM("**" + a.getTitle(ju.getTitleLanguage()) + "** doesn't have any data concerning the release of the next episode, so you won't recieve any updates!\nIf any data becomes available, then notifications will resume.");
+				}
+			}
+		});
+	}
+
+	private void animeAddImpl(Anime a, int id, JikaiUser ju) {
+		stepMap.putIfAbsent(id, new ConcurrentHashMap<>());
+		stepMap.compute(id, (idA, map) -> {
+			ju.getPreReleaseNotifcationSteps().forEach(step -> {
+				addToStepUserMap(map, step, a, id, ju);
 			});
+			return map;
 		});
 	}
 
 	private void stepAdd(JikaiUser ju) {
 		ju.preReleaseNotificationStepsProperty().onAdd(step -> {
 			log.debug("{} added PreReleaseNotificationStep {}", ju.getId(), step);
-			ju.getSubscribedAnimes().forEach(id -> {
+			ju.getSubscribedAnime().forEach(id -> {
 				Anime a = AnimeDB.getAnime(id);
-				addToAnimeStepMap(id, step, a, ju);
+				if (a.hasDataForNextEpisode()) {
+					addToAnimeStepMap(id, step, a, ju);
+				}
 			});
 		});
 	}
@@ -116,7 +117,7 @@ public class JikaiUserUpdater {
 	}
 
 	private Map<Integer, Set<JikaiUser>> addToStepUserMap(Map<Integer, Set<JikaiUser>> map, int step, Anime a, int id, JikaiUser ju) {
-		map.putIfAbsent(step, Collections.synchronizedSet(new TreeSet<>()));
+		map.putIfAbsent(step, Collections.synchronizedSet(new HashSet<>()));
 		map.get(step).add(ju);
 		if (!hasFuture(id, step)) {
 			scheduleStepUpdate(a, step);
@@ -127,18 +128,21 @@ public class JikaiUserUpdater {
 
 	private void subRem(JikaiUser ju) {
 		ju.subscribedAnimesProperty().onRemove(id -> {
-			stepMap.compute(id, (idA, map) -> {
-				ju.getPreReleaseNotifcationSteps().forEach(step -> {
-					removeFromStepJUMap(id, step, ju, map);
+			if (stepMap.containsKey(id)) {
+				stepMap.compute(id, (idA, map) -> {
+					ju.getPreReleaseNotifcationSteps().forEach(step -> {
+						removeFromStepJUMap(id, step, ju, map);
+					});
+					return handleMapEmpty(map, id);
 				});
-				return handleMapEmpty(map, id);
-			});
+			}
 		});
+
 	}
 
 	private void stepRem(JikaiUser ju) {
 		ju.preReleaseNotificationStepsProperty().onRemove(step -> {
-			ju.getSubscribedAnimes().forEach(id -> {
+			ju.getSubscribedAnime().forEach(id -> {
 				stepMap.compute(id, (idA, map) -> {
 					removeFromStepJUMap(id, step, ju, map);
 					return handleMapEmpty(map, id);
@@ -189,23 +193,39 @@ public class JikaiUserUpdater {
 	}
 
 	private void cancelFuture(int id, int step) {
+		ScheduledFuture<?> sf = removeFuture(id, step);
+		if (sf != null) {
+			sf.cancel(false);
+			log.debug("Cancelled future for id {} and step {}", id, step);
+		}
+	}
+
+	private ScheduledFuture<?> removeFuture(int id, int step) {
+		ScheduledFuture<?>[] sf = new ScheduledFuture<?>[1];
 		if (hasFuture(id, step)) {
 			futureMap.compute(id, (idA, map) -> {
-				map.get(step).cancel(false);
+				sf[0] = map.remove(step);
 				if (map.isEmpty()) {
-					log.debug("Future map for step {} for anime {}", step, id);
+					log.debug("Future map for step {} for anime {} is empty", step, id);
 					return null;
 				}
 				return map;
 			});
 		}
+		return sf[0];
 	}
 
 	//TODO handle negative initial delays!
 	private void scheduleStepUpdate(Anime a, int step) {
 		//min -> seconds
 		int secsToNotif = a.getNextEpisodesAirsIn() - step;
-		ScheduledFuture<?> sf = Core.EXEC.scheduleAtFixedRate(() -> updateUser(a, step), secsToNotif, TimeUnit.DAYS.toSeconds(7), TimeUnit.SECONDS);
+		if (secsToNotif < 0) {
+			secsToNotif += TimeUnit.DAYS.toSeconds(7);
+		}
+		ScheduledFuture<?> sf = Core.EXEC.schedule(() -> {
+			updateUser(a, step);
+			removeFuture(a.getId(), step);
+		}, secsToNotif, TimeUnit.SECONDS);
 		putInFutureMap(a.getId(), step, sf);
 		log.debug("Scheduled future for step {} of {} first running in {} mins", step, a.getTitleRomaji(), secsToNotif / 60);
 	}
@@ -215,17 +235,18 @@ public class JikaiUserUpdater {
 		futureMap.get(id).put(step, sf);
 	}
 
-	private void updateUser(Anime a, int step) {
+	public void updateUser(Anime a, int step) {
 		stepMap.get(a.getId()).get(step).forEach(ju -> {
-			MessageEmbed me = step == 0 ? makeNotifyRelease(a) : makeNotifyEmbed(a, step, ju);
+			MessageEmbed me = step == 0 ? makeNotifyRelease(a, ju) : makeNotifyEmbed(a, step, ju);
 			ju.sendPM(me);
 		});
 	}
 
 	private void startDailyUpdateThread(ZoneId z) {
 		ZonedDateTime now = ZonedDateTime.now(z);
-		long untilMidnight = now.until(now.plusDays(1).withHour(0).truncatedTo(ChronoUnit.HOURS), ChronoUnit.SECONDS) + 1;
-		ScheduledFuture<?> cf = Core.EXEC.scheduleAtFixedRate(() -> updatedDaily.get(z).forEach(JikaiUser::sendDailyUpdate), untilMidnight, TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS);
+		//+ 1 cause end is excluded and +10 so it's at 00:00:10, which guarantees than any LocalDate.now() calls is actually the next day and not still the last one
+		long untilMidnight = now.until(now.plusDays(1).withHour(0).truncatedTo(ChronoUnit.HOURS), ChronoUnit.SECONDS) + 11;
+		ScheduledFuture<?> cf = Core.EXEC.scheduleAtFixedRate(() -> updatedDaily.get(z).forEach(this::sendDailyUpdate), untilMidnight, TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS);
 		dailyFutures.put(z, cf);
 		long mins = TimeUnit.SECONDS.toMinutes(untilMidnight);
 		untilMidnight -= TimeUnit.MINUTES.toSeconds(mins);
@@ -234,7 +255,8 @@ public class JikaiUserUpdater {
 
 	private void update(AnimeUpdate au) {
 		updateRem(au);
-		updatePostponed(au);
+		updateReleaseChanged(au);
+		updateNextEp(au);
 	}
 
 	private void updateRem(AnimeUpdate au) {
@@ -242,32 +264,60 @@ public class JikaiUserUpdater {
 			List<Anime> removed = au.getRemovedAnime();
 			Set<JikaiUser> jus = Jikai.getUserManager().users();
 			jus.forEach(ju -> {
-				StringBuilder bob = new StringBuilder();
-				bob.append("These anime have finished airing and you have been automatically unsubscribed from them:");
 				Set<Integer> rem = removed.stream().map(Anime::getId).collect(Collectors.toSet());
-				rem.retainAll(ju.getSubscribedAnimes());
-				rem.stream().map(AnimeDB::getAnime).forEach(a -> {
-					bob.append("\\n**" + a.getTitle(ju.getTitleLanguage()) + "**");
-					ju.unsubscribeAnime(a.getId());
-				});
-				ju.sendPM(bob.toString());
+				rem.retainAll(ju.getSubscribedAnime());
+				if (!rem.isEmpty()) {
+					ju.sendPMFormat("%d anime %s finished airing!", rem.size(), rem.size() > 1 ? "have" : "has");
+					rem.stream().map(AnimeDB::getAnime).forEach(a -> {
+						ju.unsubscribeAnime(a.getId());
+					});
+				}
 			});
 		}
 	}
 
-	private void updatePostponed(AnimeUpdate au) {
-		if (au.hasPostponedAnime()) {
-			List<Pair<Anime, Long>> pp = au.getPostponedAnime();
+	private void updateReleaseChanged(AnimeUpdate au) {
+		if (au.hasChangedReleaseAnime()) {
+			List<Pair<Anime, Long>> pp = au.getChangedReleaseAnime();
 			pp.forEach(p -> {
 				Anime a = p.getLeft();
 				long delay = p.getRight();
 				cancelAnime(a);
 				Jikai.getUserManager().users().stream().filter(ju -> ju.isSubscribedTo(a)).forEach(ju -> {
-					ju.sendPM(a.getTitle(ju.getTitleLanguage()) + " has been postponed by " + secondsToTime(delay) + "!");
+					ju.sendPM(makeReleaseChangedEmbed(ju, a, delay));
 					ju.getPreReleaseNotifcationSteps().forEach(step -> {
 						addToAnimeStepMap(a.getId(), step, a, ju);
 					});
 				});
+			});
+		}
+	}
+
+	private static MessageEmbed makeReleaseChangedEmbed(JikaiUser ju, Anime a, long delay) {
+		EmbedBuilder eb = new EmbedBuilder();
+		eb.setTitle(a.getTitle(ju.getTitleLanguage()), a.getAniUrl());
+		if (a.hasCoverImageMedium()) {
+			eb.setThumbnail(a.getBiggestAvailableCoverImage());
+		}
+		List<String> externalLinks = a.getExternalLinks().stream().filter(es -> es.getSite().equals("Twitter") || es.getSite().equals("Official Site")).map(es -> String.format("[**%s**](%s)", es.getSite(), es.getUrl())).collect(Collectors.toList());
+		StringBuilder bob = new StringBuilder();
+		if (delay > 0) {
+			bob.append("has been postponed by " + BotUtils.formatSeconds(delay) + " to **");
+		} else {
+			bob.append("airs " + BotUtils.formatSeconds(delay) + " earlier! That's **");
+		}
+		bob.append(formatter.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(a.getNextEpisodesAirsAt()), ju.getTimeZone())) + "**");
+		if (!externalLinks.isEmpty()) {
+			bob.append("\nCheck these links for more information: " + StringUtils.joinWith(", ", externalLinks.toArray()));
+		}
+		eb.setDescription(bob).setTimestamp(Instant.now());
+		return eb.build();
+	}
+
+	private void updateNextEp(AnimeUpdate au) {
+		if (au.hasAnimeNextEp()) {
+			au.getAnimeNextEp().forEach(a -> {
+				Jikai.getUserManager().getJUSubscribedToAnime(a).forEach(ju -> animeAddImpl(a, a.getId(), ju));
 			});
 		}
 	}
@@ -290,40 +340,70 @@ public class JikaiUserUpdater {
 
 	private static MessageEmbed makeNotifyEmbed(Anime a, int step, JikaiUser ju) {
 		EmbedBuilder eb = new EmbedBuilder();
-		if (a.hasCoverImage()) {
-			eb.setThumbnail(a.getCoverImageURL());
+		if (a.hasCoverImageMedium()) {
+			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
-		eb.setTitle("**" + a.getTitleRomaji() + "**", a.getAniUrl()).setDescription(String.format("**%s\nAirs in %s**", a.getNextEpisodeDateTime(ju.getTimeZone()).get().toLocalTime().format(formatter), secondsToTime(step)));
+		eb.setTitle("**" + a.getTitleRomaji() + "**", a.getAniUrl()).setDescription(String.format("**%s%nEpisode %2d/%2d airs in %s**", formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get()), a.getNextEpisodeNumber(), a.getEpisodes(), BotUtils.formatSeconds(step)));
+		eb.setTimestamp(ZonedDateTime.now(ju.getTimeZone()));
 		return eb.build();
 	}
 
-	private static MessageEmbed makeNotifyRelease(Anime a) {
+	private static String formatAirDateTime(LocalDateTime ldt) {
+		return ldt.format(DateTimeFormatter.ofPattern("eeee, dd.MM.yyyy")) + " at " + ldt.format(DateTimeFormatter.ofPattern("HH:mm"));
+	}
+
+	private static MessageEmbed makeNotifyRelease(Anime a, JikaiUser ju) {
 		EmbedBuilder eb = new EmbedBuilder();
-		if (a.hasCoverImage()) {
-			eb.setThumbnail(a.getCoverImageURL());
+		if (a.hasCoverImageMedium()) {
+			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
-		eb.setTitle("**" + a.getTitleRomaji() + "**", a.getAniUrl()).setDescription("just released!\nIt will probably be up on your favourite streaming sites in a few minutes.");
+		eb.setTitle("**" + a.getTitleRomaji() + "**", a.getAniUrl()).setDescription(String.format("Episode %2d/%2d just released!%nIt will probably be up on your favourite streaming sites in a few minutes.", a.getNextEpisodeNumber(), a.getEpisodes()));
+		eb.setTimestamp(ZonedDateTime.now(ju.getTimeZone()));
 		return eb.build();
 	}
 
-	private static String secondsToTime(long seconds) {
-		long days = TimeUnit.SECONDS.toDays(seconds);
-		seconds -= TimeUnit.DAYS.toSeconds(days);
-		long hours = TimeUnit.SECONDS.toHours(seconds);
-		seconds -= TimeUnit.HOURS.toSeconds(hours);
-		long minutes = TimeUnit.SECONDS.toMinutes(seconds);
-		BiFunction<String, Long, String> f = (s, l) -> (l == 0 ? "" : l + " " + s + (l == 1 ? "" : "s"));
-		List<String> time = new LinkedList<>();
-		if (days > 0) {
-			time.add(days + " " + (days > 1 ? "days" : "day"));
-		}
-		if (hours > 0) {
-			time.add(hours + " " + (hours > 1 ? "hours" : "hour"));
-		}
-		if (minutes > 0) {
-			time.add(minutes + " " + (minutes > 1 ? "minutes" : "minute"));
-		}
-		return String.join(", ", time);
+	public static MessageEmbed testNotify(Anime a, int step, JikaiUser ju) {
+		return step == 0 ? makeNotifyRelease(a, ju) : makeNotifyEmbed(a, step, ju);
 	}
 
+	public static MessageEmbed testPostpone(Anime a, long delay, JikaiUser ju) {
+		return makeReleaseChangedEmbed(ju, a, delay);
+	}
+
+	public void testDailyUpdate(JikaiUser ju) {
+		sendDailyUpdate(ju);
+	}
+
+	private Message createDailyMessage(JikaiUser ju, AnimeTable at, DayOfWeek day) {
+		String content = at.toFormatedWeekString(ju.getTitleLanguage(), false).get(day);
+		StringBuilder bob = new StringBuilder();
+		if (content.isBlank()) {
+			bob.append("Jikai tried her best but couldn't find any anime airing on " + StringUtils.capitalize(day.toString().toLowerCase()) + "s that you are subscribed to :(");
+		} else {
+			bob.append(content);
+		}
+		MessageBuilder mb = new MessageBuilder();
+		String str = "Your daily anime are:";
+		mb.appendCodeBlock(str + "\n" + "=".repeat(str.length()) + "\n" + bob.toString(), "asciidoc");
+		return mb.build();
+	}
+
+	private void sendDailyUpdate(JikaiUser ju) {
+		ZoneId zone = ju.getTimeZone();
+		LocalDate ld = ZonedDateTime.now(zone).toLocalDate();
+		DayOfWeek today = ld.getDayOfWeek();
+		AnimeTable at = ScheduleManager.getSchedule(zone).makeUserTable(ju);
+		if (today == DayOfWeek.MONDAY) {
+			//BotUtils.sendFile(ju.getUser(), "Your anime schedule for this week:", BotUtils.imageToByteArray(at.toImage()), "Schedule_" + BotUtils.formatTime(ld, "dd.MM.yy") + ".png");
+			StringBuilder bob = new StringBuilder();
+			String str = "Here's your anime schedule for this week:";
+			bob.append(str + "\n" + "=".repeat(str.length()));
+			at.toFormatedWeekString(ju.getTitleLanguage(), true).values().forEach(s -> bob.append("\n" + s));
+			MessageBuilder mb = new MessageBuilder();
+			mb.appendCodeBlock(bob, "asciidoc");
+			mb.buildAll(SplitPolicy.NEWLINE).forEach(ju::sendPM);
+		} else {
+			ju.sendPM(createDailyMessage(ju, at, today));
+		}
+	}
 }
