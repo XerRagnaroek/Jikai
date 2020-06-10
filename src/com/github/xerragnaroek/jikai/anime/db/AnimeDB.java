@@ -1,5 +1,6 @@
 package com.github.xerragnaroek.jikai.anime.db;
 
+import java.awt.image.BufferedImage;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -109,6 +110,10 @@ public class AnimeDB {
 
 	public static void runOnDBUpdate(Consumer<AnimeUpdate> con) {
 		updateCon.add(con);
+	}
+
+	public static BufferedImage getCoverImage(Anime a) {
+		return aDB.getCoverImage(a);
 	}
 
 	static void dBUpdated(AnimeUpdate au) {

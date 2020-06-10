@@ -16,6 +16,7 @@ import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.util.BotUtils;
+import com.github.xerragnaroek.jikai.util.prop.BooleanProperty;
 import com.github.xerragnaroek.jikai.util.prop.Property;
 import com.github.xerragnaroek.jikai.util.prop.SetProperty;
 
@@ -29,9 +30,10 @@ public class JikaiUser {
 	private long id;
 	private TitleLanguage tt;
 	private SetProperty<Integer> subscribedAnime = new SetProperty<>();
-	private Property<Boolean> sendDailyUpdate = new Property<>();
+	private BooleanProperty sendDailyUpdate = new BooleanProperty();
+	private BooleanProperty sendWeeklySchedule = new BooleanProperty();
 	private SetProperty<Integer> notifBeforeRelease = new SetProperty<>();
-	private Property<ZoneId> zone = new Property<>(ZoneId.of("Europe/Berlin"));
+	private Property<ZoneId> zone = new Property<>();
 	private boolean setupComplete = false;
 	boolean loading = true;
 	private final Logger log;
@@ -44,6 +46,7 @@ public class JikaiUser {
 		notifBeforeRelease.onAdd(l -> log.debug("Added step " + l));
 		notifBeforeRelease.onRemove(l -> log.debug("Removed step " + l));
 		sendDailyUpdate.onChange((o, n) -> log.debug("Send daily update: " + n));
+		sendWeeklySchedule.onChange((o, n) -> log.debug("Send weekly schedule: " + n));
 	}
 
 	public long getId() {
@@ -91,6 +94,14 @@ public class JikaiUser {
 
 	public void setUpdateDaily(boolean upd) {
 		sendDailyUpdate.set(upd);
+	}
+
+	public boolean isSentWeeklySchedule() {
+		return sendWeeklySchedule.get();
+	}
+
+	public void setSentWeeklySchedule(boolean upd) {
+		sendWeeklySchedule.set(upd);
 	}
 
 	public void subscribeAnime(int id) {
@@ -143,8 +154,12 @@ public class JikaiUser {
 		}
 	}
 
-	public Property<Boolean> isUpdatedDailyProperty() {
+	public BooleanProperty isUpdatedDailyProperty() {
 		return sendDailyUpdate;
+	}
+
+	public BooleanProperty isSentWeeklyScheduleProperty() {
+		return sendWeeklySchedule;
 	}
 
 	public CompletableFuture<PrivateChannel> sendPM(String message) {
@@ -226,13 +241,10 @@ public class JikaiUser {
 
 	void destroy() {
 		subscribedAnime.clear();
-		subscribedAnime.clearConsumer();
 		notifBeforeRelease.clear();
-		notifBeforeRelease.clearConsumer();
 		sendDailyUpdate.set(false);
-		sendDailyUpdate.clearConsumer();
+		sendWeeklySchedule.set(false);
 		zone.set(null);
-		zone.clearConsumer();
 	}
 
 	@Override
@@ -252,7 +264,7 @@ public class JikaiUser {
 
 	@Override
 	public String toString() {
-		//id,titletype,zone,sendDailyUpdate,notifBeforeRelease,anime
-		return String.format("\"%d\",\"%d\",\"%s\",\"%d\",\"%s\",\"%s\"", id, tt.ordinal(), zone.get().getId(), sendDailyUpdate.get() ? 1 : 0, notifBeforeRelease.toString(), subscribedAnime.get());
+		// id,titletype,zone,sendDailyUpdate,notifBeforeRelease,anime
+		return String.format("\"%d\",\"%d\",\"%s\",\"%d\",\"%d\",\"%s\",\"%s\"", id, tt.ordinal(), zone.get().getId(), sendDailyUpdate.get() ? 1 : 0, sendWeeklySchedule.get() ? 1 : 0, notifBeforeRelease.toString(), subscribedAnime.get());
 	}
 }

@@ -1,10 +1,15 @@
 package com.github.xerragnaroek.jikai.anime.db;
 
+import java.time.Duration;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,25 +22,28 @@ import com.github.xerragnaroek.jikai.util.Pair;
  * postponed anime
  * 
  * @author XerRagnaroek
- *
  */
 public class AnimeUpdate {
 	private List<Anime> removed;
 	private List<Anime> newA;
 	private List<Pair<Anime, Long>> changed = new ArrayList<>();
 	private List<Anime> nextEp = new ArrayList<>();
+	private Map<Anime, CircularFifoQueue<Integer>> releasePeriods = new HashMap<>();
+	private List<Pair<Anime, String>> changedPeriod = new ArrayList<>();
 	private final Logger log = LoggerFactory.getLogger(AnimeUpdate.class);
 
 	private AnimeUpdate() {}
 
 	private void listChanges(List<Anime> oldA, List<Anime> newAnime) {
 		removed = oldA.stream().filter(a -> !newAnime.contains(a)).collect(Collectors.toCollection(() -> Collections.synchronizedList(new ArrayList<>())));
-		//removed.addAll(newAnime.stream().filter(a -> !a.hasDataForNextEpisode()).collect(Collectors.toList()));
+		// removed.addAll(newAnime.stream().filter(a ->
+		// !a.hasDataForNextEpisode()).collect(Collectors.toList()));
 		removed.forEach(a -> log.debug("{} has been removed!", a.getTitleRomaji()));
 		newA = newAnime.stream().filter(a -> !oldA.contains(a)).collect(Collectors.toCollection(() -> Collections.synchronizedList(new ArrayList<>())));
 		newA.forEach(a -> log.debug("New anime: {}", a.getTitleRomaji()));
 		handleReleaseChanged(newAnime, oldA);
 		handleNextEp(newAnime, oldA);
+		handleReleasePeriod(newAnime, oldA);
 		String msg = String.format("Updated AnimeDB. Removed: %d, New: %d, Postponed: %d, Next Episode: %d", removed.size(), newA.size(), changed.size(), nextEp.size());
 		log.info(msg);
 		if (!removed.isEmpty() || !newA.isEmpty() || !changed.isEmpty() || !nextEp.isEmpty()) {
@@ -70,6 +78,32 @@ public class AnimeUpdate {
 		});
 	}
 
+	private void handleReleasePeriod(List<Anime> newA, List<Anime> old) {
+		newA.forEach(a -> {
+			if (old.contains(a) && nextEp.contains(a)) {
+				releasePeriods.compute(a, (an, q) -> {
+					Duration dif = getDifference(old.get(old.indexOf(a)), a);
+					int dayDif = (int) dif.toDays();
+					if (q == null) {
+						q = new CircularFifoQueue<>(2);
+						q.offer(dayDif);
+					} else {
+						if (q.isAtFullCapacity() && !q.contains(dayDif)) {
+							log.debug("{} has a changed release period: {} instead of {}", a.getTitleRomaji(), dayDif, q);
+							q.offer(dayDif);
+							changedPeriod.add(Pair.of(a, BotUtils.formatSeconds(dif.toSeconds())));
+						}
+					}
+					return q;
+				});
+			}
+		});
+	}
+
+	private Duration getDifference(Anime old, Anime newA) {
+		return Duration.between(old.getNextEpisodeDateTime(ZoneId.systemDefault()).get(), newA.getNextEpisodeDateTime(ZoneId.systemDefault()).get());
+	}
+
 	public List<Anime> getRemovedAnime() {
 		return removed;
 	}
@@ -98,12 +132,20 @@ public class AnimeUpdate {
 		return !nextEp.isEmpty();
 	}
 
+	public List<Pair<Anime, String>> getAnimeChangedPeriod() {
+		return changedPeriod;
+	}
+
+	public boolean hasAnimeChangedPeriod() {
+		return !changedPeriod.isEmpty();
+	}
+
 	public boolean hasChangedReleaseAnime() {
 		return changed != null && !changed.isEmpty();
 	}
 
 	public boolean hasChange() {
-		return hasAnimeNextEp() || hasNewAnime() || hasChangedReleaseAnime() || hasRemovedAnime();
+		return hasAnimeNextEp() || hasNewAnime() || hasChangedReleaseAnime() || hasRemovedAnime() || hasAnimeChangedPeriod();
 	}
 
 	public static AnimeUpdate categoriseUpdates(List<Anime> oldA, List<Anime> newA) {

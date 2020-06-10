@@ -9,8 +9,8 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
-import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -48,7 +48,7 @@ class ARHandler {
 				ALRHData data = alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
 				if (data != null) {
 					data.setReacted(true);
-					JikaiUser ju = Jikai.getUserManager().getUser(event.getUser().getIdLong());
+					JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getUser().getIdLong());
 					ju.subscribeAnime(AnimeDB.getAnime(data.getTitle()).getId());
 				}
 			}
@@ -64,7 +64,7 @@ class ARHandler {
 				ALRHData data = alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
 				String title = data.getTitle();
 				if (!event.getUser().isBot()) {
-					Jikai.getUserManager().getUser(event.getUser().getIdLong()).unsubscribeAnime(AnimeDB.getAnime(data.getTitle()).getId());
+					JikaiUserManager.getInstance().getUser(event.getUser().getIdLong()).unsubscribeAnime(AnimeDB.getAnime(data.getTitle()).getId());
 				} else {
 					log.debug("Reaction was removed by a bot");
 				}

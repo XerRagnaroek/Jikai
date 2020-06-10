@@ -14,6 +14,7 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -241,11 +242,11 @@ public class BotUtils {
 					try {
 						log.debug("Sent to infochannel on guild {}: '{}'", j.getGuild().getName(), msg);
 					} catch (Exception e1) {
-						//guild doesn't exist, already being handled
+						// guild doesn't exist, already being handled
 					}
 				}));
 			} catch (Exception e) {
-				//info channel doesn't exist, already being handled
+				// info channel doesn't exist, already being handled
 			}
 		}
 		return cf;
@@ -262,6 +263,7 @@ public class BotUtils {
 		long hours = TimeUnit.SECONDS.toHours(seconds);
 		seconds -= TimeUnit.HOURS.toSeconds(hours);
 		long minutes = TimeUnit.SECONDS.toMinutes(seconds);
+		seconds -= TimeUnit.MINUTES.toSeconds(minutes);
 		List<String> time = new LinkedList<>();
 		if (days > 0) {
 			time.add(days + " " + (days > 1 ? "days" : "day"));
@@ -272,7 +274,20 @@ public class BotUtils {
 		if (minutes > 0) {
 			time.add(minutes + " " + (minutes > 1 ? "minutes" : "minute"));
 		}
+		if (seconds > 0) {
+			time.add(seconds + " " + (seconds > 1 ? "seconds" : "second"));
+		}
 		return String.join(", ", time);
+	}
+
+	public static String formatMillis(long millis) {
+		if (millis > 1000) {
+			long seconds = TimeUnit.MILLISECONDS.toSeconds(millis);
+			millis -= TimeUnit.SECONDS.toMillis(seconds);
+			return String.join(", ", formatSeconds(seconds), millis + " ms");
+		} else {
+			return millis + " ms";
+		}
 	}
 
 	public static byte[] imageToByteArray(RenderedImage img) {
@@ -289,4 +304,24 @@ public class BotUtils {
 		DateTimeFormatter dtf = DateTimeFormatter.ofPattern(format);
 		return dtf.format(tempAccess);
 	}
+
+	public static CompletableFuture<?> clearChannel(TextChannel tc) {
+		log.debug("Deleting all messages in channel {}", tc.getName());
+		AtomicInteger count = new AtomicInteger(0);
+		long start = System.currentTimeMillis();
+		List<CompletableFuture<?>> cfs = new ArrayList<>();
+		tc.getIterableHistory().forEach(m -> {
+			cfs.add(m.delete().submit().thenAccept(v -> {
+				count.incrementAndGet();
+			}));
+		});
+		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).whenComplete((v, t) -> {
+			if (t == null) {
+				log.debug("Successfully deleted " + count.get() + " messages in " + formatMillis(System.currentTimeMillis() - start));
+			} else {
+				Core.logThrowable(t);
+			}
+		});
+	}
+
 }

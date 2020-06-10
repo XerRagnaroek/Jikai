@@ -6,8 +6,8 @@ import java.time.ZonedDateTime;
 
 import com.github.xerragnaroek.jikai.anime.schedule.AnimeTable;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
-import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.MessageBuilder.SplitPolicy;
@@ -30,7 +30,7 @@ public class TestDailyUpdateCommand implements JUCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		Jikai.getUserManager().getUserUpdater().testDailyUpdate(ju);
+		JikaiUserManager.getInstance().getUserUpdater().testDailyUpdate(ju);
 		ZoneId zone = ju.getTimeZone();
 		LocalDate ld = ZonedDateTime.now(zone).toLocalDate();
 		AnimeTable at = ScheduleManager.getSchedule(zone).makeUserTable(ju);

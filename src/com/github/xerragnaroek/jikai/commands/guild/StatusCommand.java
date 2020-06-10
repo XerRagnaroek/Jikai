@@ -9,6 +9,7 @@ import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiData;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.Permission;
@@ -18,7 +19,6 @@ import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
 public class StatusCommand implements GuildCommand {
-	//TODO StatusCommand
 	@Override
 	public String getName() {
 		return "status";
@@ -35,14 +35,25 @@ public class StatusCommand implements GuildCommand {
 			Message m = tc.sendMessage("If you can see this, something broke along the lines.").complete();
 			long ping = Instant.now().toEpochMilli() - now.toEpochMilli();
 			MessageBuilder mb = new MessageBuilder();
-			mb.appendCodeBlock(String.format("= Status =%nPing :: %d ms%nGateway-Ping :: %d ms%nExecuted Commands :: %d%nAnimes in DB :: %02d%nDB Version :: %d%nUpdate-Rate :: %d min%nConnected Servers :: %d%nUsers :: %d", ping, JDA.getGatewayPing(), jd.getExecutedCommandCount(), AnimeDB.size(), AnimeDB.getAnimeDBVersion(), JDA.getGuildCache().size(), Jikai.getUserManager().userAmount()), "asciidoc");
+			StringBuilder bob = new StringBuilder();
+			bob.append("= Status =\n");
+			bob.append("Ping :: " + ping + " ms\n");
+			bob.append("Gateway-Ping :: " + JDA.getGatewayPing() + " ms\n");
+			bob.append("Currently loaded anime :: " + AnimeDB.size() + "\n");
+			bob.append("Executed Commands :: " + jd.getExecutedCommandCount() + "\n");
+			bob.append("Servers running Jikai :: " + JDA.getGuildCache().size() + "\n");
+			bob.append("Registered Users :: " + JikaiUserManager.getInstance().userAmount() + "\n");
+			bob.append("Server Commands Enabled :: " + jd.areCommandsEnabled());
+			mb.appendCodeBlock(bob.toString(), "asciidoc");
 			m.editMessage(mb.build()).queue();
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			Core.logThrowable(e);
+		}
 	}
 
 	@Override
 	public String getDescription() {
-		return "Shows general information concerning the bot's status (Ping, executed commands, etc.)";
+		return "Sends the bots current stats.";
 	}
 
 	@Override

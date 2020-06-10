@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jikai.anime.alrh.ALRHandler;
 import com.github.xerragnaroek.jikai.commands.guild.CommandHandler;
 import com.github.xerragnaroek.jikai.core.Core;
-import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.MessageBuilder;
@@ -23,7 +22,6 @@ public class Jikai {
 	private CommandHandler ch;
 	private final Logger log;
 	private final static Logger sLog = LoggerFactory.getLogger(Jikai.class);
-	private static JikaiUserManager jum = new JikaiUserManager();
 
 	public Jikai(long gId, JikaiManager jm) {
 		this.jd = jm.jdm.get(gId);
@@ -153,10 +151,6 @@ public class Jikai {
 
 	public void setALRH(ALRHandler alrh) {
 		this.alrh = alrh;
-	}
-
-	public static JikaiUserManager getUserManager() {
-		return jum;
 	}
 
 }

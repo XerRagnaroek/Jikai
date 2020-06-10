@@ -22,15 +22,28 @@ import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.util.BotUtils;
+import com.github.xerragnaroek.jikai.util.prop.MapProperty;
 
 public class JikaiUserManager {
 
 	private Map<Long, JikaiUser> user = new ConcurrentHashMap<>();
 	private Map<Integer, Set<JikaiUser>> subscriptionMap = new ConcurrentHashMap<>();
-	private JikaiUserUpdater juu = new JikaiUserUpdater();
+	private MapProperty<ZoneId, Set<JikaiUser>> timeZoneMap = new MapProperty<>();
+	private JikaiUserUpdater juu;
 	private final Logger log = LoggerFactory.getLogger(JikaiUserManager.class);
 
-	public JikaiUserManager() {}
+	private static JikaiUserManager instance;
+
+	private JikaiUserManager() {}
+
+	public static void init() {
+		instance = new JikaiUserManager();
+		instance.juu = new JikaiUserUpdater();
+	}
+
+	public static JikaiUserManager getInstance() {
+		return instance;
+	}
 
 	public JikaiUser registerUser(long id) {
 		JikaiUser ju = new JikaiUser(id);
@@ -42,12 +55,17 @@ public class JikaiUserManager {
 		return ju;
 	}
 
+	public boolean isKnownJikaiUser(long id) {
+		return user.containsKey(id);
+	}
+
 	public int userAmount() {
 		return user.size();
 	}
 
 	private void registerImpl(JikaiUser ju) {
 		handleSubscriptions(ju);
+		handleTimeZoneChange(ju);
 		juu.registerUser(ju);
 		user.put(ju.getId(), ju);
 	}
@@ -71,6 +89,33 @@ public class JikaiUserManager {
 				s.remove(ju);
 				return s.isEmpty() ? null : s;
 			});
+		});
+	}
+
+	private void handleTimeZoneChange(JikaiUser ju) {
+		ju.timeZoneProperty().onChange((ov, nv) -> {
+			if (ov != null) {
+				log.debug("Deleting old timezone mapping for {}", ju.getId());
+				timeZoneMap.compute(ov, (z, s) -> {
+					s.remove(ju);
+					return s.isEmpty() ? null : s;
+				});
+			}
+			if (nv == null) {
+				if (timeZoneMap.containsKey(ov)) {
+					timeZoneMap.compute(ov, (k, s) -> {
+						s.remove(ju);
+						log.debug("Removed {} from the timezone map!", ju.getId());
+						return s.isEmpty() ? null : s;
+					});
+				}
+			} else {
+				timeZoneMap.compute(nv, (z, s) -> {
+					s = s == null ? Collections.synchronizedSet(new HashSet<>()) : s;
+					s.add(ju);
+					return s;
+				});
+			}
 		});
 	}
 
@@ -118,7 +163,7 @@ public class JikaiUserManager {
 		 * not quoted. - by Luke Sheppard (regexr.com)
 		 */
 		String[] data = str.split(",(?=(?:[^\\\"]*\\\"[^\\\"]*\\\")*(?![^\\\"]*\\\"))");
-		if (data.length < 6) {
+		if (data.length < 7) {
 			throw new IllegalArgumentException("Expected data length 6, got " + data.length + " instead");
 		}
 		for (int i = 0; i < data.length; i++) {
@@ -129,11 +174,12 @@ public class JikaiUserManager {
 		ju.setTitleLanguage(TitleLanguage.values()[Integer.parseInt(data[1])]);
 		ju.setTimeZone(ZoneId.of(data[2]));
 		ju.setUpdateDaily(data[3].equals("1"));
-		String tmp = StringUtils.substringBetween(data[4], "[", "]");
+		ju.setSentWeeklySchedule(data[4].equals("1"));
+		String tmp = StringUtils.substringBetween(data[5], "[", "]");
 		if (tmp != null && !tmp.isEmpty()) {
 			Stream.of(tmp.split(",")).mapToInt(Integer::parseInt).forEach(ju::addPreReleaseNotificaionStep);
 		}
-		tmp = StringUtils.substringBetween(data[5], "[", "]");
+		tmp = StringUtils.substringBetween(data[6], "[", "]");
 		if (tmp != null && !tmp.isEmpty()) {
 			Stream.of(tmp.split(", ")).mapToInt(Integer::parseInt).mapToObj(AnimeDB::getAnime).forEach(a -> ju.subscribeAnime(a.getId()));
 		}
@@ -145,5 +191,17 @@ public class JikaiUserManager {
 
 	public JikaiUserUpdater getUserUpdater() {
 		return juu;
+	}
+
+	public Set<JikaiUser> getJikaiUsersWithTimeZone(ZoneId z) {
+		Set<JikaiUser> set = new HashSet<>();
+		if (timeZoneMap.containsKey(z)) {
+			set.addAll(timeZoneMap.get(z));
+		}
+		return set;
+	}
+
+	public MapProperty<ZoneId, Set<JikaiUser>> timeZoneMapProperty() {
+		return timeZoneMap;
 	}
 }

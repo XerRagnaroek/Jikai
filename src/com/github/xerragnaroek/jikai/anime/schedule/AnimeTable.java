@@ -8,7 +8,6 @@ import java.awt.Graphics;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.net.URL;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -23,14 +22,13 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-import javax.imageio.ImageIO;
-
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
+import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 
 /**
  * Maps anime to the day and time they air on, creating a timetable. Then turns that into an image.
@@ -45,11 +43,12 @@ public class AnimeTable {
 	private ZoneId zone;
 	private Map<DayOfWeek, Map<LocalTime, Cell>> table = new TreeMap<>();
 	private final Logger log = LoggerFactory.getLogger(AnimeTable.class);
-	private float fontSize = 18f;
+	private float fontSize = 20f;
 	private int padding = 5;
 	private Font font;
 	private int lineThickness = 2;
 	private String fontFile = "animeace_b.ttf";
+	private Color backgroundCol = new Color(54, 57, 63);
 
 	public AnimeTable(ZoneId z) {
 		zone = z;
@@ -86,13 +85,13 @@ public class AnimeTable {
 		return false;
 	}
 
-	public void setTable(Map<DayOfWeek, Map<LocalTime, Set<Anime>>> map) {
+	public void setTable(Map<DayOfWeek, Map<LocalTime, List<Anime>>> map) {
 		Map<DayOfWeek, Map<LocalTime, Cell>> table = new TreeMap<>();
-		map.forEach((day, lsa) -> {
+		map.forEach((day, lla) -> {
 			Map<LocalTime, Cell> tmp = new TreeMap<>();
-			lsa.forEach((lt, sa) -> {
+			lla.forEach((lt, la) -> {
 				Cell c = new Cell(lt);
-				sa.forEach(c::addAnime);
+				la.forEach(c::addAnime);
 				tmp.put(lt, c);
 			});
 			table.put(day, tmp);
@@ -113,9 +112,12 @@ public class AnimeTable {
 			height = height > imgH ? height : imgH;
 		}
 		log.debug("Image has width={}, height={}", width, height);
-		BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
 		int curX = 0;
 		Graphics g = img.getGraphics();
+		g.setColor(backgroundCol);
+		g.fillRect(0, 0, width + 1, height + 1);
+		g.setColor(Color.white);
 		int total = imgs.size();
 		log.debug("Merging images");
 		for (int i = 0; i < total; i++) {
@@ -128,6 +130,7 @@ public class AnimeTable {
 				curX += lineThickness;
 			}
 		}
+		addJikaiMark(img);
 		return img;
 	}
 
@@ -141,16 +144,17 @@ public class AnimeTable {
 		Rectangle2D dayBounds = g.getFontMetrics(dayFont).getStringBounds(day.toString(), g);
 		height[0] += dayBounds.getHeight();
 		width[0] += dayBounds.getWidth();
-		List<BufferedImage> cellImgs = map.values().stream().sorted().map(c -> c.toImage(padding, font)).peek(img -> {
+		List<BufferedImage> cellImgs = map.values().stream().sorted().map(c -> c.toImage(padding, font, backgroundCol)).peek(img -> {
 			height[0] += img.getHeight() + lineThickness * 2;
 			int imgW = img.getWidth();
 			width[0] = width[0] > imgW ? width[0] : imgW;
 		}).collect(Collectors.toList());
-		BufferedImage img = new BufferedImage(width[0], (int) height[0], BufferedImage.TYPE_INT_RGB);
+		BufferedImage img = new BufferedImage(width[0], (int) height[0], BufferedImage.TYPE_4BYTE_ABGR);
 		log.debug("Image has dimensions: width={}, height={}", img.getWidth(), img.getHeight());
 		g = img.getGraphics();
-		g.setColor(Color.black);
-		g.drawRect(0, 0, img.getWidth(), img.getHeight());
+		log.debug("Set color to {}", backgroundCol.toString());
+		//g.setColor(backgroundCol);
+		//g.fillRect(0, 0, img.getWidth(), img.getHeight());
 		g.setColor(Color.white);
 		g.setFont(dayFont);
 		int curY = (int) dayBounds.getHeight();
@@ -167,6 +171,16 @@ public class AnimeTable {
 		log.debug("Image successfully created");
 		return img;
 		//return map.values().stream().findAny().get().toImage(padding, font);
+	}
+
+	private void addJikaiMark(BufferedImage img) {
+		log.debug("Adding Jikai mark");
+		Graphics g = img.getGraphics();
+		String mark = "Created by Jikai!";
+		g.setFont(g.getFont().deriveFont(fontSize * 2));
+		g.setColor(new Color(18, 229, 168));
+		int strWidth = g.getFontMetrics().stringWidth(mark);
+		g.drawString(mark, img.getWidth() - padding - strWidth, img.getHeight() - padding);
 	}
 
 	public Map<DayOfWeek, String> toFormatedWeekString(TitleLanguage tl, boolean includeDay) {
@@ -204,23 +218,17 @@ class Cell implements Comparable<Cell> {
 	}
 
 	void addAnime(Anime a) {
-		try {
-			log.debug("Adding {} to cell", a.getId());
-			BufferedImage bi = ImageIO.read(new URL(a.getCoverImageMedium()));
-			ani.put(a, bi);
-			log.debug("Added {} to cell and loaded image w={}, h={}", a.getTitleRomaji(), bi.getWidth(), bi.getHeight());
-		} catch (IOException e) {
-			log.error("", e);
-		}
+		ani.put(a, AnimeDB.getCoverImage(a));
+		log.debug("Added {} to cell", a.getTitleRomaji());
 	}
 
 	Set<Anime> getAnime() {
 		return ani.keySet();
 	}
 
-	BufferedImage toImage(int padding, Font f) {
+	BufferedImage toImage(int padding, Font f, Color backgroundCol) {
 		log.debug("Creating image");
-		BufferedImage tmp = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+		BufferedImage tmp = new BufferedImage(1, 1, BufferedImage.TYPE_4BYTE_ABGR);
 		String timeStr = dtf.format(lt);
 		Graphics g = tmp.getGraphics();
 		Font timeFont = f.deriveFont(f.getSize() + 2f);
@@ -242,10 +250,10 @@ class Cell implements Comparable<Cell> {
 		}
 
 		log.debug("Image has dimensions: width={}, height={}", (int) width, (int) height);
-		BufferedImage img = new BufferedImage((int) width, (int) height, BufferedImage.TYPE_INT_RGB);
+		BufferedImage img = new BufferedImage((int) width, (int) height, BufferedImage.TYPE_4BYTE_ABGR);
 		g = img.getGraphics();
-		g.setColor(Color.black);
-		g.drawRect(0, 0, img.getWidth(), img.getHeight());
+		//g.setColor(backgroundCol);
+		//g.fillRect(0, 0, img.getWidth(), img.getHeight());
 		g.setColor(Color.white);
 		g.setFont(timeFont);
 		fm = g.getFontMetrics(f);

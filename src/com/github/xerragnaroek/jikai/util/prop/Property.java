@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
+import java.util.function.BooleanSupplier;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
@@ -15,13 +16,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
  * Should be thread-safe.
  * 
  * @author XerRagnaroek
- *
  * @param <T>
  */
 public class Property<T> {
 	protected T value;
 	protected List<BiConsumer<T, T>> cons = Collections.synchronizedList(new ArrayList<>());
 	protected AtomicBoolean changed = new AtomicBoolean(false);
+	protected BooleanSupplier dontRun = () -> false;
 
 	public Property() {}
 
@@ -49,8 +50,10 @@ public class Property<T> {
 	}
 
 	protected void runConsumer(T oldV, T newV) {
-		synchronized (cons) {
-			cons.forEach(biCon -> biCon.accept(oldV, newV));
+		if (!dontRun.getAsBoolean()) {
+			synchronized (cons) {
+				cons.forEach(biCon -> biCon.accept(oldV, newV));
+			}
 		}
 	}
 
@@ -89,6 +92,10 @@ public class Property<T> {
 
 	public void clearConsumer() {
 		cons.clear();
+	}
+
+	public void dontRunConsumerIf(BooleanSupplier dontRun) {
+		this.dontRun = dontRun;
 	}
 
 	@Override

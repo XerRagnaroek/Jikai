@@ -19,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.jikai.JikaiManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
+import com.github.xerragnaroek.jikai.util.prop.BooleanProperty;
+import com.github.xerragnaroek.jikai.util.prop.Property;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -36,9 +38,11 @@ public class Core {
 	public static final JikaiManager JM = new JikaiManager();
 	public static final Path DATA_LOC = Paths.get("./data/");
 	public static final ScheduledExecutorService EXEC = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors() * 2);
-	public static boolean INITIAL_LOAD = true;
+	public static final Property<String> CUR_SEASON = new Property<>();
+	public static BooleanProperty INITIAL_LOAD = new BooleanProperty(true);
 
 	public static void main(String[] args) throws LoginException, InterruptedException, ExecutionException, ClassNotFoundException, IOException {
+		log.info("Initializing");
 		long mem = Runtime.getRuntime().freeMemory();
 		handleArgs(args);
 		JDABuilder builder = JDABuilder.create(token, GatewayIntent.DIRECT_MESSAGES, GatewayIntent.GUILD_MESSAGE_REACTIONS, GatewayIntent.GUILD_MESSAGES, GatewayIntent.GUILD_MEMBERS);
@@ -51,12 +55,12 @@ public class Core {
 	}
 
 	private static void init(String[] args) {
-		log.info("Initializing");
-		//RestAction.setDefaultFailure(e -> BotUtils.logAndSendToDev(ERROR_LOG, "", e));
+		// RestAction.setDefaultFailure(e -> BotUtils.logAndSendToDev(ERROR_LOG, "", e));
+		CUR_SEASON.dontRunConsumerIf(() -> INITIAL_LOAD.get());
 		JM.init();
 		JM.startSaveThread(saveDelay);
 		BotUtils.sendToAllInfoChannels("I'm online again!");
-		INITIAL_LOAD = false;
+		INITIAL_LOAD.set(false);
 	}
 
 	private static void handleArgs(String args[]) {

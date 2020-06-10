@@ -35,6 +35,7 @@ public class ConfigCommand implements JUCommand {
 		bob.append("```asciidoc\n");
 		bob.append("Time zone :: " + ju.getTimeZone() + "\n");
 		bob.append("Send daily overview :: " + (ju.isUpdatedDaily() ? "yes" : "no") + "\n");
+		bob.append("Send weekly schedule :: " + (ju.isSentWeeklySchedule() ? "yes" : "no") + "\n");
 		bob.append("Notified on release :: " + (ju.isNotfiedOnRelease() ? "yes" : "no") + "\n");
 		bob.append("Title language :: " + ju.getTitleLanguage() + "\n");
 		Set<Integer> steps = ju.getPreReleaseNotifcationSteps().stream().map(i -> i / 60).collect(Collectors.toSet());

@@ -6,6 +6,7 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiData;
 
@@ -106,8 +107,7 @@ public class SetupHelper extends ListenerAdapter {
 		setTc.sendMessage("The setup is complete. Commands are by default " + (jd.areCommandsEnabled() ? "enabled" : "disabled") + ".\nYou can change that by calling !enable/disable_commands").complete();
 		setTc.sendMessage("Send `!help` for a list of all commands you have permissions to run (which are all because you're the owner).").complete();
 		setTc.sendMessage("Also I ask you to set the bot role ('Jikai') color to #12e5a8 or R18 G229 B168. Thank you!").complete();
-		Core.EXEC.execute(() -> {
-			j.getALRHandler().sendList();
-		});
+		Core.EXEC.execute(() -> j.getALRHandler().sendList());
+		Core.EXEC.execute(() -> ScheduleManager.sendScheduleToJikai(j));
 	}
 }

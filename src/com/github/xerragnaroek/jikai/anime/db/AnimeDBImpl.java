@@ -1,6 +1,8 @@
 package com.github.xerragnaroek.jikai.anime.db;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.net.URL;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -13,9 +15,10 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
+import javax.imageio.ImageIO;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -35,10 +38,10 @@ import net.dv8tion.jda.api.entities.Guild;
  * Does the animes.
  * 
  * @author XerRagnaroek
- *
  */
 class AnimeDBImpl implements Initilizable {
 	private Map<Integer, Anime> anime = new ConcurrentHashMap<>();
+	private Map<Integer, BufferedImage> coverImages = new ConcurrentHashMap<>();
 	private static final Logger log = LoggerFactory.getLogger(AnimeDBImpl.class);
 	private AtomicBoolean loading = new AtomicBoolean(true);
 	private AtomicBoolean initialized = new AtomicBoolean(false);
@@ -52,19 +55,14 @@ class AnimeDBImpl implements Initilizable {
 		initialized.set(true);
 	}
 
-	/**
-	 * Queries jikan for the current seasonal animes, loads their pages, and stores them with their
-	 * broadcast day/time in the list.
-	 * 
-	 * @throws InterruptedException
-	 * @throws ExecutionException
-	 */
 	void loadAiringAnime() {
 		loading.set(true);
+		Core.CUR_SEASON.set(jasa.getCurrentSeason());
 		Core.JDA.getPresence().setPresence(Activity.watching("the anime load!"), false);
 		try {
 			List<Anime> newAnime = jasa.fetchAllAiringAnime(0, 2020);
 			newAnime.addAll(jasa.fetchSeasonalAnime(0));
+			loadImages(newAnime);
 			List<Anime> old = new ArrayList<>();
 			CollectionUtils.addAll(old, anime.values());
 			if (old.isEmpty()) {
@@ -128,10 +126,26 @@ class AnimeDBImpl implements Initilizable {
 		return anime.values().stream().filter(a -> a.getTitleRomaji().equals(title)).findFirst().get();
 	}
 
+	BufferedImage getCoverImage(Anime a) {
+		return coverImages.get(a.getId());
+	}
+
+	private void loadImages(List<Anime> list) {
+		list.stream().parallel().filter(a -> !coverImages.containsKey(a.getId())).forEach(a -> {
+			try {
+				log.debug("Loading medium cover image for {}", a.getTitleRomaji());
+				coverImages.put(a.getId(), ImageIO.read(new URL(a.getCoverImageMedium())));
+				log.debug("Loaded medium cover image for {}", a.getTitleRomaji());
+			} catch (IOException e) {
+				log.error("", e);
+			}
+		});
+	}
+
 	private void handleUpdate(List<Anime> old, List<Anime> newA) {
 		AnimeUpdate au = AnimeUpdate.categoriseUpdates(old, newA);
 		if (au.hasChange()) {
-			//newA.removeIf(a -> !a.hasDataForNextEpisode());
+			// newA.removeIf(a -> !a.hasDataForNextEpisode());
 			anime = newA.stream().collect(Collectors.toConcurrentMap(a -> a.getId(), a -> a));
 		}
 		AnimeDB.dBUpdated(au);

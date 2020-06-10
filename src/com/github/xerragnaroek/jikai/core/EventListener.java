@@ -11,12 +11,15 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jikai.commands.user.JUCommandHandler;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 
 import net.dv8tion.jda.api.entities.ChannelType;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.ReadyEvent;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent;
+import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
+import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
@@ -29,7 +32,7 @@ public class EventListener extends ListenerAdapter {
 
 	@Override
 	public void onMessageReceived(MessageReceivedEvent event) {
-		//ignore bots
+		// ignore bots
 		if (!event.getAuthor().isBot()) {
 			if (event.isFromGuild()) {
 				Guild g = event.getGuild();
@@ -45,7 +48,7 @@ public class EventListener extends ListenerAdapter {
 
 	@Override
 	public void onPrivateMessageReceived(PrivateMessageReceivedEvent event) {
-		JikaiUser ju = Jikai.getUserManager().getUser(event.getAuthor().getIdLong());
+		JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getAuthor().getIdLong());
 		if (ju != null && ju.isSetupCompleted()) {
 			log.debug("Received pm from known jikai user");
 			runAsync(() -> JUCommandHandler.handleMessage(ju, event.getMessage().getContentRaw()));
@@ -56,7 +59,7 @@ public class EventListener extends ListenerAdapter {
 	public void onMessageReactionAdd(MessageReactionAddEvent event) {
 		if (!event.getUser().isBot() && event.isFromType(ChannelType.TEXT)) {
 			Jikai j = JM.get(event.getGuild());
-			if (j.hasCompletedSetup()) {
+			if (j.hasCompletedSetup() && JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
 				runAsync(() -> j.getALRHandler().handleReactionAdded(event));
 			}
 		}
@@ -66,7 +69,7 @@ public class EventListener extends ListenerAdapter {
 	public void onMessageReactionRemove(MessageReactionRemoveEvent event) {
 		if (event.isFromGuild()) {
 			Jikai j = JM.get(event.getGuild());
-			if (j.hasCompletedSetup()) {
+			if (j.hasCompletedSetup() && JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
 				runAsync(() -> j.getALRHandler().handleReactionRemoved(event));
 			}
 		}
@@ -104,6 +107,26 @@ public class EventListener extends ListenerAdapter {
 		log.info("Guild {} left", event.getGuild().getName());
 		JM.remove(id);
 
+	}
+
+	@Override
+	public void onGuildMemberJoin(GuildMemberJoinEvent event) {
+		long id = event.getUser().getIdLong();
+		JikaiUserManager jum = JikaiUserManager.getInstance();
+		if (!jum.isKnownJikaiUser(id)) {
+			log.info("New member joined, regestering new JikaiUser! [{}]", id);
+			jum.registerUser(id);
+		}
+	}
+
+	@Override
+	public void onGuildMemberRemove(GuildMemberRemoveEvent event) {
+		long id = event.getUser().getIdLong();
+		JikaiUserManager jum = JikaiUserManager.getInstance();
+		if (jum.isKnownJikaiUser(id)) {
+			log.info("Member {} has been removed!", id);
+			jum.removeUser(id);
+		}
 	}
 
 	private void onNewGuild(Guild g) {

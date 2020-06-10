@@ -27,7 +27,9 @@ public class TimeZoneCommand implements JUCommand {
 		String id = arguments[0];
 		try {
 			ZoneId z = ZoneId.of(id);
+			ZoneId old = ju.getTimeZone();
 			ju.setTimeZone(z);
+			ju.sendPMFormat("Your timezone has been changed from '%s' to '%s'!", old.getId(), z.getId());
 		} catch (Exception e) {
 			ju.sendPMFormat("'%s' isn't a known timezone.%nSee the column 'TZ database name' here: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones", id);
 		}

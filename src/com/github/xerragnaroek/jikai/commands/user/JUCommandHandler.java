@@ -17,7 +17,7 @@ public class JUCommandHandler {
 	private static Set<JUCommand> commands = Collections.synchronizedSet(new TreeSet<>());
 	private static final Logger log = LoggerFactory.getLogger(JUCommandHandler.class);
 	static {
-		JUCommand coms[] = new JUCommand[] { new ForceDBUpdateCommand(), new TestDailyUpdateCommand(), new FontsCommand(), new TestPostponeCommand(), new SubscriptionsCommand(), new ForceDBUpdateCommand(), new TestNotifyCommand(), new StopCommand(), new HelpCommand(), new ConfigCommand(), new DailyUpdateCommand(), new NotifyReleaseCommand(), new ReleaseStepCommand(), new TimeZoneCommand(), new TitleLanguageCommand() };
+		JUCommand coms[] = new JUCommand[] { new UnregisterCommand(), new WeeklyScheduleCommand(), new ForceDBUpdateCommand(), new TestDailyUpdateCommand(), new FontsCommand(), new TestPostponeCommand(), new SubscriptionsCommand(), new ForceDBUpdateCommand(), new TestNotifyCommand(), new StopCommand(), new HelpCommand(), new ConfigCommand(), new DailyUpdateCommand(), new NotifyReleaseCommand(), new ReleaseStepCommand(), new TimeZoneCommand(), new TitleLanguageCommand() };
 		commands.addAll(Arrays.asList(coms));
 	}
 
@@ -33,7 +33,7 @@ public class JUCommandHandler {
 		JUCommand com = ComUtils.findCommand(commands, tmp[0]);
 		if (com != null) {
 			log.debug("Found command: '{}'", com.getName());
-			//remove the command from the content and execute it
+			// remove the command from the content and execute it
 			tmp = (String[]) ArrayUtils.subarray(tmp, 1, tmp.length);
 			com.executeCommand(ju, tmp);
 		}

@@ -11,6 +11,9 @@ import java.util.stream.Collectors;
 import com.github.xerragnaroek.jikai.anime.alrh.ALRHManager;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
+import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
+import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Manager;
 import com.github.xerragnaroek.jikai.util.prop.MapProperty;
 
@@ -30,11 +33,18 @@ public class JikaiManager extends Manager<Jikai> {
 		AnimeDB.init();
 		AnimeDB.waitUntilLoaded();
 		AnimeDB.startUpdateThread();
+		JikaiUserManager.init();
 		JikaiIO.load();
 		jdm.getGuildIds().forEach(this::registerNew);
 		alrhm.init();
 		ScheduleManager.init();
+		Core.CUR_SEASON.onChange((ov, nv) -> updateJikaisSeasonChanged(nv));
 		log.info("Jikai initialized!");
+	}
+
+	private void updateJikaisSeasonChanged(String newSeason) {
+		log.info("Season has changed to '" + newSeason + "', updating Jikias");
+		BotUtils.sendToAllAnimeChannels("The season has changed! We're now in\n **" + newSeason + "**!\n");
 	}
 
 	@Override

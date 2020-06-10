@@ -1,6 +1,6 @@
 package com.github.xerragnaroek.jikai.commands.guild;
 
-import com.github.xerragnaroek.jikai.jikai.Jikai;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
@@ -13,7 +13,7 @@ public class ForceRegisterCommand implements GuildCommand {
 
 	@Override
 	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
-		Jikai.getUserManager().registerUser(event.getAuthor().getIdLong());
+		JikaiUserManager.getInstance().registerUser(event.getAuthor().getIdLong());
 	}
 
 	@Override

@@ -23,7 +23,6 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
  * Handles commands (who'd have thunk?).
  * 
  * @author XerRagnarök
- *
  */
 public class CommandHandler implements Initilizable {
 	private static Set<GuildCommand> commands = new TreeSet<>();
@@ -35,7 +34,18 @@ public class CommandHandler implements Initilizable {
 	public static Permission[] MOD_PERMS = new Permission[] { Permission.MANAGE_CHANNEL, Permission.MANAGE_ROLES, Permission.MESSAGE_MANAGE, Permission.KICK_MEMBERS, Permission.BAN_MEMBERS };
 
 	static {
-		GuildCommand[] coms = new GuildCommand[] { new ForceSaveCommand(), new ForceRegisterCommand(), new StopCommand(), new StatusCommand(), new PingCommand(), new SetCommand(), new ScheduleCommand(), new DebugCommand(), new AnimeListCommand(), new HelpCommand(), new EnableCommandsCommand(), new DisableCommandsCommand(), new RequestAssistanceCommand() };
+		GuildCommand[] coms = new GuildCommand[] { new SetupJikaiServerCommand(), new ClearChannelCommand(), new ForceSaveCommand(), new ForceRegisterCommand(), new StopCommand(), new StatusCommand(), /*
+																																																			 * new
+																																																			 * PingCommand
+																																																			 * (
+																																																			 * )
+																																																			 * ,
+																																																			 */ new SetCommand(), new ScheduleCommand(), new AnimeListCommand(), new HelpCommand(), new EnableCommandsCommand(), new DisableCommandsCommand(),/*
+																																																																																								 * new
+																																																																																								 * RequestAssistanceCommand
+																																																																																								 * (
+																																																																																								 * )
+																																																																																								 */ };
 		commands.addAll(Arrays.asList(coms));
 	}
 
@@ -57,21 +67,21 @@ public class CommandHandler implements Initilizable {
 	}
 
 	public void handleMessage(MessageReceivedEvent event) {
-		//ignore bots
+		// ignore bots
 		if (!event.getAuthor().isBot()) {
 			String content = event.getMessage().getContentRaw();
 			String trigger = this.trigger.get();
-			//is it supposed to be a command?
+			// is it supposed to be a command?
 			if (content.startsWith(trigger)) {
 				log.debug("Received message: {}", content);
-				//remove trigger from content
+				// remove trigger from content
 				content = content.substring(trigger.length());
-				//any recognised commands?
+				// any recognised commands?
 				String[] tmp = content.trim().split(" ");
 				GuildCommand com = ComUtils.findCommand(commands, tmp[0]);
 				if (com != null) {
 					log.info("Recognised command {}", com.getName());
-					//remove the command from the content and execute it
+					// remove the command from the content and execute it
 					tmp = (String[]) ArrayUtils.subarray(tmp, 1, tmp.length);
 					if (ComUtils.checkPermissions(com, event.getMember())) {
 						if (comsEnabled.get() || com.isAlwaysEnabled()) {
@@ -81,8 +91,9 @@ public class CommandHandler implements Initilizable {
 					}
 				} else {
 					log.debug("No commands recognised");
-					//trash talk the user cause they typed some garbage
-					//event.getChannel().sendMessageFormat("**Bruh** :triumph: %s, what the **fuck** is that command supposed to mean? :angry: Smh my damn head. :clown:", event.getAuthor().getAsMention()).queue();
+					// trash talk the user cause they typed some garbage
+					// event.getChannel().sendMessageFormat("**Bruh** :triumph: %s, what the **fuck** is that command
+					// supposed to mean? :angry: Smh my damn head. :clown:", event.getAuthor().getAsMention()).queue();
 				}
 			}
 		}

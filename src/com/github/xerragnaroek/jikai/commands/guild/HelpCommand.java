@@ -1,7 +1,7 @@
 
 package com.github.xerragnaroek.jikai.commands.guild;
 
-import java.time.ZonedDateTime;
+import java.time.Instant;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,8 +38,8 @@ public class HelpCommand implements GuildCommand {
 		String trigger = Core.JM.get(event.getGuild()).getCommandHandler().getTrigger();
 		EmbedBuilder eb = new EmbedBuilder();
 		eb.setTitle("Commands you have permissions to use are:");
-		CommandHandler.getCommands().stream().filter(c -> ComUtils.checkPermissions(c, m)).forEach(com -> eb.addField("**" + trigger + (com.hasUsage() ? com.getUsage() : com.getName()) + "**", com.getDescription(), false));
-		eb.setTimestamp(ZonedDateTime.now(Core.JM.get(event.getGuild()).getJikaiData().getTimeZone()));
+		CommandHandler.getCommands().stream().filter(c -> !c.getName().equals("help")).filter(c -> ComUtils.checkPermissions(c, m)).forEach(com -> eb.addField("**" + trigger + (com.hasUsage() ? com.getUsage() : com.getName() + (com.hasAlternativeName() ? "|" + com.getAlternativeName() : "")) + "**", com.getDescription(), false));
+		eb.setTimestamp(Instant.now());
 		BotUtils.sendPM(m.getUser(), eb.build());
 	}
 

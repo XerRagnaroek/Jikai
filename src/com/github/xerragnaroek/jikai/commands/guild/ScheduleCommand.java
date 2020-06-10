@@ -1,6 +1,9 @@
 
 package com.github.xerragnaroek.jikai.commands.guild;
 
+import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
+import com.github.xerragnaroek.jikai.core.Core;
+
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
@@ -18,7 +21,9 @@ public class ScheduleCommand implements GuildCommand {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String[] arguments) {}
+	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
+		ScheduleManager.sendScheduleToJikai(Core.JM.get(event.getGuild()));
+	}
 
 	@Override
 	public Permission[] getRequiredPermissions() {
@@ -27,6 +32,6 @@ public class ScheduleCommand implements GuildCommand {
 
 	@Override
 	public String getDescription() {
-		return "Sends a schedule of when the animes air in the week, as per the previously set timezone.";
+		return "Sends this week's anime schedule, for this server's timezone.";
 	}
 }

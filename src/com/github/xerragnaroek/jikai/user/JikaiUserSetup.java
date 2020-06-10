@@ -15,6 +15,7 @@ import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.core.Core;
 
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
@@ -29,7 +30,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 		Core.JDA.addEventListener(this);
 	}
 
-	//TODO think of some nice words
+	// TODO think of some nice words
 	public void startSetup() {
 		log.debug("Running setup for new user");
 		try {
@@ -48,23 +49,12 @@ public class JikaiUserSetup extends ListenerAdapter {
 				boolean successful = false;
 				try {
 					switch (stage) {
-						case 0:
-							successful = timeZone(input);
-							break;
-						case 1:
-							successful = dailyUpdate(input);
-							break;
-						case 2:
-							successful = notifyOnRelease(input);
-							break;
-						case 3:
-							successful = titleLanguage(input);
-							break;
-						case 4:
-							successful = releaseSteps(input);
-							break;
-						default:
-							return;
+						case 0 -> successful = timeZone(input);
+						case 1 -> successful = dailyUpdate(input);
+						case 2 -> successful = notifyOnRelease(input);
+						case 3 -> successful = sendWeeklySchedule(input);
+						case 4 -> successful = titleLanguage(input);
+						case 5 -> successful = releaseSteps(input);
 					}
 					if (successful) {
 						nextStage();
@@ -76,10 +66,19 @@ public class JikaiUserSetup extends ListenerAdapter {
 		}
 	}
 
+	@Override
+	public void onGuildMemberRemove(GuildMemberRemoveEvent event) {
+		if (ju.getId() == event.getUser().getIdLong()) {
+			log.debug("User left server before the setup was completed!");
+			JikaiUserManager.getInstance().removeUser(ju.getId());
+			Core.JDA.removeEventListener(this);
+		}
+	}
+
 	private boolean timeZone(String input) throws InterruptedException, ExecutionException {
 		if (input == null) {
 			log.debug("Stage TimeZone: First message");
-			ju.sendPM("What is your time zone? E.g. 'Europe/Berlin', 'GMT' or  'America/Chicago'\n||See the column 'TZ database name' here: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones||");
+			ju.sendPM("What is your time zone? E.g. 'Europe/Berlin', 'GMT' or  'America/Chicago'\n||For a list of accepted timezones refer to the column 'TZ database name' here: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones||");
 		} else {
 			try {
 				log.debug("Stage TimeZone: Computing input");
@@ -101,6 +100,10 @@ public class JikaiUserSetup extends ListenerAdapter {
 
 	private boolean notifyOnRelease(String input) throws InterruptedException, ExecutionException {
 		return yesNoOption(input, "Should I send you a message when an anime releases?", () -> ju.setNotifyToRelease(true), null, () -> ju.setNotifyToRelease(false), null);
+	}
+
+	private boolean sendWeeklySchedule(String input) throws InterruptedException, ExecutionException {
+		return yesNoOption(input, "Should I send you a weekly schedule of all your subscribed anime?", () -> ju.setNotifyToRelease(true), null, () -> ju.setNotifyToRelease(false), null);
 	}
 
 	private boolean yesNoOption(String input, String message, Runnable yes, String yesMsg, Runnable no, String noMsg) throws InterruptedException, ExecutionException {
@@ -185,6 +188,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 		bob.append("Time zone :: " + ju.getTimeZone() + "\n");
 		bob.append("Send daily overview :: " + (ju.isUpdatedDaily() ? "yes" : "no") + "\n");
 		bob.append("Notified on release :: " + (ju.isNotfiedOnRelease() ? "yes" : "no") + "\n");
+		bob.append("Recieve weekly schedule :: " + (ju.isSentWeeklySchedule() ? "yes" : "no") + "\n");
 		bob.append("Title language :: " + ju.getTitleLanguage() + "\n");
 		Set<Integer> steps = ju.getPreReleaseNotifcationSteps().stream().map(i -> i / 60).collect(Collectors.toSet());
 		bob.append("Release update steps :: " + (steps.isEmpty() ? "None" : StringUtils.join(steps, "min, ") + "min before a release") + "\n");
@@ -201,24 +205,13 @@ public class JikaiUserSetup extends ListenerAdapter {
 		log.debug("Next stage");
 		try {
 			switch (stage) {
-				case -1:
-					timeZone(null);
-					break;
-				case 0:
-					dailyUpdate(null);
-					break;
-				case 1:
-					notifyOnRelease(null);
-					break;
-				case 2:
-					titleLanguage(null);
-					break;
-				case 3:
-					releaseSteps(null);
-					break;
-				case 4:
-					setupComplete();
-					break;
+				case -1 -> timeZone(null);
+				case 0 -> dailyUpdate(null);
+				case 1 -> notifyOnRelease(null);
+				case 2 -> sendWeeklySchedule(null);
+				case 3 -> titleLanguage(null);
+				case 4 -> releaseSteps(null);
+				case 5 -> setupComplete();
 			}
 			stage++;
 		} catch (InterruptedException | ExecutionException e) {

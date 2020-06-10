@@ -16,25 +16,24 @@ import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
 
 /**
- * 
  * Handles the sending and updating of the anime list. <br>
  * Only used by the ALRHandler.
  * 
  * @author XerRagnaroek
- *
  */
 class ALHandler {
 	private ALRHandler alrh;
 	private final Logger log;
 	private ALRHDataBase alrhDB;
 	private AtomicBoolean sending = new AtomicBoolean(false);
-	private AtomicInteger successes = new AtomicInteger(0); //Successful RestActions
+	private AtomicInteger successes = new AtomicInteger(0); // Successful RestActions
 
 	ALHandler(ALRHandler alrh) {
 		this.alrh = alrh;
@@ -66,17 +65,17 @@ class ALHandler {
 		log.info("Deleting old messages and data");
 		TextChannel tc = alrh.j.getGuild().getTextChannelById(alrhDB.getSentTextChannelId());
 		if (tc != null) {
-			alrhDB.forEachMessage((id, dat) -> {
-				tc.deleteMessageById(id).queue(v -> log.info("Deleted old list message"));
-			});
+			BotUtils.clearChannel(tc);
 		}
 		alrhDB.clearUcMsgMap();
 		TextChannel lc = alrh.j.getListChannel();
 		log.info("Sending list messages to channel {}", lc.getName() + "#" + alrh.tcId);
+		CompletableFuture<?> seasonMsg = lc.sendMessage("Current season: **" + Core.CUR_SEASON.get() + "**").submit();
 		List<CompletableFuture<?>> cfs = dtos.stream().map(dto -> handleDTO(lc, dto)).collect(Collectors.toList());
+		cfs.add(seasonMsg);
 		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).thenAccept(v -> {
 			alrh.dataChanged();
-			//successes.set(0);
+			// successes.set(0);
 			alrh.jData.save(true);
 			sending.set(false);
 		});
@@ -125,12 +124,33 @@ class ALHandler {
 	}
 
 	private void sendUpdate(AnimeUpdate au) {
-		log.debug("Sending new anime embeds to anime channel");
-		for (Anime a : au.getNewAnime()) {
+		sendNewAnime(au);
+		sendRemovedAnime(au);
+	}
+
+	private void sendNewAnime(AnimeUpdate au) {
+		List<Anime> newA = au.getNewAnime();
+		log.debug("Sending {} new anime embeds to anime channel", newA.size());
+		for (Anime a : newA) {
 			EmbedBuilder eb = new EmbedBuilder();
 			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 			try {
 				eb.setTitle(a.getTitle(TitleLanguage.ROMAJI), a.getAniUrl()).setDescription("has been added to the list! \n Subscribe to it here:" + alrh.j.getListChannel().getAsMention()).setTimestamp(Instant.now());
+				alrh.j.getAnimeChannel().sendMessage(eb.build()).submit().thenAccept(m -> log.debug("Sent embed for {}", a.getTitle(TitleLanguage.ROMAJI)));
+			} catch (Exception e) {
+				log.error("", e);
+			}
+		}
+	}
+
+	private void sendRemovedAnime(AnimeUpdate au) {
+		List<Anime> removedA = au.getRemovedAnime();
+		log.debug("Sending {} removed anime embeds to anime channel", removedA.size());
+		for (Anime a : removedA) {
+			EmbedBuilder eb = new EmbedBuilder();
+			eb.setThumbnail(a.getBiggestAvailableCoverImage());
+			try {
+				eb.setTitle(a.getTitle(TitleLanguage.ROMAJI), a.getAniUrl()).setDescription("has been removed, presumably because it finished airing!").setTimestamp(Instant.now());
 				alrh.j.getAnimeChannel().sendMessage(eb.build()).submit().thenAccept(m -> log.debug("Sent embed for {}", a.getTitle(TitleLanguage.ROMAJI)));
 			} catch (Exception e) {
 				log.error("", e);

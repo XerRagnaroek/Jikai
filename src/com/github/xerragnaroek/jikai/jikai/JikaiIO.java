@@ -12,7 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.core.Core;
-import com.github.xerragnaroek.jikai.util.BotUtils;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 
 public class JikaiIO {
 	private final static Logger log = LoggerFactory.getLogger(JikaiIO.class);
@@ -20,28 +21,32 @@ public class JikaiIO {
 	public static void save(boolean now) {
 		JM.getJDM().save(now);
 		try {
-			Jikai.getUserManager().save();
+			JikaiUserManager.getInstance().save();
 		} catch (IOException e) {
 			Core.ERROR_LOG.error("Failed saving user db", e);
 		}
 	}
 
 	public static void load() {
-		log.info("Loading configurations...");
+		log.info("Loading data...");
 		Path loc = Core.DATA_LOC;
+		JikaiLocaleManager jlm = JikaiLocaleManager.getInstance();
 		try {
 			if (Files.exists(loc)) {
-				Files.walk(loc).filter(Files::isRegularFile).forEach(path -> {
+				Files.walk(loc).forEach(path -> {
 					log.info("Found file {}", path.toAbsolutePath());
-					switch (path.getFileName().toString()) {
-						case "BOT.json":
-							JM.getJDM().loadBotData(path);
-							break;
-						case "user.db":
-							Jikai.getUserManager().load(path);
-							break;
-						default:
-							JM.getJDM().loadData(path);
+					if (path.getParent().toString().equals("locales")) {
+						try {
+							jlm.loadLocale(path);
+						} catch (IOException e) {
+							Core.ERROR_LOG.error("Failed loading the locaes!!", e);
+						}
+					} else {
+						switch (path.getFileName().toString()) {
+							case "BOT.json" -> JM.getJDM().loadBotData(path);
+							case "user.db" -> JikaiUserManager.getInstance().load(path);
+							default -> JM.getJDM().loadData(path);
+						}
 					}
 				});
 			} else {
@@ -51,7 +56,7 @@ public class JikaiIO {
 				Files.createDirectory(loc);
 			}
 		} catch (IOException e) {
-			BotUtils.logAndSendToDev(log, "Failed loading the configurations", e);
+			Core.ERROR_LOG.error("Failed loading the data!", e);
 		}
 	}
 
