@@ -25,17 +25,21 @@ public class SetInfoChannelCommand implements GuildCommand {
 
 	@Override
 	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
-		String chan = arguments[0];
 		Guild g = event.getGuild();
-		List<TextChannel> tc = g.getTextChannelsByName(chan, false);
-		if (!tc.isEmpty()) {
-			TextChannel textC = tc.get(0);
-			Jikai j = Core.JM.get(g);
-			j.getJikaiData().setScheduleChannelId(textC.getIdLong());
-			try {
-				j.getInfoChannel().sendMessage("This has been set as the new info channel!").queue();
-			} catch (Exception e) {}
+		TextChannel textC = event.getTextChannel();
+		if (arguments.length >= 1) {
+			List<TextChannel> tcs = g.getTextChannelsByName(arguments[0], false);
+			if (!tcs.isEmpty()) {
+				textC = tcs.get(0);
+			} else {
+				textC.sendMessage('"' + arguments[0] + "\" isn't a channel!").queue();
+			}
 		}
+		Jikai j = Core.JM.get(g);
+		j.getJikaiData().setInfoChannelId(textC.getIdLong());
+		try {
+			j.getInfoChannel().sendMessage("This has been set as the new info channel!").queue();
+		} catch (Exception e) {}
 	}
 
 	@Override

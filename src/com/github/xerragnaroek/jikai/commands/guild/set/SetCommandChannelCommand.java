@@ -12,21 +12,23 @@ import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
 /**
- * Command that sets the channel the bot posts the role list in.
  * 
- * @author XerRagnarök
  */
-public class SetListChannelCommand implements GuildCommand {
-	SetListChannelCommand() {}
+public class SetCommandChannelCommand implements GuildCommand {
 
 	@Override
 	public String getName() {
-		return "list_channel";
+		return "command_channel";
 	}
 
 	@Override
 	public String getUsage() {
-		return "list_channel <textchannel>";
+		return "command_channel <textchannel name>";
+	}
+
+	@Override
+	public String getAlternativeName() {
+		return "com_chan";
 	}
 
 	@Override
@@ -42,9 +44,9 @@ public class SetListChannelCommand implements GuildCommand {
 			}
 		}
 		Jikai j = Core.JM.get(g);
-		j.getJikaiData().setListChannelId(textC.getIdLong());
+		j.getJikaiData().setCommandChannelId(textC.getIdLong());
 		try {
-			j.getInfoChannel().sendMessage(textC.getAsMention() + " has been set as the new list channel!").queue();
+			j.getInfoChannel().sendMessage(textC.getAsMention() + " has been set as the new command channel!").queue();
 		} catch (Exception e) {}
 	}
 
@@ -55,6 +57,6 @@ public class SetListChannelCommand implements GuildCommand {
 
 	@Override
 	public String getDescription() {
-		return "The channel for the anime list.";
+		return "The channel for bot updates/status changes.";
 	}
 }

@@ -15,7 +15,6 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
  * Command that sets the channel the bot posts automated stuff in.
  * 
  * @author XerRagnarök
- *
  */
 public class SetAnimeChannelCommand implements GuildCommand {
 
@@ -33,17 +32,21 @@ public class SetAnimeChannelCommand implements GuildCommand {
 
 	@Override
 	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
-		String chan = arguments[0];
 		Guild g = event.getGuild();
-		List<TextChannel> tc = g.getTextChannelsByName(chan, false);
-		if (!tc.isEmpty()) {
-			TextChannel textC = tc.get(0);
-			Jikai j = Core.JM.get(g);
-			j.getJikaiData().setAnimeChannelId(textC.getIdLong());
-			try {
-				j.getInfoChannel().sendMessage(textC.getAsMention() + " has been set as the new anime channel!").queue();
-			} catch (Exception e) {}
+		TextChannel textC = event.getTextChannel();
+		if (arguments.length >= 1) {
+			List<TextChannel> tcs = g.getTextChannelsByName(arguments[0], false);
+			if (!tcs.isEmpty()) {
+				textC = tcs.get(0);
+			} else {
+				textC.sendMessage('"' + arguments[0] + "\" isn't a channel!").queue();
+			}
 		}
+		Jikai j = Core.JM.get(g);
+		j.getJikaiData().setAnimeChannelId(textC.getIdLong());
+		try {
+			j.getInfoChannel().sendMessage(textC.getAsMention() + " has been set as the new anime channel!").queue();
+		} catch (Exception e) {}
 	}
 
 	@Override

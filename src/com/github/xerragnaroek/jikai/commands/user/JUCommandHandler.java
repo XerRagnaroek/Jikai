@@ -9,6 +9,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jikai.commands.BugCommand;
 import com.github.xerragnaroek.jikai.commands.ComUtils;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 
@@ -17,7 +18,7 @@ public class JUCommandHandler {
 	private static Set<JUCommand> commands = Collections.synchronizedSet(new TreeSet<>());
 	private static final Logger log = LoggerFactory.getLogger(JUCommandHandler.class);
 	static {
-		JUCommand coms[] = new JUCommand[] { new UnregisterCommand(), new WeeklyScheduleCommand(), new ForceDBUpdateCommand(), new TestDailyUpdateCommand(), new FontsCommand(), new TestPostponeCommand(), new SubscriptionsCommand(), new ForceDBUpdateCommand(), new TestNotifyCommand(), new StopCommand(), new HelpCommand(), new ConfigCommand(), new DailyUpdateCommand(), new NotifyReleaseCommand(), new ReleaseStepCommand(), new TimeZoneCommand(), new TitleLanguageCommand() };
+		JUCommand coms[] = new JUCommand[] { new BugCommand(), new UnregisterCommand(), new WeeklyScheduleCommand(), new ForceDBUpdateCommand(), new TestDailyUpdateCommand(), new TestPostponeCommand(), new SubscriptionsCommand(), new ForceDBUpdateCommand(), new TestNotifyCommand(), new StopCommand(), new HelpCommand(), new ConfigCommand(), new DailyUpdateCommand(), new NotifyReleaseCommand(), new ReleaseStepCommand(), new TimeZoneCommand(), new TitleLanguageCommand() };
 		commands.addAll(Arrays.asList(coms));
 	}
 

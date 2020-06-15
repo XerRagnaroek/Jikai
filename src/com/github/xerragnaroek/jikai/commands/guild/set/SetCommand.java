@@ -19,7 +19,6 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
  * The "set" command. Handles executing whatever set commands there are.
  * 
  * @author XerRagnarök
- *
  */
 public class SetCommand implements GuildCommand {
 
@@ -38,24 +37,20 @@ public class SetCommand implements GuildCommand {
 
 	@Override
 	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
-		if (arguments.length > 1) {
+		if (arguments.length >= 1) {
 			String com = arguments[0].toLowerCase();
 			GuildCommand c = ComUtils.findCommand(setComs, com);
 			if (c != null) {
 				log.info("Recognized SetCommand '{}'", c.getName());
 				arguments = (String[]) ArrayUtils.subarray(arguments, 1, arguments.length);
-				if (arguments.length >= 1) {
-					c.executeCommand(event, arguments);
-				} else {
-					log.debug("Missing argument for {}" + com);
-				}
+				c.executeCommand(event, arguments);
 			}
 		}
 	}
 
 	private void init() {
 		log = LoggerFactory.getLogger(this.getClass());
-		GuildCommand[] commands = new GuildCommand[] { new SetScheduleChannelCommand(), new SetTriggerCommand(), new SetAnimeChannelCommand(), new SetTimeZoneCommand(), new SetListChannelCommand(), new SetInfoChannelCommand() };
+		GuildCommand[] commands = new GuildCommand[] { new SetCommandChannelCommand(), new SetScheduleChannelCommand(), new SetTriggerCommand(), new SetAnimeChannelCommand(), new SetTimeZoneCommand(), new SetListChannelCommand(), new SetInfoChannelCommand() };
 		setComs.addAll(Arrays.asList(commands));
 		log.info("Loaded {} SetCommands", setComs.size());
 	}

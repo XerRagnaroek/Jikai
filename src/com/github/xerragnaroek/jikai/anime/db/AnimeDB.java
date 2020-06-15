@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.IntegerProperty;
 
@@ -93,7 +94,7 @@ public class AnimeDB {
 		LocalDateTime now = LocalDateTime.now();
 		long untilNextFullHour = now.until(now.truncatedTo(ChronoUnit.HOURS).plusHours(1), ChronoUnit.SECONDS);
 		exec.scheduleAtFixedRate(aDB::loadAiringAnime, untilNextFullHour, updateRate * 3600, TimeUnit.SECONDS);
-		log.debug("Update thread started, first running in {} and updating every {} hours", BotUtils.formatSeconds(untilNextFullHour), updateRate);
+		log.debug("Update thread started, first running in {} and updating every {} hours", BotUtils.formatSeconds(untilNextFullHour, JikaiLocaleManager.getEN()), updateRate);
 	}
 
 	public static void setUpdateRate(long rate) {

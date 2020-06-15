@@ -1,5 +1,6 @@
 package com.github.xerragnaroek.jikai.commands.guild;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -18,6 +19,8 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
  */
 public class SetupJikaiServerCommand implements GuildCommand {
 
+	private Guild g;
+
 	@Override
 	public String getName() {
 		return "setup";
@@ -30,13 +33,13 @@ public class SetupJikaiServerCommand implements GuildCommand {
 
 	@Override
 	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
-		Guild g = event.getGuild();
-		g.createTextChannel("welcome").addPermissionOverride(g.getPublicRole(), Arrays.asList(Permission.VIEW_CHANNEL), Arrays.asList(Permission.MESSAGE_WRITE)).addPermissionOverride(g.getSelfMember(), Permission.ALL_CHANNEL_PERMISSIONS, 0l).submit().thenAccept(this::welcome);
+		g = event.getGuild();
+		g.createTextChannel("welcome").addPermissionOverride(g.getPublicRole(), Arrays.asList(Permission.VIEW_CHANNEL, Permission.MESSAGE_READ), Arrays.asList(Permission.MESSAGE_WRITE)).addPermissionOverride(g.getSelfMember(), Permission.ALL_CHANNEL_PERMISSIONS, 0l).setTopic("Welcome to Jikai! Please read the message below.").submit().thenAccept(this::welcome);
 	}
 
 	private void welcome(TextChannel tc) {
 		try {
-			tc.sendMessage("Welcome to my server!").addFile(BotUtils.imageToByteArray(ImageIO.read(SetupJikaiServerCommand.class.getResourceAsStream("/jikai.png"))), "jikai.png").complete();
+			tc.sendMessage("Welcome to my server! Please read the message below and enjoy your stay! :kissing_heart:").addFile(BotUtils.imageToByteArray(ImageIO.read(new File("./data/jikai.png"))), "jikai.png").queue();
 		} catch (IOException e) {
 			Core.ERROR_LOG.error("Couldn't load jikai image!", e);
 		}

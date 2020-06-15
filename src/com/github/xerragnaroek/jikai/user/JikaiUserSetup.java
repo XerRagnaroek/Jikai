@@ -4,6 +4,7 @@ package com.github.xerragnaroek.jikai.user;
 import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -30,15 +31,17 @@ public class JikaiUserSetup extends ListenerAdapter {
 		Core.JDA.addEventListener(this);
 	}
 
-	// TODO think of some nice words
 	public void startSetup() {
 		log.debug("Running setup for new user");
-		try {
-			ju.sendPMFormat("<PLACEHOLDER GREETINGS>, %s.%nBefore you can subscribe to anime and be sent updates, you need to complete a short setup first.", ju.getUser().getName()).get();
-			nextStage();
-		} catch (InterruptedException | ExecutionException e) {
-			log.error("", e);
-		}
+		CompletableFuture<Boolean> cf = ju.sendPMFormat("Hiya, %s!%nBefore you can subscribe to anime and be sent updates, you need to complete a short setup first.%nAlso make sure to have read the welcome message!", ju.getUser().getName());
+		cf.whenComplete((b, e) -> {
+			if (b) {
+				nextStage();
+			} else {
+				JikaiUserManager.getInstance().removeUser(ju.getId());
+			}
+		});
+
 	}
 
 	@Override
@@ -157,7 +160,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 	private boolean releaseSteps(String input) throws InterruptedException, ExecutionException {
 		if (input == null) {
 			log.debug("Stage ReleaseSteps: First Message");
-			ju.sendPM("You can define times until a relase when I will notify you.\nFor example:\nTo be sent a message 3 days,1 day, 1 hour and 15 minutes before an anime releases, type \"3d,1d,1h,15m\"\nThis will automatically ignore any input above a week because that's just overkill.\nIf you don't want any of that, type \"no\" or \"n\"").get();
+			ju.sendPM("You can configure times to recieve notification before an anime releases.\nFor example:\nTo be sent a message 3 days,1 day, 1 hour and 15 minutes before an anime releases, type `3d,1d,1h,15m`\nThis will automatically ignore any input above a week because that's just overkill.\nIf you don't want any of that, type \"no\" or \"n\"").get();
 		} else {
 			if (input.equals("n") || input.equals("no")) {
 				log.debug("Stage ReleaseSteps: User wants no steps");

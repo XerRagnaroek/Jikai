@@ -3,4 +3,5 @@
 /logs/
 /data/*
 !/data/BOT.json
+!/data/jikai.png
 /notes

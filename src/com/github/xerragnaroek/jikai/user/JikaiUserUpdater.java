@@ -9,6 +9,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +30,7 @@ import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.anime.schedule.AnimeTable;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Pair;
 
@@ -75,8 +77,13 @@ public class JikaiUserUpdater {
 			if (a.hasDataForNextEpisode()) {
 				animeAddImpl(a, id, ju);
 			} else {
+				JikaiLocale loc = ju.getLocale();
 				if (!Core.INITIAL_LOAD.get()) {
-					ju.sendPM("**" + a.getTitle(ju.getTitleLanguage()) + "** doesn't have any data concerning the release of the next episode, so you won't recieve any updates!\nIf any data becomes available, then notifications will resume.");
+					EmbedBuilder eb = new EmbedBuilder();
+					eb.setTitle(loc.getString("ju_eb_anime_no_data_available_title"), a.getAniUrl());
+					eb.setThumbnail(a.getCoverImageMedium());
+					eb.setDescription(loc.getStringFormatted("ju_eb_anime_no_data_available_desc", Arrays.asList("%title%"), a.getTitle(ju.getTitleLanguage())));
+					ju.sendPM(eb.build());
 				}
 			}
 		});
@@ -189,7 +196,6 @@ public class JikaiUserUpdater {
 		return sf[0];
 	}
 
-	// TODO handle negative initial delays!
 	private void scheduleStepUpdate(Anime a, int step) {
 		// min -> seconds
 		int secsToNotif = a.getNextEpisodesAirsIn() - step;
@@ -273,13 +279,15 @@ public class JikaiUserUpdater {
 
 	private void updatePeriodChanged(AnimeUpdate au) {
 		if (au.hasAnimeChangedPeriod()) {
-			List<Pair<Anime, String>> changedP = au.getAnimeChangedPeriod();
+			List<Pair<Anime, Long>> changedP = au.getAnimeChangedPeriod();
 			changedP.forEach(pair -> {
 				Anime a = pair.getLeft();
-				String dayDif = pair.getRight();
+				long dif = pair.getRight();
 				jum.getJUSubscribedToAnime(a).forEach(ju -> {
+					JikaiLocale loc = ju.getLocale();
 					EmbedBuilder eb = new EmbedBuilder();
-					eb.setTitle(a.getTitle(ju.getTitleLanguage()), a.getAniUrl()).setThumbnail(a.getCoverImageMedium()).setDescription(String.format("airs later than usual!%nThe next episode will be in **%s** on%n**%s**.", dayDif, formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get())) + "**.");
+					eb.setTitle(loc.getStringFormatted("ju_eb_period_change_title", Arrays.asList("%title%"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl()).setThumbnail(a.getBiggestAvailableCoverImage());
+					eb.setDescription(loc.getStringFormatted("ju_eb_period_change_desc", Arrays.asList("%time%", "%date%"), BotUtils.formatSeconds(dif, loc), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get())));
 					ju.sendPM(eb.build());
 				});
 			});
@@ -288,20 +296,21 @@ public class JikaiUserUpdater {
 
 	private static MessageEmbed makeReleaseChangedEmbed(JikaiUser ju, Anime a, long delay) {
 		EmbedBuilder eb = new EmbedBuilder();
-		eb.setTitle(a.getTitle(ju.getTitleLanguage()), a.getAniUrl());
+		JikaiLocale loc = ju.getLocale();
+		eb.setTitle(loc.getStringFormatted("ju_eb_release_change_title", Arrays.asList("%title%"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
 		if (a.hasCoverImageMedium()) {
 			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
 		List<String> externalLinks = a.getExternalLinks().stream().filter(es -> es.getSite().equals("Twitter") || es.getSite().equals("Official Site")).map(es -> String.format("[**%s**](%s)", es.getSite(), es.getUrl())).collect(Collectors.toList());
 		StringBuilder bob = new StringBuilder();
+		String date = formatter.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(a.getNextEpisodesAirsAt()), ju.getTimeZone()));
 		if (delay > 0) {
-			bob.append("has been postponed by " + BotUtils.formatSeconds(delay) + " to **");
+			bob.append(loc.getStringFormatted("ju_eb_release_change_pp", Arrays.asList("%time%", "%date%"), BotUtils.formatSeconds(delay, loc), date));
 		} else {
-			bob.append("airs " + BotUtils.formatSeconds(delay) + " earlier! That's **");
+			bob.append(loc.getStringFormatted("ju_eb_release_change_earlier", Arrays.asList("%time%", "%date%"), BotUtils.formatSeconds(delay, loc), date));
 		}
-		bob.append(formatter.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(a.getNextEpisodesAirsAt()), ju.getTimeZone())) + "**");
 		if (!externalLinks.isEmpty()) {
-			bob.append("\nCheck these links for more information: " + StringUtils.joinWith(", ", externalLinks.toArray()));
+			bob.append(loc.getStringFormatted("ju_eb_release_change_links", Arrays.asList("%links%"), StringUtils.joinWith(", ", externalLinks.toArray())));
 		}
 		eb.setDescription(bob).setTimestamp(Instant.now());
 		return eb.build();
@@ -336,8 +345,10 @@ public class JikaiUserUpdater {
 		if (a.hasCoverImageMedium()) {
 			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
-		eb.setTitle("**" + a.getTitleRomaji() + "**", a.getAniUrl()).setDescription(String.format("**%s%nEpisode %2d/%2d airs in %s.**", formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get()), a.getNextEpisodeNumber(), a.getEpisodes(), BotUtils.formatSeconds(step)));
-		eb.setTimestamp(ZonedDateTime.now(ju.getTimeZone()));
+		JikaiLocale loc = ju.getLocale();
+		eb.setTitle(loc.getStringFormatted("ju_eb_notify_title", Arrays.asList("%title%"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
+		eb.setDescription(loc.getStringFormatted("ju_eb_notify_desc", Arrays.asList("%date%", "%episodes%", "%time%"), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get()), String.format("%2d/%2d", a.getNextEpisodeNumber(), a.getEpisodes()), BotUtils.formatSeconds(step, loc)));
+		eb.setTimestamp(Instant.now());
 		return eb.build();
 	}
 
@@ -350,8 +361,10 @@ public class JikaiUserUpdater {
 		if (a.hasCoverImageMedium()) {
 			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
-		eb.setTitle("**" + a.getTitleRomaji() + "**", a.getAniUrl()).setDescription(String.format("Episode %2d/%2d just released!%nIt will probably be up on your favourite streaming sites in a few minutes.", a.getNextEpisodeNumber(), a.getEpisodes()));
-		eb.setTimestamp(ZonedDateTime.now(ju.getTimeZone()));
+		JikaiLocale loc = ju.getLocale();
+		eb.setTitle(loc.getStringFormatted("ju_eb_notify_release_title", Arrays.asList("%title%"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
+		eb.setDescription(loc.getStringFormatted("ju_eb_notify_release_desc", Arrays.asList("%episodes%"), String.format("%2d/%2d", a.getNextEpisodeNumber(), a.getEpisodes())));
+		eb.setTimestamp(Instant.now());
 		return eb.build();
 	}
 

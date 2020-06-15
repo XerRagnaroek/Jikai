@@ -21,6 +21,7 @@ import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.MapProperty;
 
@@ -120,6 +121,7 @@ public class JikaiUserManager {
 	}
 
 	public void removeUser(long id) {
+		log.debug("Removing user '{}'", id);
 		JikaiUser ju = user.remove(id);
 		if (ju != null) {
 			ju.destroy();
@@ -163,8 +165,8 @@ public class JikaiUserManager {
 		 * not quoted. - by Luke Sheppard (regexr.com)
 		 */
 		String[] data = str.split(",(?=(?:[^\\\"]*\\\"[^\\\"]*\\\")*(?![^\\\"]*\\\"))");
-		if (data.length < 7) {
-			throw new IllegalArgumentException("Expected data length 6, got " + data.length + " instead");
+		if (data.length < 8) {
+			throw new IllegalArgumentException("Expected data length 8, got " + data.length + " instead");
 		}
 		for (int i = 0; i < data.length; i++) {
 			data[i] = StringUtils.substringBetween(data[i], "\"");
@@ -173,13 +175,14 @@ public class JikaiUserManager {
 		registerImpl(ju);
 		ju.setTitleLanguage(TitleLanguage.values()[Integer.parseInt(data[1])]);
 		ju.setTimeZone(ZoneId.of(data[2]));
-		ju.setUpdateDaily(data[3].equals("1"));
-		ju.setSentWeeklySchedule(data[4].equals("1"));
-		String tmp = StringUtils.substringBetween(data[5], "[", "]");
+		ju.setLocale(JikaiLocaleManager.getInstance().getLocale(data[3]));
+		ju.setUpdateDaily(data[4].equals("1"));
+		ju.setSentWeeklySchedule(data[5].equals("1"));
+		String tmp = StringUtils.substringBetween(data[6], "[", "]");
 		if (tmp != null && !tmp.isEmpty()) {
 			Stream.of(tmp.split(",")).mapToInt(Integer::parseInt).forEach(ju::addPreReleaseNotificaionStep);
 		}
-		tmp = StringUtils.substringBetween(data[6], "[", "]");
+		tmp = StringUtils.substringBetween(data[7], "[", "]");
 		if (tmp != null && !tmp.isEmpty()) {
 			Stream.of(tmp.split(", ")).mapToInt(Integer::parseInt).mapToObj(AnimeDB::getAnime).forEach(a -> ju.subscribeAnime(a.getId()));
 		}
@@ -204,4 +207,5 @@ public class JikaiUserManager {
 	public MapProperty<ZoneId, Set<JikaiUser>> timeZoneMapProperty() {
 		return timeZoneMap;
 	}
+
 }

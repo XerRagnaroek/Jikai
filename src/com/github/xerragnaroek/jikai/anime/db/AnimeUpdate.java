@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Pair;
 
@@ -29,7 +30,7 @@ public class AnimeUpdate {
 	private List<Pair<Anime, Long>> changed = new ArrayList<>();
 	private List<Anime> nextEp = new ArrayList<>();
 	private Map<Anime, CircularFifoQueue<Integer>> releasePeriods = new HashMap<>();
-	private List<Pair<Anime, String>> changedPeriod = new ArrayList<>();
+	private List<Pair<Anime, Long>> changedPeriod = new ArrayList<>();
 	private final Logger log = LoggerFactory.getLogger(AnimeUpdate.class);
 
 	private AnimeUpdate() {}
@@ -59,7 +60,7 @@ public class AnimeUpdate {
 					long delay = a.getNextEpisodesAirsAt() - oldA.getNextEpisodesAirsAt();
 					if (delay != 0) {
 						changed.add(Pair.of(a, delay));
-						log.info("{} has been {} by {}!", a.getTitleRomaji(), (delay > 0 ? "postponed" : "advanced"), BotUtils.formatSeconds(delay));
+						log.info("{} has been {} by {}!", a.getTitleRomaji(), (delay > 0 ? "postponed" : "advanced"), BotUtils.formatSeconds(delay, JikaiLocaleManager.getEN()));
 					}
 				}
 			}
@@ -91,7 +92,7 @@ public class AnimeUpdate {
 						if (q.isAtFullCapacity() && !q.contains(dayDif)) {
 							log.debug("{} has a changed release period: {} instead of {}", a.getTitleRomaji(), dayDif, q);
 							q.offer(dayDif);
-							changedPeriod.add(Pair.of(a, BotUtils.formatSeconds(dif.toSeconds())));
+							changedPeriod.add(Pair.of(a, dif.toSeconds()));
 						}
 					}
 					return q;
@@ -132,7 +133,7 @@ public class AnimeUpdate {
 		return !nextEp.isEmpty();
 	}
 
-	public List<Pair<Anime, String>> getAnimeChangedPeriod() {
+	public List<Pair<Anime, Long>> getAnimeChangedPeriod() {
 		return changedPeriod;
 	}
 

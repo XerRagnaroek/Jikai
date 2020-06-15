@@ -2,6 +2,7 @@
 package com.github.xerragnaroek.jikai.user;
 
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -15,6 +16,8 @@ import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.BooleanProperty;
 import com.github.xerragnaroek.jikai.util.prop.Property;
@@ -22,7 +25,6 @@ import com.github.xerragnaroek.jikai.util.prop.SetProperty;
 
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.User;
 
 public class JikaiUser {
@@ -34,6 +36,7 @@ public class JikaiUser {
 	private BooleanProperty sendWeeklySchedule = new BooleanProperty();
 	private SetProperty<Integer> notifBeforeRelease = new SetProperty<>();
 	private Property<ZoneId> zone = new Property<>();
+	private Property<JikaiLocale> locale = new Property<>(JikaiLocaleManager.getInstance().getLocale("en"));
 	private boolean setupComplete = false;
 	boolean loading = true;
 	private final Logger log;
@@ -47,6 +50,7 @@ public class JikaiUser {
 		notifBeforeRelease.onRemove(l -> log.debug("Removed step " + l));
 		sendDailyUpdate.onChange((o, n) -> log.debug("Send daily update: " + n));
 		sendWeeklySchedule.onChange((o, n) -> log.debug("Send weekly schedule: " + n));
+		locale.onChange((o, n) -> log.debug("Locale: " + n));
 	}
 
 	public long getId() {
@@ -142,7 +146,7 @@ public class JikaiUser {
 		log.debug("User added new release notification step: {} minutes", seconds / 60);
 		notifBeforeRelease.add(seconds);
 		if (!loading) {
-			sendPM("You will be notified at " + BotUtils.formatSeconds(seconds) + " to a release!");
+			sendPM(locale.get().getStringFormatted("ju_step_add", Arrays.asList("%time%"), BotUtils.formatSeconds(seconds, locale.get())));
 		}
 	}
 
@@ -150,7 +154,7 @@ public class JikaiUser {
 		log.debug("User removed release notification step: {} minutes", seconds / 60);
 		notifBeforeRelease.remove(seconds);
 		if (!loading) {
-			sendPM("You won't be notified at" + BotUtils.formatSeconds(seconds) + " to a release!");
+			sendPM(locale.get().getStringFormatted("ju_step_add", Arrays.asList("%time%"), BotUtils.formatSeconds(seconds, locale.get())));
 		}
 	}
 
@@ -162,19 +166,19 @@ public class JikaiUser {
 		return sendWeeklySchedule;
 	}
 
-	public CompletableFuture<PrivateChannel> sendPM(String message) {
+	public CompletableFuture<Boolean> sendPM(String message) {
 		return BotUtils.sendPM(getUser(), message);
 	}
 
-	public CompletableFuture<PrivateChannel> sendPMFormat(String message, Object... args) {
+	public CompletableFuture<Boolean> sendPMFormat(String message, Object... args) {
 		return BotUtils.sendPM(getUser(), String.format(message, args));
 	}
 
-	public CompletableFuture<PrivateChannel> sendPM(Message message) {
+	public CompletableFuture<Boolean> sendPM(Message message) {
 		return BotUtils.sendPM(getUser(), message);
 	}
 
-	public CompletableFuture<Message> sendPM(MessageEmbed message) {
+	public CompletableFuture<Boolean> sendPM(MessageEmbed message) {
 		return BotUtils.sendPM(getUser(), message);
 	}
 
@@ -192,6 +196,14 @@ public class JikaiUser {
 
 	public boolean isSubscribedTo(Anime a) {
 		return subscribedAnime.contains(a.getId());
+	}
+
+	public JikaiLocale getLocale() {
+		return locale.get();
+	}
+
+	public void setLocale(JikaiLocale loc) {
+		locale.set(loc);
 	}
 
 	private boolean stepImpl(String input, boolean add) {
@@ -264,7 +276,7 @@ public class JikaiUser {
 
 	@Override
 	public String toString() {
-		// id,titletype,zone,sendDailyUpdate,notifBeforeRelease,anime
-		return String.format("\"%d\",\"%d\",\"%s\",\"%d\",\"%d\",\"%s\",\"%s\"", id, tt.ordinal(), zone.get().getId(), sendDailyUpdate.get() ? 1 : 0, sendWeeklySchedule.get() ? 1 : 0, notifBeforeRelease.toString(), subscribedAnime.get());
+		// id,titletype,zone,localeIdentifier,sendDailyUpdate,notifBeforeRelease,anime
+		return String.format("\"%d\",\"%d\",\"%s\",\"%s\",\"%d\",\"%d\",\"%s\",\"%s\"", id, tt.ordinal(), zone.get().getId(), locale.get().getIdentifier(), sendDailyUpdate.get() ? 1 : 0, sendWeeklySchedule.get() ? 1 : 0, notifBeforeRelease.toString(), subscribedAnime.get());
 	}
 }

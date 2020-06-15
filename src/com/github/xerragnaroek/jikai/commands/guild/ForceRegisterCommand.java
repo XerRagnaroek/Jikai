@@ -18,7 +18,7 @@ public class ForceRegisterCommand implements GuildCommand {
 
 	@Override
 	public String getDescription() {
-		return "Only for development purposes.";
+		return "Register with Jikai, this'll start the setup so you can subscribe to anime! No need to do it if you've already done it tho!";
 	}
 
 }

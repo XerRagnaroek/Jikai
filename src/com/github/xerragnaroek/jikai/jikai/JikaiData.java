@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,7 +32,7 @@ import com.github.xerragnaroek.jikai.util.prop.IntegerProperty;
 import com.github.xerragnaroek.jikai.util.prop.Property;
 
 @JsonInclude(Include.NON_EMPTY)
-@JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "trigger", "timezone", "exec_command_count", "list_channel_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "last_mentioned", "alrh_data" })
+@JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "trigger", "timezone", "exec_command_count", "list_channel_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "command_channel_id", "last_mentioned", "alrh_data" })
 public class JikaiData {
 	private Property<Long> aniChId = new Property<>(0l);
 	private AtomicBoolean changed = new AtomicBoolean(false);
@@ -43,9 +42,9 @@ public class JikaiData {
 	private long gId;
 	private Property<Long> infoChId = new Property<>(0l);
 	private Property<Long> listChId = new Property<>(0l);
+	private Property<Long> commandChId = new Property<>(0l);
 	private final Logger log;
 	private Property<Long> schedChId = new Property<>(0l);
-	private List<Long> schedMsgIds;
 	private Property<String> trigger = new Property<>();
 	private Property<ZoneId> zone = new Property<>();
 	private IntegerProperty execComs = new IntegerProperty(0);
@@ -116,14 +115,14 @@ public class JikaiData {
 		return schedChId.get();
 	}
 
+	@JsonProperty("command_channel_id")
+	public long getCommandChannelId() {
+		return commandChId.get();
+	}
+
 	@JsonProperty("exec_command_count")
 	public int getExecutedCommandCount() {
 		return execComs.get();
-	}
-
-	@JsonProperty("schedule_message_ids")
-	public List<Long> getScheduleMessageIds() {
-		return schedMsgIds;
 	}
 
 	@JsonIgnore
@@ -146,24 +145,24 @@ public class JikaiData {
 		return completedSetup != null && completedSetup.hasNonNullValue() && completedSetup.get();
 	}
 
-	public boolean hasScheduleMessageIds() {
-		return schedMsgIds != null;
-	}
-
 	public boolean hasScheduleChannelId() {
-		return schedChId.hasNonNullValue();
+		return schedChId.get() != 0l;
 	}
 
 	public boolean hasListChannelId() {
-		return listChId.hasNonNullValue();
+		return listChId.get() != 0l;
 	}
 
 	public boolean hasInfoChannelId() {
-		return infoChId.hasNonNullValue();
+		return infoChId.get() != 0l;
 	}
 
 	public boolean hasAnimeChannelId() {
-		return aniChId.hasNonNullValue();
+		return aniChId.get() != 0l;
+	}
+
+	public boolean hasCommandChannelId() {
+		return commandChId.get() != 0l;
 	}
 
 	public Property<Long> infoChannelIdProperty() {
@@ -218,12 +217,8 @@ public class JikaiData {
 		return setData(schedChId, id, "schedule_channel_id");
 	}
 
-	public List<Long> setScheduleMessageIds(List<Long> ids) {
-		List<Long> tmp = schedMsgIds;
-		schedMsgIds = ids;
-		hasChanged();
-		log.info("schedule_message_ids changed '{}' -> '{}'", tmp, schedMsgIds);
-		return tmp;
+	public void setCommandChannelId(long idLong) {
+		commandChId.set(idLong);
 	}
 
 	public boolean setSetupCompleted(boolean setup) {
@@ -275,22 +270,22 @@ public class JikaiData {
 	}
 
 	@JsonCreator
-	public static JikaiData of(@JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") long gId, @JsonProperty("trigger") Property<String> trig, @JsonProperty("anime_channel_id") Property<Long> aniChId, @JsonProperty("list_channel_id") Property<Long> listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") Property<Long> icId, @JsonProperty("schedule_channel_id") Property<Long> schId, @JsonProperty("schedule_message_ids") List<Long> schedMsgIds) {
-		JikaiData gd = new JikaiData(gId, false);
-		setIfNonNull(gd.trigger, trig);
-		setIfNonNull(gd.aniChId, aniChId);
-		setIfNonNull(gd.listChId, listChId);
+	public static JikaiData of(@JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") long gId, @JsonProperty("trigger") Property<String> trig, @JsonProperty("anime_channel_id") Property<Long> aniChId, @JsonProperty("list_channel_id") Property<Long> listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") Property<Long> icId, @JsonProperty("schedule_channel_id") Property<Long> schId, @JsonProperty("command_channel_id") Property<Long> comChId) {
+		JikaiData jd = new JikaiData(gId, false);
+		setIfNonNull(jd.trigger, trig);
+		setIfNonNull(jd.aniChId, aniChId);
+		setIfNonNull(jd.listChId, listChId);
 		if (zone != null) {
-			gd.zone = Property.of(ZoneId.of(zone));
+			jd.zone = Property.of(ZoneId.of(zone));
 		}
-		setIfNonNull(gd.completedSetup, setupCompleted);
-		setIfNonNull(gd.comsEnabled, comsEnabled);
-		setIfNonNull(gd.infoChId, icId);
-		setIfNonNull(gd.schedChId, schId);
-		gd.schedMsgIds = schedMsgIds;
-		setIfNonNull(gd.execComs, execComs);
+		setIfNonNull(jd.completedSetup, setupCompleted);
+		setIfNonNull(jd.comsEnabled, comsEnabled);
+		setIfNonNull(jd.infoChId, icId);
+		setIfNonNull(jd.schedChId, schId);
+		setIfNonNull(jd.commandChId, comChId);
+		setIfNonNull(jd.execComs, execComs);
 		JM.getALHRM().addToInitMap(gId, data);
-		return gd;
+		return jd;
 	}
 
 	public boolean hasExplicitCommandSetting() {

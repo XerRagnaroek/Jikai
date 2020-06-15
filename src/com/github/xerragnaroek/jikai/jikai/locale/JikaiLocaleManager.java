@@ -1,6 +1,7 @@
 package com.github.xerragnaroek.jikai.jikai.locale;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Map;
@@ -11,9 +12,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.xerragnaroek.jikai.core.Core;
 
 /**
  * 
@@ -43,12 +44,31 @@ public class JikaiLocaleManager {
 		return new HashSet<>(locales.keySet());
 	}
 
-	public void loadLocale(Path locale) throws JsonProcessingException, IOException {
+	public void loadLocale(Path locale) {
 		String identifier = StringUtils.substringBefore(locale.getFileName().toString(), ".");
 		JikaiLocale jloc = new JikaiLocale(identifier);
-		JsonNode loc = new ObjectMapper().readTree(locale.toFile());
-		loc.fields().forEachRemaining(e -> jloc.registerKey(e.getKey(), e.getValue().asText()));
-		log.info("Loaded locale {}", identifier);
+		try {
+			JsonNode loc = new ObjectMapper().readTree(locale.toFile());
+			loc.fields().forEachRemaining(e -> jloc.registerKey(e.getKey(), e.getValue().asText()));
+			locales.put(identifier, jloc);
+			log.info("Loaded locale {}", identifier);
+		} catch (IOException e) {
+			log.error("Failed reading locale {}!", identifier, e);
+		}
+
+	}
+
+	public static JikaiLocale getEN() {
+		return getInstance().getLocale("en");
+	}
+
+	public static void loadLocales() {
+		getInstance();
+		try {
+			Files.walk(Path.of(Core.DATA_LOC.toString(), "/locales/")).filter(p -> Files.isRegularFile(p)).forEach(instance::loadLocale);
+		} catch (IOException e) {
+			Core.ERROR_LOG.error("Failed walking locale folder", e);
+		}
 	}
 
 }

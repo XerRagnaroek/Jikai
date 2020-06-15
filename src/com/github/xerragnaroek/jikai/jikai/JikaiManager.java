@@ -12,6 +12,7 @@ import com.github.xerragnaroek.jikai.anime.alrh.ALRHManager;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Manager;
@@ -30,6 +31,7 @@ public class JikaiManager extends Manager<Jikai> {
 
 	@Override
 	public void init() {
+		JikaiLocaleManager.loadLocales();
 		AnimeDB.init();
 		AnimeDB.waitUntilLoaded();
 		AnimeDB.startUpdateThread();

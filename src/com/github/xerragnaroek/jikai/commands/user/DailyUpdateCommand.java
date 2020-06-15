@@ -5,11 +5,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.commands.ComUtils;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 
 /**
  * @author XerRagnaroek
- *
  */
 public class DailyUpdateCommand implements JUCommand {
 	private final Logger log = LoggerFactory.getLogger(DailyUpdateCommand.class);
@@ -31,9 +31,10 @@ public class DailyUpdateCommand implements JUCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
+		JikaiLocale en = ju.getLocale();
 		ComUtils.trueFalseCommand(arguments[0], ju, (b) -> {
 			ju.setUpdateDaily(b);
-			ju.sendPM(b ? "You will recieve a daily overview of all your subscribed anime releasing on that day!" : "You won't recieve the daily overview.");
+			ju.sendPM(b ? en.getString("ju_daily_update_true") : en.getString("ju_daily_update_false"));
 		});
 	}
 

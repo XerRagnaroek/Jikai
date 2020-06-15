@@ -33,19 +33,18 @@ public class JikaiIO {
 		JikaiLocaleManager jlm = JikaiLocaleManager.getInstance();
 		try {
 			if (Files.exists(loc)) {
-				Files.walk(loc).forEach(path -> {
+				Files.walk(loc).filter(Files::isRegularFile).forEach(path -> {
 					log.info("Found file {}", path.toAbsolutePath());
-					if (path.getParent().toString().equals("locales")) {
-						try {
-							jlm.loadLocale(path);
-						} catch (IOException e) {
-							Core.ERROR_LOG.error("Failed loading the locaes!!", e);
-						}
-					} else {
-						switch (path.getFileName().toString()) {
+					String fileName = path.getFileName().toString();
+					if (!path.getParent().getFileName().toString().equals("locales")) {
+						switch (fileName) {
 							case "BOT.json" -> JM.getJDM().loadBotData(path);
 							case "user.db" -> JikaiUserManager.getInstance().load(path);
-							default -> JM.getJDM().loadData(path);
+							default -> {
+								if (!fileName.equals("jikai.png")) {
+									JM.getJDM().loadData(path);
+								}
+							}
 						}
 					}
 				});

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -26,13 +27,14 @@ import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.MessageBuilder.SplitPolicy;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
@@ -52,11 +54,11 @@ public class BotUtils {
 		return tc;
 	}
 
-	public static CompletableFuture<PrivateChannel> sendToDev(String msg) {
+	public static CompletableFuture<?> sendToDev(String msg) {
 		return sendToDev(new MessageBuilder(msg).buildAll());
 	}
 
-	public static CompletableFuture<PrivateChannel> sendToDev(Queue<Message> msgs) {
+	public static CompletableFuture<?> sendToDev(Queue<Message> msgs) {
 		User dev = getDev();
 		if (dev != null) {
 			return sendPMs(dev, msgs);
@@ -65,7 +67,7 @@ public class BotUtils {
 	}
 
 	@Nullable
-	public static CompletableFuture<PrivateChannel> sendToDev(Message m) {
+	public static CompletableFuture<?> sendToDev(Message m) {
 		log.debug("Attempting to send a message to the dev");
 		User dev = getDev();
 		if (dev != null) {
@@ -101,7 +103,7 @@ public class BotUtils {
 		return null;
 	}
 
-	private static CompletableFuture<Message> sendEmbedToDev(MessageEmbed me) {
+	private static CompletableFuture<?> sendEmbedToDev(MessageEmbed me) {
 		log.debug("Attempting to send a message to the dev");
 		long devId = Core.DEV_ID;
 		if (devId != 0) {
@@ -115,7 +117,7 @@ public class BotUtils {
 		return null;
 	}
 
-	public static CompletableFuture<MessageAction> sendFile(User u, String message, byte[] data, String fileName) {
+	public static CompletableFuture<?> sendFile(User u, String message, byte[] data, String fileName) {
 		log.debug("Sending {} bytes to user", data.length);
 		return u.openPrivateChannel().map(pc -> pc.sendFile(data, fileName).append(message)).submit().whenComplete((ma, e) -> {
 			log.debug("sendFile to user completed");
@@ -125,7 +127,7 @@ public class BotUtils {
 		});
 	}
 
-	public static CompletableFuture<PrivateChannel> sendPM(User u, String msg) {
+	public static CompletableFuture<Boolean> sendPM(User u, String msg) {
 		MessageBuilder mb = new MessageBuilder().append(msg);
 		if (mb.length() > 2000) {
 			return sendPMs(u, mb.buildAll(SplitPolicy.NEWLINE));
@@ -134,28 +136,26 @@ public class BotUtils {
 		}
 	}
 
-	public static CompletableFuture<PrivateChannel> sendPM(User u, Message msg) {
+	public static CompletableFuture<Boolean> sendPM(User u, Message msg) {
 		Queue<Message> q = new LinkedList<>();
 		q.add(msg);
 		return sendPMs(u, q);
 	}
 
-	public static CompletableFuture<Message> sendPM(User u, MessageEmbed msg) {
-		return u.openPrivateChannel().flatMap(pc -> pc.sendMessage(msg)).submit();
+	public static CompletableFuture<Boolean> sendPM(User u, MessageEmbed msg) {
+		return u.openPrivateChannel().flatMap(pc -> pc.sendMessage(msg)).submit().handle((m, e) -> {
+			return evalSent(e);
+		});
 	}
 
-	public static CompletableFuture<PrivateChannel> sendPMs(User u, Queue<Message> msgs) {
-		return u.openPrivateChannel().submit().whenComplete((pc, ex) -> {
-			if (ex != null) {
-				log.error("", ex);
-			} else {
-				msgs.forEach(m -> pc.sendMessage(m).submit().whenComplete((me, e) -> {
-					if (e != null) {
-						log.error("Failed sending message to {}", u.getName(), e);
-					} else {
-						log.info("Successfully sent message to {}", u.getName());
-					}
-				}));
+	public static CompletableFuture<Boolean> sendPMs(User u, Queue<Message> msgs) {
+		return u.openPrivateChannel().submit().thenApply(pc -> {
+			List<CompletableFuture<?>> cfs = new ArrayList<>();
+			msgs.forEach(m -> cfs.add(pc.sendMessage(m).submit()));
+			try {
+				return CompletableFuture.allOf(cfs.toArray(new CompletableFuture<?>[cfs.size()])).handle((v, e) -> CompletableFuture.completedFuture(evalSent(e))).get().get();
+			} catch (InterruptedException | ExecutionException e) {
+				return false;
 			}
 		});
 	}
@@ -174,51 +174,51 @@ public class BotUtils {
 		return getTextChannelChecked(Core.JDA.getGuildById(gId), id);
 	}
 
-	public static List<CompletableFuture<Message>> sendToAllListChannels(Message msg) {
+	public static List<CompletableFuture<?>> sendToAllListChannels(Message msg) {
 		return sendToAllChannels(0, msg, null);
 	}
 
-	public static List<CompletableFuture<Message>> sendToAllScheduleChannels(Message msg) {
+	public static List<CompletableFuture<?>> sendToAllScheduleChannels(Message msg) {
 		return sendToAllChannels(1, msg, null);
 	}
 
-	public static List<CompletableFuture<Message>> sendToAllAnimeChannels(Message msg) {
+	public static List<CompletableFuture<?>> sendToAllAnimeChannels(Message msg) {
 		return sendToAllChannels(2, msg, null);
 	}
 
-	public static List<CompletableFuture<Message>> sendToAllInfoChannels(Message msg) {
+	public static List<CompletableFuture<?>> sendToAllInfoChannels(Message msg) {
 		return sendToAllChannels(3, msg, null);
 	}
 
-	public static List<CompletableFuture<Message>> sendToAllListChannels(MessageEmbed msg) {
+	public static List<CompletableFuture<?>> sendToAllListChannels(MessageEmbed msg) {
 		return sendToAllChannels(0, null, msg);
 	}
 
-	public static List<CompletableFuture<Message>> sendToAllScheduleChannels(MessageEmbed msg) {
+	public static List<CompletableFuture<?>> sendToAllScheduleChannels(MessageEmbed msg) {
 		return sendToAllChannels(1, null, msg);
 	}
 
-	public static List<CompletableFuture<Message>> sendToAllAnimeChannels(MessageEmbed msg) {
+	public static List<CompletableFuture<?>> sendToAllAnimeChannels(MessageEmbed msg) {
 		return sendToAllChannels(2, null, msg);
 	}
 
-	public static List<CompletableFuture<Message>> sendToAllInfoChannels(MessageEmbed msg) {
+	public static List<CompletableFuture<?>> sendToAllInfoChannels(MessageEmbed msg) {
 		return sendToAllChannels(3, null, msg);
 	}
 
-	public static List<CompletableFuture<Message>> sendToAllListChannels(String msg) {
+	public static List<CompletableFuture<?>> sendToAllListChannels(String msg) {
 		return sendToAllListChannels(new MessageBuilder(msg).build());
 	}
 
-	public static List<CompletableFuture<Message>> sendToAllScheduleChannels(String msg) {
+	public static List<CompletableFuture<?>> sendToAllScheduleChannels(String msg) {
 		return sendToAllScheduleChannels(new MessageBuilder(msg).build());
 	}
 
-	public static List<CompletableFuture<Message>> sendToAllAnimeChannels(String msg) {
+	public static List<CompletableFuture<?>> sendToAllAnimeChannels(String msg) {
 		return sendToAllAnimeChannels(new MessageBuilder(msg).build());
 	}
 
-	public static List<CompletableFuture<Message>> sendToAllInfoChannels(String msg) {
+	public static List<CompletableFuture<?>> sendToAllInfoChannels(String msg) {
 		return sendToAllInfoChannels(new MessageBuilder(msg).build());
 	}
 
@@ -226,8 +226,8 @@ public class BotUtils {
 	 * @param channel
 	 *            0 = list, 1 = schedule, 2 = anime, 3 = info
 	 */
-	private static List<CompletableFuture<Message>> sendToAllChannels(int channel, Message msg, MessageEmbed me) {
-		List<CompletableFuture<Message>> cf = new ArrayList<>();
+	private static List<CompletableFuture<?>> sendToAllChannels(int channel, Message msg, MessageEmbed me) {
+		List<CompletableFuture<?>> cf = new ArrayList<>();
 		for (Jikai j : Core.JM) {
 			try {
 				TextChannel tc = null;
@@ -256,7 +256,7 @@ public class BotUtils {
 		return col.stream().map(Object::toString).collect(Collectors.toList());
 	}
 
-	public static String formatSeconds(long seconds) {
+	public static String formatSeconds(long seconds, JikaiLocale loc) {
 		seconds = Math.abs(seconds);
 		long days = TimeUnit.SECONDS.toDays(seconds);
 		seconds -= TimeUnit.DAYS.toSeconds(days);
@@ -266,25 +266,25 @@ public class BotUtils {
 		seconds -= TimeUnit.MINUTES.toSeconds(minutes);
 		List<String> time = new LinkedList<>();
 		if (days > 0) {
-			time.add(days + " " + (days > 1 ? "days" : "day"));
+			time.add(days + " " + (days > 1 ? loc.getString("u_days") : loc.getString("u_day")));
 		}
 		if (hours > 0) {
-			time.add(hours + " " + (hours > 1 ? "hours" : "hour"));
+			time.add(hours + " " + (hours > 1 ? loc.getString("u_hours") : loc.getString("u_hour")));
 		}
 		if (minutes > 0) {
-			time.add(minutes + " " + (minutes > 1 ? "minutes" : "minute"));
+			time.add(minutes + " " + (minutes > 1 ? loc.getString("u_mins") : loc.getString("u_min")));
 		}
 		if (seconds > 0) {
-			time.add(seconds + " " + (seconds > 1 ? "seconds" : "second"));
+			time.add(seconds + " " + (seconds > 1 ? loc.getString("u_secs") : loc.getString("u_sec")));
 		}
 		return String.join(", ", time);
 	}
 
-	public static String formatMillis(long millis) {
+	public static String formatMillis(long millis, JikaiLocale loc) {
 		if (millis > 1000) {
 			long seconds = TimeUnit.MILLISECONDS.toSeconds(millis);
 			millis -= TimeUnit.SECONDS.toMillis(seconds);
-			return String.join(", ", formatSeconds(seconds), millis + " ms");
+			return String.join(", ", formatSeconds(seconds, loc), millis + " ms");
 		} else {
 			return millis + " ms";
 		}
@@ -317,11 +317,21 @@ public class BotUtils {
 		});
 		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).whenComplete((v, t) -> {
 			if (t == null) {
-				log.debug("Successfully deleted " + count.get() + " messages in " + formatMillis(System.currentTimeMillis() - start));
+				log.debug("Successfully deleted " + count.get() + " messages in " + formatMillis(System.currentTimeMillis() - start, JikaiLocaleManager.getInstance().getLocale("en")));
 			} else {
 				Core.logThrowable(t);
 			}
 		});
+	}
+
+	private static boolean evalSent(Throwable e) {
+		if (e == null) {
+			log.debug("Successfully sent message");
+			return true;
+		} else {
+			log.error("Failed sending message: {}", e.getMessage());
+			return false;
+		}
 	}
 
 }

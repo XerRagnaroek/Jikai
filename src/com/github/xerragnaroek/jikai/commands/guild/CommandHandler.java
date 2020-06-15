@@ -9,6 +9,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jikai.commands.BugCommand;
 import com.github.xerragnaroek.jikai.commands.ComUtils;
 import com.github.xerragnaroek.jikai.commands.guild.set.SetCommand;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
@@ -34,18 +35,18 @@ public class CommandHandler implements Initilizable {
 	public static Permission[] MOD_PERMS = new Permission[] { Permission.MANAGE_CHANNEL, Permission.MANAGE_ROLES, Permission.MESSAGE_MANAGE, Permission.KICK_MEMBERS, Permission.BAN_MEMBERS };
 
 	static {
-		GuildCommand[] coms = new GuildCommand[] { new SetupJikaiServerCommand(), new ClearChannelCommand(), new ForceSaveCommand(), new ForceRegisterCommand(), new StopCommand(), new StatusCommand(), /*
-																																																			 * new
-																																																			 * PingCommand
-																																																			 * (
-																																																			 * )
-																																																			 * ,
-																																																			 */ new SetCommand(), new ScheduleCommand(), new AnimeListCommand(), new HelpCommand(), new EnableCommandsCommand(), new DisableCommandsCommand(),/*
-																																																																																								 * new
-																																																																																								 * RequestAssistanceCommand
-																																																																																								 * (
-																																																																																								 * )
-																																																																																								 */ };
+		GuildCommand[] coms = new GuildCommand[] { new BugCommand(), new SetupJikaiServerCommand(), new ClearChannelCommand(), new ForceSaveCommand(), new ForceRegisterCommand(), new StopCommand(), new StatusCommand(), /*
+																																																							 * new
+																																																							 * PingCommand
+																																																							 * (
+																																																							 * )
+																																																							 * ,
+																																																							 */ new SetCommand(), new ScheduleCommand(), new AnimeListCommand(), new HelpCommand(), new EnableCommandsCommand(), new DisableCommandsCommand(),/*
+																																																																																												 * new
+																																																																																												 * RequestAssistanceCommand
+																																																																																												 * (
+																																																																																												 * )
+																																																																																												 */ };
 		commands.addAll(Arrays.asList(coms));
 	}
 
@@ -68,32 +69,37 @@ public class CommandHandler implements Initilizable {
 
 	public void handleMessage(MessageReceivedEvent event) {
 		// ignore bots
+		JikaiData jd = j.getJikaiData();
 		if (!event.getAuthor().isBot()) {
-			String content = event.getMessage().getContentRaw();
-			String trigger = this.trigger.get();
-			// is it supposed to be a command?
-			if (content.startsWith(trigger)) {
-				log.debug("Received message: {}", content);
-				// remove trigger from content
-				content = content.substring(trigger.length());
-				// any recognised commands?
-				String[] tmp = content.trim().split(" ");
-				GuildCommand com = ComUtils.findCommand(commands, tmp[0]);
-				if (com != null) {
-					log.info("Recognised command {}", com.getName());
-					// remove the command from the content and execute it
-					tmp = (String[]) ArrayUtils.subarray(tmp, 1, tmp.length);
-					if (ComUtils.checkPermissions(com, event.getMember())) {
-						if (comsEnabled.get() || com.isAlwaysEnabled()) {
-							j.getJikaiData().incrementAndGetExecComs();
-							com.executeCommand(event, tmp);
+			if (!jd.hasCommandChannelId() || event.getChannel().getIdLong() == jd.getCommandChannelId() || event.getMember().hasPermission(Permission.MESSAGE_MANAGE)) {
+				String content = event.getMessage().getContentRaw();
+				String trigger = this.trigger.get();
+				// is it supposed to be a command?
+				if (content.startsWith(trigger)) {
+					log.debug("Received message: {}", content);
+					// remove trigger from content
+					content = content.substring(trigger.length());
+					// any recognised commands?
+					String[] tmp = content.trim().split(" ");
+					GuildCommand com = ComUtils.findCommand(commands, tmp[0]);
+					if (com != null) {
+						log.info("Recognised command {}", com.getName());
+						// remove the command from the content and execute it
+						tmp = (String[]) ArrayUtils.subarray(tmp, 1, tmp.length);
+						if (ComUtils.checkPermissions(com, event.getMember())) {
+							if (comsEnabled.get() || com.isAlwaysEnabled()) {
+								j.getJikaiData().incrementAndGetExecComs();
+								com.executeCommand(event, tmp);
+							}
 						}
+					} else {
+						log.debug("No commands recognised");
+						// trash talk the user cause they typed some garbage
+						// event.getChannel().sendMessageFormat("**Bruh** :triumph: %s, what the **fuck** is that
+						// command
+						// supposed to mean? :angry: Smh my damn head. :clown:",
+						// event.getAuthor().getAsMention()).queue();
 					}
-				} else {
-					log.debug("No commands recognised");
-					// trash talk the user cause they typed some garbage
-					// event.getChannel().sendMessageFormat("**Bruh** :triumph: %s, what the **fuck** is that command
-					// supposed to mean? :angry: Smh my damn head. :clown:", event.getAuthor().getAsMention()).queue();
 				}
 			}
 		}

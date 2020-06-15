@@ -22,4 +22,8 @@ public class ForceSaveCommand implements GuildCommand {
 		return "Forces the immediate saving of everything.";
 	}
 
+	@Override
+	public boolean isDevOnly() {
+		return true;
+	}
 }
