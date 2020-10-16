@@ -25,7 +25,7 @@ public class ChangeLocaleCommand implements JUCommand {
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		JikaiLocale loc = JikaiLocaleManager.getInstance().getLocale(arguments[0]);
-		if (loc != null) {
+		if (loc != null && arguments.length > 0) {
 			ju.setLocale(loc);
 			ju.sendPM(loc.getString("com_ju_changeloc_success"));
 		} else {
@@ -40,6 +40,6 @@ public class ChangeLocaleCommand implements JUCommand {
 
 	@Override
 	public String getUsage(JikaiLocale loc) {
-		return loc.getStringFormatted("com_ju_changeloc_use", Arrays.asList("%use%"), getName());
+		return loc.getStringFormatted("com_ju_changeloc_use", Arrays.asList("%com%"), getName());
 	}
 }
