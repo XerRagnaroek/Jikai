@@ -3,13 +3,12 @@ package com.github.xerragnaroek.jikai.commands.guild;
 
 import com.github.xerragnaroek.jikai.commands.Command;
 
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 /**
  * A recognized command of the bot.
  * 
  * @author XerRagnarök
- *
  */
 public interface GuildCommand extends Command {
 	/**
@@ -20,5 +19,9 @@ public interface GuildCommand extends Command {
 	 * @param arguments
 	 *            - what was written after the command
 	 */
-	public void executeCommand(MessageReceivedEvent event, String[] arguments);
+	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments);
+
+	public default boolean isJikaiUserOnly() {
+		return true;
+	}
 }

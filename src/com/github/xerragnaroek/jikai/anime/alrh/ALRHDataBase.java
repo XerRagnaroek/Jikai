@@ -2,6 +2,7 @@ package com.github.xerragnaroek.jikai.anime.alrh;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -9,19 +10,23 @@ import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.BidiMap;
+import org.apache.commons.collections4.bidimap.TreeBidiMap;
 import org.apache.commons.collections4.map.MultiKeyMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.github.xerragnaroek.jikai.util.Pair;
 
 public class ALRHDataBase {
 	private Map<Long, Set<ALRHData>> msgMap = Collections.synchronizedMap(new HashMap<>());
 	private Map<String, ALRHData> titleMap = Collections.synchronizedMap(new TreeMap<>());
+	// title of the Embed mapped to its msgid
+	private BidiMap<Long, String> msgIdEmbedTitleMap = new TreeBidiMap<Long, String>();
 	@SuppressWarnings("rawtypes")
 	private MultiKeyMap ucMsgMap = new MultiKeyMap();
-	private int sentABVersion;
 	private long sentTcId;
+	private Pair<String, Long> seasonMsg;
 	private final Logger log = LoggerFactory.getLogger(ALRHDataBase.class);
 
 	ALRHDataBase() {}
@@ -31,13 +36,8 @@ public class ALRHDataBase {
 		msgMap.put(msgId, data);
 		data.forEach(alrhd -> {
 			alrhd.setMessageId(msgId);
-			alrhd.setABVersion(sentABVersion);
 			addALRHData(alrhd);
 		});
-	}
-
-	int getSentABVersion() {
-		return sentABVersion;
 	}
 
 	long getSentTextChannelId() {
@@ -45,7 +45,6 @@ public class ALRHDataBase {
 	}
 
 	private void updateVariables(ALRHData data) {
-		sentABVersion = AnimeDB.getAnimeDBVersion();
 		sentTcId = data.getTextChannelId();
 	}
 
@@ -90,8 +89,16 @@ public class ALRHDataBase {
 		return new TreeSet<>(titleMap.values());
 	}
 
+	BidiMap<Long, String> getMsgIdTitleMap() {
+		return msgIdEmbedTitleMap;
+	}
+
 	boolean hasDataForMessage(long msgId) {
 		return msgMap.containsKey(msgId);
+	}
+
+	Map<Long, Set<ALRHData>> getMsgIdDataMap() {
+		return msgMap;
 	}
 
 	Set<ALRHData> getReactedAnimes() {
@@ -106,6 +113,7 @@ public class ALRHDataBase {
 		msgMap.clear();
 		titleMap.clear();
 		ucMsgMap.clear();
+		msgIdEmbedTitleMap.clear();
 	}
 
 	boolean hasDataForTitle(String title) {
@@ -124,5 +132,46 @@ public class ALRHDataBase {
 
 	boolean isReacted(ALRHData data) {
 		return getReactedAnimes().contains(data);
+	}
+
+	void mapEmbedTitleToId(long id, String t) {
+		msgIdEmbedTitleMap.put(id, t);
+	}
+
+	void setMsgIdEmbedTitleMap(Map<Long, String> map) {
+		msgIdEmbedTitleMap = new TreeBidiMap<>(map);
+	}
+
+	long getMsgIdForEmbedTitle(String title) {
+		return msgIdEmbedTitleMap.getKey(title);
+	}
+
+	String getEmbedTitleForMsgId(long id) {
+		return msgIdEmbedTitleMap.get(id);
+	}
+
+	boolean hasMsgIdForEmbedTitle(String title) {
+		return msgIdEmbedTitleMap.containsValue(title);
+	}
+
+	void setSeasonMsg(Pair<String, Long> msg) {
+		seasonMsg = msg;
+	}
+
+	Pair<String, Long> getSeasonMsg() {
+		return seasonMsg;
+	}
+
+	void removeDataForMessage(long id, String title) {
+		Set<ALRHData> data = getDataForMessage(id);
+		log.debug("Deleting {} entries for message {}", data.size(), title);
+		msgIdEmbedTitleMap.removeValue(title);
+		data.forEach(this::deleteEntry);
+	}
+
+	List<String> getAllMessageIdsAsList() {
+		List<String> ids = msgMap.keySet().stream().map(String::valueOf).collect(Collectors.toList());
+		ids.add(seasonMsg.getRight().toString());
+		return ids;
 	}
 }

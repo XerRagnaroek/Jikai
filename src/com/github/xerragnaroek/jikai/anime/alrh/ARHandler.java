@@ -19,9 +19,9 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageReaction;
 import net.dv8tion.jda.api.entities.MessageReaction.ReactionEmote;
 import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
-import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent;
-import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
+import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
+import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionRemoveAllEvent;
+import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionRemoveEvent;
 
 class ARHandler {
 
@@ -35,7 +35,7 @@ class ARHandler {
 		alrhDB = alrh.alrhDB;
 	}
 
-	void handleReactionAdded(MessageReactionAddEvent event) {
+	void handleReactionAdded(GuildMessageReactionAddEvent event) {
 		log.trace("Handling MessageReactionAdded event");
 		long msgId = event.getMessageIdLong();
 		if (alrhDB.hasDataForMessage(msgId)) {
@@ -49,13 +49,13 @@ class ARHandler {
 				if (data != null) {
 					data.setReacted(true);
 					JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getUser().getIdLong());
-					ju.subscribeAnime(AnimeDB.getAnime(data.getTitle()).getId());
+					ju.subscribeAnime(AnimeDB.getAnime(data.getTitle()).getId(), ju.getLocale().getString("ju_sub_add_cause_user"));
 				}
 			}
 		}
 	}
 
-	void handleReactionRemoved(MessageReactionRemoveEvent event) {
+	void handleReactionRemoved(GuildMessageReactionRemoveEvent event) {
 		long msgId = event.getMessageIdLong();
 		if (alrhDB.hasDataForMessage(msgId)) {
 			ReactionEmote re = event.getReactionEmote();
@@ -64,24 +64,24 @@ class ARHandler {
 				ALRHData data = alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
 				String title = data.getTitle();
 				if (!event.getUser().isBot()) {
-					JikaiUserManager.getInstance().getUser(event.getUser().getIdLong()).unsubscribeAnime(AnimeDB.getAnime(data.getTitle()).getId());
+					JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getUser().getIdLong());
+					ju.unsubscribeAnime(AnimeDB.getAnime(data.getTitle()).getId(), ju.getLocale().getString("ju_sub_rem_cause_user"));
 				} else {
 					log.debug("Reaction was removed by a bot");
 				}
-				validateReaction(g, event.getTextChannel(), event.getMessageId(), re.getAsCodepoints(), title);
+				validateReaction(g, event.getChannel(), event.getMessageId(), re.getAsCodepoints(), title);
 			}
 
 		}
 	}
 
-	void handleReactionRemovedAll(MessageReactionRemoveAllEvent event) {
+	void handleReactionRemovedAll(GuildMessageReactionRemoveAllEvent event) {
 		long msgId = event.getMessageIdLong();
 		if (alrhDB.hasDataForMessage(msgId)) {
 			log.trace("Message is part of the anime list");
-			Guild g = event.getGuild();
 			alrhDB.getDataForMessage(msgId).forEach(data -> {
 				data.setReacted(false);
-				addReaction(event.getTextChannel(), event.getMessageId(), data.getUnicodeCodePoint());
+				addReaction(event.getChannel(), event.getMessageId(), data.getUnicodeCodePoint());
 			});
 			alrh.dataChanged();
 		}
@@ -105,9 +105,9 @@ class ARHandler {
 			if (re.isEmoji()) {
 				if (re.getAsCodepoints().equals(uni)) {
 					if (mr.getCount() == 1) {
-						log.debug("No user reaction left for {}", title);
 						ALRHData data = alrhDB.getDataForTitle(title);
 						if (data.isReacted()) {
+							log.debug("No user reaction left for {}", title);
 							data.setReacted(false);
 						}
 					}
@@ -121,20 +121,14 @@ class ARHandler {
 		}
 	}
 
-	void validateReactions(Guild g, TextChannel tc, long msgId, Set<ALRHData> data) {
-		log.debug("Readding missing reactions on msg {} in TextChannel {}", msgId, tc.getName());
-		tc.retrieveMessageById(msgId).submit().whenComplete((m, t) -> {
-			long tmp = msgId;
-			if (t == null) {
-				if (m != null) {
-					data.forEach(d -> validateReaction(m, d.getUnicodeCodePoint(), d.getTitle()));
-				} else {
-					log.error("Saved message id is invalid!");
-				}
-			} else {
-				log.error("Message not found", t);
-			}
-		});
+	boolean validateReactions(Message m, Set<ALRHData> data) {
+		if (m != null) {
+			data.forEach(d -> validateReaction(m, d.getUnicodeCodePoint(), d.getTitle()));
+			return true;
+		} else {
+			log.error("Saved message id is invalid!");
+			return false;
+		}
 	}
 
 	void update(AnimeUpdate au) {

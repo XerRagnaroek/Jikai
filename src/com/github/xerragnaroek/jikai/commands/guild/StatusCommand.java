@@ -4,19 +4,23 @@ package com.github.xerragnaroek.jikai.commands.guild;
 import static com.github.xerragnaroek.jikai.core.Core.JDA;
 
 import java.time.Instant;
+import java.util.Arrays;
+
+import org.apache.commons.lang3.ArrayUtils;
 
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiData;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
+import com.github.xerragnaroek.jikai.util.BotUtils;
 
-import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 public class StatusCommand implements GuildCommand {
 	@Override
@@ -25,35 +29,33 @@ public class StatusCommand implements GuildCommand {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
 		Jikai j = Core.JM.get(g);
 		JikaiData jd = j.getJikaiData();
+		JikaiLocale loc = j.getLocale();
 		try {
 			TextChannel tc = j.getInfoChannel();
 			Instant now = Instant.now();
-			Message m = tc.sendMessage("If you can see this, something broke along the lines.").complete();
+			Message m = tc.sendMessage("Ping check...").complete();
 			long ping = Instant.now().toEpochMilli() - now.toEpochMilli();
-			MessageBuilder mb = new MessageBuilder();
-			StringBuilder bob = new StringBuilder();
-			bob.append("= Status =\n");
-			bob.append("Ping :: " + ping + " ms\n");
-			bob.append("Gateway-Ping :: " + JDA.getGatewayPing() + " ms\n");
-			bob.append("Currently loaded anime :: " + AnimeDB.size() + "\n");
-			bob.append("Executed Commands :: " + jd.getExecutedCommandCount() + "\n");
-			bob.append("Servers running Jikai :: " + JDA.getGuildCache().size() + "\n");
-			bob.append("Registered Users :: " + JikaiUserManager.getInstance().userAmount() + "\n");
-			bob.append("Server Commands Enabled :: " + jd.areCommandsEnabled());
-			mb.appendCodeBlock(bob.toString(), "asciidoc");
-			m.editMessage(mb.build()).queue();
+			String msg = loc.getStringFormatted("com_g_status_msg", Arrays.asList("ping", "gping", "anime", "lang", "coms", "servers", "users", "enabled"), ping, JDA.getGatewayPing(), AnimeDB.size(), loc.getLanguageName(), jd.getExecutedCommandCount(), JDA.getGuildCache().size(), JikaiUserManager.getInstance().userAmount(), jd.areCommandsEnabled());
+			String[] tmp = msg.split("\n");
+			// codeblock,title and codeblock end
+			String[] nonFormat = { tmp[0], tmp[1], tmp[tmp.length - 1] };
+			// all data fields
+			tmp = ArrayUtils.subarray(tmp, 2, tmp.length - 2);
+			String formatted = BotUtils.padEquallyAndJoin(loc.getString("com_g_status_sep"), "\n", null, tmp);
+			formatted = nonFormat[0] + "\n" + nonFormat[1] + "\n" + formatted + "\n" + nonFormat[2];
+			m.editMessage(formatted).queue();
 		} catch (Exception e) {
 			Core.logThrowable(e);
 		}
 	}
 
 	@Override
-	public String getDescription() {
-		return "Sends the bots current stats.";
+	public String getDescription(JikaiLocale loc) {
+		return loc.getString("com_g_status_desc");
 	}
 
 	@Override

@@ -6,9 +6,12 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jikai.anime.alrh.ALRHandler;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.jikai.Jikai;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.entities.MessageChannel;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 public class AnimeListCommand implements GuildCommand {
 
@@ -20,14 +23,18 @@ public class AnimeListCommand implements GuildCommand {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments) {
 		log.debug("Executing ListCommand");
+		Jikai j = Core.JM.get(event.getGuild());
+		JikaiLocale loc = j.getLocale();
 		AnimeDB.waitUntilLoaded();
-		ALRHandler h = Core.JM.get(event.getGuild()).getALRHandler();
+		ALRHandler h = j.getALRHandler();
+		MessageChannel mc = event.getChannel();
 		if (!h.isSendingList()) {
 			h.sendList();
 		} else {
 			log.debug("List is already being sent");
+			mc.sendMessage(loc.getString("com_g_list_wait")).queue();
 		}
 	}
 
@@ -37,8 +44,8 @@ public class AnimeListCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription() {
-		return "Sends the reactable list of seasonal animes to the anime_list_channel or general.";
+	public String getDescription(JikaiLocale loc) {
+		return loc.getString("com_g_list_desc");
 	}
 
 }

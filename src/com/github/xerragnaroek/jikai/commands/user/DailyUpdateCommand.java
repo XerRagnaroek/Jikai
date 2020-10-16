@@ -1,6 +1,9 @@
 
 package com.github.xerragnaroek.jikai.commands.user;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,13 +23,13 @@ public class DailyUpdateCommand implements JUCommand {
 	}
 
 	@Override
-	public String getAlternativeName() {
-		return "daily";
+	public List<String> getAlternativeNames() {
+		return Arrays.asList("daily");
 	}
 
 	@Override
-	public String getDescription() {
-		return "Enable/Disable the daily overview.";
+	public String getDescription(JikaiLocale loc) {
+		return loc.getString("com_ju_daily_ov_desc");
 	}
 
 	@Override
@@ -34,12 +37,12 @@ public class DailyUpdateCommand implements JUCommand {
 		JikaiLocale en = ju.getLocale();
 		ComUtils.trueFalseCommand(arguments[0], ju, (b) -> {
 			ju.setUpdateDaily(b);
-			ju.sendPM(b ? en.getString("ju_daily_update_true") : en.getString("ju_daily_update_false"));
+			ju.sendPM(b ? en.getString("ju_daily_ov_true") : en.getString("ju_daily_ov_false"));
 		});
 	}
 
 	@Override
-	public String getUsage() {
-		return "daily_update <true/false>";
+	public String getUsage(JikaiLocale loc) {
+		return loc.getStringFormatted("com_ju_daily_ov_use", Arrays.asList("com"), getName());
 	}
 }

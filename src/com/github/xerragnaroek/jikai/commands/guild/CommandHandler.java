@@ -11,6 +11,9 @@ import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.commands.BugCommand;
 import com.github.xerragnaroek.jikai.commands.ComUtils;
+import com.github.xerragnaroek.jikai.commands.HelpCommand;
+import com.github.xerragnaroek.jikai.commands.ReloadLocalesCommand;
+import com.github.xerragnaroek.jikai.commands.StopCommand;
 import com.github.xerragnaroek.jikai.commands.guild.set.SetCommand;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiData;
@@ -18,7 +21,7 @@ import com.github.xerragnaroek.jikai.util.Initilizable;
 import com.github.xerragnaroek.jikai.util.prop.Property;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 /**
  * Handles commands (who'd have thunk?).
@@ -28,25 +31,25 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 public class CommandHandler implements Initilizable {
 	private static Set<GuildCommand> commands = new TreeSet<>();
 	private final Logger log;
-	private Property<String> trigger = new Property<>();
+	private Property<String> prefix = new Property<>();
 	private Property<Boolean> comsEnabled = new Property<>(true);
 	private AtomicBoolean initialized = new AtomicBoolean(false);
 	private Jikai j;
 	public static Permission[] MOD_PERMS = new Permission[] { Permission.MANAGE_CHANNEL, Permission.MANAGE_ROLES, Permission.MESSAGE_MANAGE, Permission.KICK_MEMBERS, Permission.BAN_MEMBERS };
 
 	static {
-		GuildCommand[] coms = new GuildCommand[] { new BugCommand(), new SetupJikaiServerCommand(), new ClearChannelCommand(), new ForceSaveCommand(), new ForceRegisterCommand(), new StopCommand(), new StatusCommand(), /*
-																																																							 * new
-																																																							 * PingCommand
-																																																							 * (
-																																																							 * )
-																																																							 * ,
-																																																							 */ new SetCommand(), new ScheduleCommand(), new AnimeListCommand(), new HelpCommand(), new EnableCommandsCommand(), new DisableCommandsCommand(),/*
-																																																																																												 * new
-																																																																																												 * RequestAssistanceCommand
-																																																																																												 * (
-																																																																																												 * )
-																																																																																												 */ };
+		GuildCommand[] coms = new GuildCommand[] { new ReloadLocalesCommand(), new BugCommand(), new SetupJikaiServerCommand(), new ClearChannelCommand(), new ForceSaveCommand(), new ForceRegisterCommand(), new StopCommand(), new StatusCommand(), /*
+																																																														 * new
+																																																														 * PingCommand
+																																																														 * (
+																																																														 * )
+																																																														 * ,
+																																																														 */ new SetCommand(), new ScheduleCommand(), new AnimeListCommand(), new HelpCommand(), new EnableCommandsCommand(), new DisableCommandsCommand(),/*
+																																																																																																			 * new
+																																																																																																			 * RequestAssistanceCommand
+																																																																																																			 * (
+																																																																																																			 * )
+																																																																																																			 */ };
 		commands.addAll(Arrays.asList(coms));
 	}
 
@@ -58,7 +61,7 @@ public class CommandHandler implements Initilizable {
 
 	public void init() {
 		JikaiData jd = j.getJikaiData();
-		jd.triggerProperty().bindAndSet(trigger);
+		jd.prefixProperty().bindAndSet(prefix);
 		jd.comsEnabledProperty().bind(comsEnabled);
 		if (jd.hasExplicitCommandSetting()) {
 			comsEnabled.set(jd.areCommandsEnabled());
@@ -67,18 +70,18 @@ public class CommandHandler implements Initilizable {
 		log.info("Initialized");
 	}
 
-	public void handleMessage(MessageReceivedEvent event) {
+	public void handleMessage(GuildMessageReceivedEvent event) {
 		// ignore bots
 		JikaiData jd = j.getJikaiData();
 		if (!event.getAuthor().isBot()) {
 			if (!jd.hasCommandChannelId() || event.getChannel().getIdLong() == jd.getCommandChannelId() || event.getMember().hasPermission(Permission.MESSAGE_MANAGE)) {
 				String content = event.getMessage().getContentRaw();
-				String trigger = this.trigger.get();
+				String prefix = this.prefix.get();
 				// is it supposed to be a command?
-				if (content.startsWith(trigger)) {
+				if (content.startsWith(prefix)) {
 					log.debug("Received message: {}", content);
-					// remove trigger from content
-					content = content.substring(trigger.length());
+					// remove prefix from content
+					content = content.substring(prefix.length());
 					// any recognised commands?
 					String[] tmp = content.trim().split(" ");
 					GuildCommand com = ComUtils.findCommand(commands, tmp[0]);
@@ -87,7 +90,7 @@ public class CommandHandler implements Initilizable {
 						// remove the command from the content and execute it
 						tmp = (String[]) ArrayUtils.subarray(tmp, 1, tmp.length);
 						if (ComUtils.checkPermissions(com, event.getMember())) {
-							if (comsEnabled.get() || com.isAlwaysEnabled()) {
+							if (comsEnabled.get() || com.isAlwaysEnabled() || event.getMember().hasPermission(Permission.MANAGE_SERVER)) {
 								j.getJikaiData().incrementAndGetExecComs();
 								com.executeCommand(event, tmp);
 							}
@@ -105,8 +108,8 @@ public class CommandHandler implements Initilizable {
 		}
 	}
 
-	public String getTrigger() {
-		return trigger.get();
+	public String getPrefix() {
+		return prefix.get();
 	}
 
 	@Override

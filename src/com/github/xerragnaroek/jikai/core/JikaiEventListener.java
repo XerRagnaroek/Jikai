@@ -3,8 +3,6 @@ package com.github.xerragnaroek.jikai.core;
 
 import static com.github.xerragnaroek.jikai.core.Core.JM;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,38 +10,39 @@ import com.github.xerragnaroek.jikai.commands.user.JUCommandHandler;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
+import com.github.xerragnaroek.jikai.user.ReleaseMessageReactionHandler;
 
-import net.dv8tion.jda.api.entities.ChannelType;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.MessageReaction.ReactionEmote;
 import net.dv8tion.jda.api.events.ReadyEvent;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
+import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionRemoveAllEvent;
+import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionRemoveEvent;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
-import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
-import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent;
-import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
+import net.dv8tion.jda.api.events.message.priv.react.PrivateMessageReactionAddEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
-public class EventListener extends ListenerAdapter {
-	private final Logger log = LoggerFactory.getLogger(EventListener.class);
+public class JikaiEventListener extends ListenerAdapter {
+	private final Logger log = LoggerFactory.getLogger(JikaiEventListener.class);
 
 	@Override
-	public void onMessageReceived(MessageReceivedEvent event) {
+	public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
 		// ignore bots
 		if (!event.getAuthor().isBot()) {
-			if (event.isFromGuild()) {
-				Guild g = event.getGuild();
-				if (JM.hasManagerFor(g)) {
-					Jikai j = JM.get(g);
-					if (j.hasCompletedSetup()) {
-						runAsync(() -> j.getCommandHandler().handleMessage(event));
-					}
+			Guild g = event.getGuild();
+			if (JM.hasManagerFor(g)) {
+				Jikai j = JM.get(g);
+				if (j.hasCompletedSetup()) {
+					j.getCommandHandler().handleMessage(event);
 				}
 			}
 		}
+
 	}
 
 	@Override
@@ -51,36 +50,42 @@ public class EventListener extends ListenerAdapter {
 		JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getAuthor().getIdLong());
 		if (ju != null && ju.isSetupCompleted()) {
 			log.debug("Received pm from known jikai user");
-			runAsync(() -> JUCommandHandler.handleMessage(ju, event.getMessage().getContentRaw()));
+			JUCommandHandler.handleMessage(ju, event.getMessage().getContentRaw());
 		}
 	}
 
 	@Override
-	public void onMessageReactionAdd(MessageReactionAddEvent event) {
-		if (!event.getUser().isBot() && event.isFromType(ChannelType.TEXT)) {
+	public void onGuildMessageReactionAdd(GuildMessageReactionAddEvent event) {
+		if (!event.getUser().isBot()) {
 			Jikai j = JM.get(event.getGuild());
 			if (j.hasCompletedSetup() && JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
-				runAsync(() -> j.getALRHandler().handleReactionAdded(event));
+				j.getALRHandler().handleReactionAdded(event);
 			}
 		}
 	}
 
 	@Override
-	public void onMessageReactionRemove(MessageReactionRemoveEvent event) {
-		if (event.isFromGuild()) {
-			Jikai j = JM.get(event.getGuild());
-			if (j.hasCompletedSetup() && JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
-				runAsync(() -> j.getALRHandler().handleReactionRemoved(event));
-			}
+	public void onGuildMessageReactionRemove(GuildMessageReactionRemoveEvent event) {
+		Jikai j = JM.get(event.getGuild());
+		if (j.hasCompletedSetup() && JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
+			j.getALRHandler().handleReactionRemoved(event);
 		}
 	}
 
 	@Override
-	public void onMessageReactionRemoveAll(MessageReactionRemoveAllEvent event) {
-		if (event.isFromGuild()) {
-			Jikai j = JM.get(event.getGuild());
-			if (j.hasCompletedSetup()) {
-				runAsync(() -> j.getALRHandler().handleReactionRemovedAll(event));
+	public void onGuildMessageReactionRemoveAll(GuildMessageReactionRemoveAllEvent event) {
+		Jikai j = JM.get(event.getGuild());
+		if (j.hasCompletedSetup()) {
+			j.getALRHandler().handleReactionRemovedAll(event);
+		}
+	}
+
+	@Override
+	public void onPrivateMessageReactionAdd(PrivateMessageReactionAddEvent event) {
+		ReactionEmote re = event.getReactionEmote();
+		if (re.isEmoji()) {
+			if (re.getAsCodepoints().equals(ReleaseMessageReactionHandler.getWatchedEmojiUnicode())) {
+				ReleaseMessageReactionHandler.getRMRH().handleEmojiReacted(event);
 			}
 		}
 	}
@@ -97,7 +102,9 @@ public class EventListener extends ListenerAdapter {
 	public void onGuildJoin(GuildJoinEvent event) {
 		long gId = event.getGuild().getIdLong();
 		if (!JM.isKnownGuild(gId)) {
-			onNewGuild(event.getGuild());
+			Guild g = event.getGuild();
+			log.info("New Guild {}#{}, running setup", g.getName(), g.getId());
+			SetupHelper.runSetup(g);
 		}
 	}
 
@@ -106,7 +113,6 @@ public class EventListener extends ListenerAdapter {
 		long id = event.getGuild().getIdLong();
 		log.info("Guild {} left", event.getGuild().getName());
 		JM.remove(id);
-
 	}
 
 	@Override
@@ -115,7 +121,7 @@ public class EventListener extends ListenerAdapter {
 		JikaiUserManager jum = JikaiUserManager.getInstance();
 		if (!jum.isKnownJikaiUser(id)) {
 			log.info("New member joined, regestering new JikaiUser! [{}]", id);
-			jum.registerUser(id);
+			jum.registerUser(id, Core.JM.get(event.getGuild().getIdLong()));
 		}
 	}
 
@@ -128,18 +134,4 @@ public class EventListener extends ListenerAdapter {
 			jum.removeUser(id);
 		}
 	}
-
-	private void onNewGuild(Guild g) {
-		log.info("New Guild {}#{}, running setup", g.getName(), g.getId());
-		runAsync(() -> SetupHelper.runSetup(g));
-	}
-
-	private void runAsync(Runnable r) {
-		CompletableFuture.runAsync(r, Core.EXEC).whenComplete((v, e) -> {
-			if (e != null) {
-				Core.logThrowable(e);
-			}
-		});
-	}
-
 }

@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,12 +28,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.github.xerragnaroek.jikai.anime.alrh.ALRHData;
 import com.github.xerragnaroek.jikai.anime.alrh.ALRHandler;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
+import com.github.xerragnaroek.jikai.util.Pair;
 import com.github.xerragnaroek.jikai.util.prop.IntegerProperty;
 import com.github.xerragnaroek.jikai.util.prop.Property;
 
 @JsonInclude(Include.NON_EMPTY)
-@JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "trigger", "timezone", "exec_command_count", "list_channel_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "command_channel_id", "last_mentioned", "alrh_data" })
+@JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "prefix", "timezone", "language", "exec_command_count", "list_channel_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "command_channel_id", "last_mentioned", "msg_id_title", "alrh_data", "season_msg" })
 public class JikaiData {
 	private Property<Long> aniChId = new Property<>(0l);
 	private AtomicBoolean changed = new AtomicBoolean(false);
@@ -45,22 +49,23 @@ public class JikaiData {
 	private Property<Long> commandChId = new Property<>(0l);
 	private final Logger log;
 	private Property<Long> schedChId = new Property<>(0l);
-	private Property<String> trigger = new Property<>();
+	private Property<String> prefix = new Property<>();
 	private Property<ZoneId> zone = new Property<>();
 	private IntegerProperty execComs = new IntegerProperty(0);
+	private Property<JikaiLocale> locale = new Property<>(JikaiLocaleManager.getEN());
 	private BotData bd = JM.getJDM().getBotData();
 
 	public JikaiData(long guildId, boolean save) {
 		log = LoggerFactory.getLogger(JikaiData.class + "#" + guildId);
 		gId = guildId;
-		fileLoc = Paths.get(String.format("./data/%s.json", guildId));
+		fileLoc = Paths.get(String.format("./data/guilds/%s.json", guildId));
 		zone.onChange((old, n) -> {
 			if (old != null) {
 				JM.removeTimeZone(old, guildId);
 			}
 			JM.addTimeZone(n, guildId);
 		});
-		setTrigger(bd.getDefaultTrigger());
+		setPrefix(bd.getDefaultPrefix());
 		setTimeZone(bd.getDefaultTimeZone());
 		changed.set(save);
 		log.info("Made configuration for {}", guildId);
@@ -88,6 +93,26 @@ public class JikaiData {
 			return Collections.emptySet();
 		}
 
+	}
+
+	@JsonProperty("msg_id_title")
+	public Map<Long, String> getMessageIdTitleMap() {
+		ALRHandler alrh = JM.get(gId).getALRHandler();
+		if (alrh != null) {
+			return alrh.getMessageIdTitleMap();
+		} else {
+			return Collections.emptyMap();
+		}
+	}
+
+	@JsonProperty("season_msg")
+	public Pair<String, Long> getSeasonMsg() {
+		ALRHandler alrh = JM.get(gId).getALRHandler();
+		if (alrh != null) {
+			return alrh.getSeasonMsg();
+		} else {
+			return null;
+		}
 	}
 
 	@JsonProperty("anime_channel_id")
@@ -126,6 +151,16 @@ public class JikaiData {
 	}
 
 	@JsonIgnore
+	public JikaiLocale getLocale() {
+		return locale.get();
+	}
+
+	@JsonProperty("language")
+	public String getLocaleIdentifier() {
+		return locale.get().getIdentifier();
+	}
+
+	@JsonIgnore
 	public ZoneId getTimeZone() {
 		return zone.get();
 	}
@@ -135,9 +170,9 @@ public class JikaiData {
 		return zone.get().getId();
 	}
 
-	@JsonProperty("trigger")
-	public String getTrigger() {
-		return trigger.get();
+	@JsonProperty("prefix")
+	public String getPrefix() {
+		return prefix.get();
 	}
 
 	@JsonProperty("completed_setup")
@@ -171,22 +206,6 @@ public class JikaiData {
 
 	public Property<Long> listChannelIdProperty() {
 		return listChId;
-	}
-
-	public synchronized boolean save(boolean now) {
-		if (updatesAvailable() || now) {
-			ObjectMapper mapper = new ObjectMapper();
-			mapper.enable(SerializationFeature.INDENT_OUTPUT);
-			try {
-				Files.writeString(fileLoc, mapper.writeValueAsString(this));
-				log.info("Successfully saved data to {}", fileLoc);
-				changed.set(false);
-				return true;
-			} catch (IOException e) {
-				BotUtils.logAndSendToDev(log, "Failed saving data to " + fileLoc, e);
-			}
-		}
-		return false;
 	}
 
 	public Property<Long> scheduleChannelIdProperty() {
@@ -229,17 +248,21 @@ public class JikaiData {
 		return setData(zone, z, "timezone");
 	}
 
-	public String setTrigger(String trigger) {
-		trigger = StringEscapeUtils.escapeJson(trigger);
-		return setData(this.trigger, trigger, "trigger");
+	public String setPrefix(String prefix) {
+		prefix = StringEscapeUtils.escapeJava(prefix);
+		return setData(this.prefix, prefix, "prefix");
+	}
+
+	public JikaiLocale setLocale(JikaiLocale loc) {
+		return setData(locale, loc, "language");
 	}
 
 	public Property<ZoneId> timeZoneProperty() {
 		return zone;
 	}
 
-	public Property<String> triggerProperty() {
-		return trigger;
+	public Property<String> prefixProperty() {
+		return prefix;
 	}
 
 	private void hasChanged() {
@@ -270,9 +293,9 @@ public class JikaiData {
 	}
 
 	@JsonCreator
-	public static JikaiData of(@JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") long gId, @JsonProperty("trigger") Property<String> trig, @JsonProperty("anime_channel_id") Property<Long> aniChId, @JsonProperty("list_channel_id") Property<Long> listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") Property<Long> icId, @JsonProperty("schedule_channel_id") Property<Long> schId, @JsonProperty("command_channel_id") Property<Long> comChId) {
+	public static JikaiData of(@JsonProperty("language") String lang, @JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") long gId, @JsonProperty("prefix") Property<String> pre, @JsonProperty("anime_channel_id") Property<Long> aniChId, @JsonProperty("list_channel_id") Property<Long> listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") Property<Long> icId, @JsonProperty("schedule_channel_id") Property<Long> schId, @JsonProperty("command_channel_id") Property<Long> comChId, @JsonProperty("msg_id_title") Map<Long, String> msgIdTitleMap, @JsonProperty("season_msg") Pair<String, Long> seasonMsg) {
 		JikaiData jd = new JikaiData(gId, false);
-		setIfNonNull(jd.trigger, trig);
+		setIfNonNull(jd.prefix, pre);
 		setIfNonNull(jd.aniChId, aniChId);
 		setIfNonNull(jd.listChId, listChId);
 		if (zone != null) {
@@ -284,7 +307,8 @@ public class JikaiData {
 		setIfNonNull(jd.schedChId, schId);
 		setIfNonNull(jd.commandChId, comChId);
 		setIfNonNull(jd.execComs, execComs);
-		JM.getALHRM().addToInitMap(gId, data);
+		setIfNonNull(jd.locale, new Property<>(JikaiLocaleManager.getInstance().getLocale(lang)));
+		JM.getALHRM().addToInitMap(gId, data, msgIdTitleMap, seasonMsg);
 		return jd;
 	}
 
@@ -296,6 +320,22 @@ public class JikaiData {
 		log.info("exec_command_count updated to '{}'", execComs.incrementAndGet());
 		hasChanged();
 		return execComs.get();
+	}
+
+	public synchronized boolean save(boolean now) {
+		if (updatesAvailable() || now) {
+			ObjectMapper mapper = new ObjectMapper();
+			mapper.enable(SerializationFeature.INDENT_OUTPUT);
+			try {
+				Files.writeString(fileLoc, mapper.writeValueAsString(this));
+				log.info("Successfully saved data to {}", fileLoc);
+				changed.set(false);
+				return true;
+			} catch (IOException e) {
+				BotUtils.logAndSendToDev(log, "Failed saving data to " + fileLoc, e);
+			}
+		}
+		return false;
 	}
 
 	private static <T> void setIfNonNull(Property<T> gdp, Property<T> prop) {

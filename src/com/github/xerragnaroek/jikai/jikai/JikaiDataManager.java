@@ -22,11 +22,10 @@ import net.dv8tion.jda.api.entities.Guild;
  * This class manages the different servers' configs.
  * 
  * @author XerRagnaroek
- *
  */
 public class JikaiDataManager extends Manager<JikaiData> {
 
-	private BotData botData = new BotData(true);
+	private BotData botData = new BotData();
 
 	public JikaiDataManager() {
 		super(JikaiData.class);
@@ -56,10 +55,6 @@ public class JikaiDataManager extends Manager<JikaiData> {
 		return new JikaiData(gId, true);
 	}
 
-	private void initBotData() {
-		botData = new BotData(true);
-	}
-
 	void loadData(Path p) {
 		ObjectMapper mapper = new ObjectMapper();
 		JikaiData jd = readFromPath(p, mapper, JikaiData.class);
@@ -70,7 +65,10 @@ public class JikaiDataManager extends Manager<JikaiData> {
 
 	void loadBotData(Path loc) {
 		ObjectMapper mapper = new ObjectMapper();
-		botData = readFromPath(loc, mapper, BotData.class);
+		BotData tmp = readFromPath(loc, mapper, BotData.class);
+		if (tmp != null) {
+			botData = tmp;
+		}
 	}
 
 	private <T> T readFromPath(Path p, ObjectMapper mapper, Class<T> clazz) {
@@ -93,9 +91,7 @@ public class JikaiDataManager extends Manager<JikaiData> {
 				saved.incrementAndGet();
 			}
 		});
-		if (botData.save()) {
-			saved.incrementAndGet();
-		}
+		// botData.save();
 		if (saved.get() != 0) {
 			log.info("Saved {} JikaiData", saved.get());
 		} else {
@@ -108,9 +104,7 @@ public class JikaiDataManager extends Manager<JikaiData> {
 	}
 
 	@Override
-	public void init() {
-
-	}
+	public void init() {}
 
 	@Override
 	public void remove(long id) {

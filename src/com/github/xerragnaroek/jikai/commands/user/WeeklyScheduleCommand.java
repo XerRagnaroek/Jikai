@@ -1,5 +1,8 @@
 package com.github.xerragnaroek.jikai.commands.user;
 
+import java.util.Arrays;
+import java.util.List;
+
 import com.github.xerragnaroek.jikai.commands.ComUtils;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
@@ -15,13 +18,13 @@ public class WeeklyScheduleCommand implements JUCommand {
 	}
 
 	@Override
-	public String getAlternativeName() {
-		return "weekly";
+	public List<String> getAlternativeNames() {
+		return Arrays.asList("weekly");
 	}
 
 	@Override
-	public String getDescription() {
-		return "Enable/Disable the weekly schedule.";
+	public String getDescription(JikaiLocale loc) {
+		return loc.getString("com_ju_weekly_desc");
 	}
 
 	@Override
@@ -34,8 +37,8 @@ public class WeeklyScheduleCommand implements JUCommand {
 	}
 
 	@Override
-	public String getUsage() {
-		return "weekly_schedule <true/false>";
+	public String getUsage(JikaiLocale loc) {
+		return loc.getStringFormatted("com_ju_weekly_use", Arrays.asList("com"), getName());
 	}
 
 }

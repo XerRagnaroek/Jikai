@@ -44,6 +44,14 @@ public class JikaiManager extends Manager<Jikai> {
 		log.info("Jikai initialized!");
 	}
 
+	@Override
+	public Jikai registerNew(long id) {
+		if (Core.JDA.getGuildById(id) != null) {
+			return super.registerNew(id);
+		}
+		return null;
+	}
+
 	private void updateJikaisSeasonChanged(String newSeason) {
 		log.info("Season has changed to '" + newSeason + "', updating Jikias");
 		BotUtils.sendToAllAnimeChannels("The season has changed! We're now in\n **" + newSeason + "**!\n");

@@ -1,8 +1,10 @@
 package com.github.xerragnaroek.jikai.commands.guild;
 
+import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 public class ForceRegisterCommand implements GuildCommand {
 
@@ -12,13 +14,20 @@ public class ForceRegisterCommand implements GuildCommand {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
-		JikaiUserManager.getInstance().registerUser(event.getAuthor().getIdLong());
+	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments) {
+		long id = event.getAuthor().getIdLong();
+		if (!JikaiUserManager.getInstance().isKnownJikaiUser(id)) {
+			JikaiUserManager.getInstance().registerUser(id, Core.JM.get(event.getGuild().getIdLong()));
+		}
 	}
 
 	@Override
-	public String getDescription() {
-		return "Register with Jikai, this'll start the setup so you can subscribe to anime! No need to do it if you've already done it tho!";
+	public String getDescription(JikaiLocale loc) {
+		return loc.getString("com_g_register_desc");
 	}
 
+	@Override
+	public boolean isJikaiUserOnly() {
+		return false;
+	}
 }

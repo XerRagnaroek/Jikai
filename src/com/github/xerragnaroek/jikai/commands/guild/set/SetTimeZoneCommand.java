@@ -1,14 +1,17 @@
 package com.github.xerragnaroek.jikai.commands.guild.set;
 
+import java.time.DateTimeException;
 import java.time.ZoneId;
+import java.util.Arrays;
+import java.util.List;
 
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 public class SetTimeZoneCommand implements GuildCommand {
 	SetTimeZoneCommand() {}
@@ -19,22 +22,22 @@ public class SetTimeZoneCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getUsage() {
-		return "timezone <zoneid> (tzdb ids)";
+	public String getUsage(JikaiLocale loc) {
+		return loc.getStringFormatted("com_g_set_tz_use", Arrays.asList("com"), getName());
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments) {
 		String zone = arguments[0];
 		Jikai j = Core.JM.get(event.getGuild());
 		try {
 			ZoneId z = ZoneId.of(zone);
 			j.getJikaiData().setTimeZone(z);
-			j.getInfoChannel().sendMessage("Timezone has been changed to '" + z.getId() + "'").queue();
+			j.getInfoChannel().sendMessage(j.getLocale().getStringFormatted("com_g_set_tz_success", Arrays.asList("tz"), z.getId())).queue();
+		} catch (DateTimeException e) {
+			event.getChannel().sendMessage(j.getLocale().getStringFormatted("com_g_set_tz_fail", Arrays.asList("user"), event.getAuthor().getAsMention())).queue();
 		} catch (Exception e) {
-			EmbedBuilder eb = new EmbedBuilder();
-			eb.setDescription(event.getAuthor().getAsMention() + " that's an invalid zoneid. \nPlease refer to this [list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), specifically the row \"TZ database name\"!");
-			event.getTextChannel().sendMessage(eb.build()).queue();
+			// infochannel doesn't exist, already handled in getInfoChannel()
 		}
 	}
 
@@ -44,7 +47,12 @@ public class SetTimeZoneCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription() {
-		return "The TimeZone of this server, so the release updates are in your time. Default is \"Europe/Berlin\". Please refer to this [list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), specifically the row \\\"TZ database name\\\"!.";
+	public String getDescription(JikaiLocale loc) {
+		return loc.getString("com_g_set_tz_desc");
+	}
+
+	@Override
+	public List<String> getAlternativeNames() {
+		return Arrays.asList("tz");
 	}
 }

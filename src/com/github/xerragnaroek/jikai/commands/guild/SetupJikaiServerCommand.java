@@ -7,15 +7,16 @@ import java.util.Arrays;
 import javax.imageio.ImageIO;
 
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 /**
- * 
+ * This is only for the main Jikai server
  */
 public class SetupJikaiServerCommand implements GuildCommand {
 
@@ -27,12 +28,12 @@ public class SetupJikaiServerCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription() {
+	public String getDescription(JikaiLocale loc) {
 		return "Finish the setup for the central jikai server";
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments) {
 		g = event.getGuild();
 		g.createTextChannel("welcome").addPermissionOverride(g.getPublicRole(), Arrays.asList(Permission.VIEW_CHANNEL, Permission.MESSAGE_READ), Arrays.asList(Permission.MESSAGE_WRITE)).addPermissionOverride(g.getSelfMember(), Permission.ALL_CHANNEL_PERMISSIONS, 0l).setTopic("Welcome to Jikai! Please read the message below.").submit().thenAccept(this::welcome);
 	}

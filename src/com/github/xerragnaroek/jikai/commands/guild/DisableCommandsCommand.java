@@ -1,15 +1,19 @@
 package com.github.xerragnaroek.jikai.commands.guild;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiData;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 public class DisableCommandsCommand implements GuildCommand {
 	private final Logger log = LoggerFactory.getLogger(DisableCommandsCommand.class);
@@ -20,12 +24,12 @@ public class DisableCommandsCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getAlternativeName() {
-		return "disable_coms";
+	public List<String> getAlternativeNames() {
+		return Arrays.asList("dis_coms");
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
 		log.debug("Executing DisableCommandsCommand on guild {}#{}", g.getName(), g.getId());
 		Jikai j = Core.JM.get(g);
@@ -33,7 +37,7 @@ public class DisableCommandsCommand implements GuildCommand {
 		if (jd.areCommandsEnabled()) {
 			jd.setCommandsEnabled(false);
 			try {
-				j.getInfoChannel().sendMessage("Commands have been disabled.\nOnly members with the `MANAGE_SERVER` permission may call `" + jd.getTrigger() + "enable_commands` to reenable them.").queue();
+				j.getInfoChannel().sendMessage(j.getLocale().getStringFormatted("com_g_disable_com_msg", Arrays.asList("pre"), jd.getPrefix())).queue();
 			} catch (Exception e) {}
 		}
 	}
@@ -44,8 +48,13 @@ public class DisableCommandsCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription() {
-		return "Disables all of this bot's commands for everyone.";
+	public String getDescription(JikaiLocale loc) {
+		return loc.getString("com_g_disable_com_desc");
+	}
+
+	@Override
+	public boolean isAlwaysEnabled() {
+		return true;
 	}
 
 }

@@ -33,19 +33,20 @@ public class JikaiLocaleManager {
 	}
 
 	public JikaiLocale getLocale(String identifier) {
-		return locales.get(identifier);
+		return locales.get(identifier.toLowerCase());
 	}
 
 	public boolean hasLocale(String identifier) {
-		return locales.containsKey(identifier);
+		return locales.containsKey(identifier.toLowerCase());
 	}
 
 	public Set<String> getAvailableLocales() {
 		return new HashSet<>(locales.keySet());
 	}
 
-	public void loadLocale(Path locale) {
-		String identifier = StringUtils.substringBefore(locale.getFileName().toString(), ".");
+	private void loadLocale(Path locale) {
+		log.debug("Loading locale from {}", locale);
+		String identifier = StringUtils.substringBefore(locale.getFileName().toString(), ".").toLowerCase();
 		JikaiLocale jloc = new JikaiLocale(identifier);
 		try {
 			JsonNode loc = new ObjectMapper().readTree(locale.toFile());
@@ -58,17 +59,22 @@ public class JikaiLocaleManager {
 
 	}
 
-	public static JikaiLocale getEN() {
-		return getInstance().getLocale("en");
-	}
-
-	public static void loadLocales() {
-		getInstance();
+	private void loadLocalesImpl() {
+		log.info("Loading Locales...");
 		try {
 			Files.walk(Path.of(Core.DATA_LOC.toString(), "/locales/")).filter(p -> Files.isRegularFile(p)).forEach(instance::loadLocale);
 		} catch (IOException e) {
 			Core.ERROR_LOG.error("Failed walking locale folder", e);
 		}
+	}
+
+	public static JikaiLocale getEN() {
+		return getInstance().getLocale("en");
+	}
+
+	public static void loadLocales() {
+		getInstance().loadLocalesImpl();
+
 	}
 
 }

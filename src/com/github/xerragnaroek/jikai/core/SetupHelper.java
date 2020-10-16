@@ -51,7 +51,7 @@ public class SetupHelper extends ListenerAdapter {
 		setTc.sendMessage(g.retrieveOwner().complete().getAsMention()).complete();
 		MessageBuilder mb = new MessageBuilder("\nThis is where the bot setup will take place.\n");
 		mb.append("The bot will create 4 textchannels:\n**jikai_list** - for the anime list\n**jikai_schedule** - for the anime release schedule\n**jikai_anime** - for upcoming release notifications\n**jikai_info** - for status updates and information concerning the bot\nFurthermore also set these settings:\n");
-		mb.append("**trigger** = '!' - what needs to be written before a command for the bot to recognize it. E.g. !help\n");
+		mb.append("**prefix** = '!' - what needs to be written before a command for the bot to recognize it. E.g. !help\n");
 		mb.append("**timezone** = 'Europe/Berlin' - the timezone that will be used to adjust release updates.\n");
 		mb.append("You can change the latter settings via the set commands (see !help for more info)!\n");
 		mb.append("Feel free to move or rename the channels, the bot is using their unique ID, so the name doesn't matter.");

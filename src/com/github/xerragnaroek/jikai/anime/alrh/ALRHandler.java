@@ -1,7 +1,13 @@
 package com.github.xerragnaroek.jikai.anime.alrh;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -13,28 +19,31 @@ import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiData;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Initilizable;
+import com.github.xerragnaroek.jikai.util.Pair;
 import com.github.xerragnaroek.jikai.util.prop.Property;
 
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
-import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent;
-import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
+import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
+import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionRemoveAllEvent;
+import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionRemoveEvent;
 
 /**
  * The actual implementation of a per guild AnimeListReactionHandler. <br>
  * Sends the list messages and gives users the appropriate roles when they react to those messages.
  * 
  * @author XerRagnaroek
- *
  */
 public class ALRHandler implements Initilizable {
 	JikaiData jData;
 	final long gId;
 	private final Logger log;
 	ALRHDataBase alrhDB;
-	Property<Long> tcId = new Property<>(); //Textchannel Id
+	Property<Long> tcId = new Property<>(); // Textchannel Id
 	private ALHandler alh;
 	private ARHandler arh;
 	private AtomicBoolean changed;
@@ -67,8 +76,10 @@ public class ALRHandler implements Initilizable {
 	 * @param event
 	 *            - the event to handle
 	 */
-	public void handleReactionAdded(MessageReactionAddEvent event) {
-		arh.handleReactionAdded(event);
+	public void handleReactionAdded(GuildMessageReactionAddEvent event) {
+		if (!alh.isSending()) {
+			arh.handleReactionAdded(event);
+		}
 	}
 
 	/**
@@ -78,8 +89,10 @@ public class ALRHandler implements Initilizable {
 	 * @param event
 	 *            - the event to handle
 	 */
-	public void handleReactionRemoved(MessageReactionRemoveEvent event) {
-		arh.handleReactionRemoved(event);
+	public void handleReactionRemoved(GuildMessageReactionRemoveEvent event) {
+		if (!alh.isSending()) {
+			arh.handleReactionRemoved(event);
+		}
 	}
 
 	/**
@@ -89,34 +102,63 @@ public class ALRHandler implements Initilizable {
 	 * @param event
 	 *            - the event to handle
 	 */
-	public void handleReactionRemovedAll(MessageReactionRemoveAllEvent event) {
-		arh.handleReactionRemovedAll(event);
+	public void handleReactionRemovedAll(GuildMessageReactionRemoveAllEvent event) {
+		if (!alh.isSending()) {
+			arh.handleReactionRemovedAll(event);
+		}
 	}
 
 	/**
 	 * Send the anime list.
 	 */
-	public void sendList() {
+	public CompletableFuture<Void> sendList() {
 		try {
-			alh.sendList();
+			CompletableFuture<Void> send = BotUtils.retryFuture(2, () -> {
+				try {
+					return alh.sendListNew();
+				} catch (Exception e1) {
+					return CompletableFuture.failedFuture(e1);
+				}
+			});
+			try {
+				TextChannel info = j.getInfoChannel();
+				JikaiLocale loc = j.getLocale();
+				info.sendMessage(loc.getString("g_list_send")).submit().thenAccept(m -> {
+					Instant start = Instant.now();
+					send.whenComplete((v, e) -> {
+						if (e == null) {
+							m.editMessage(loc.getStringFormatted("g_list_done", Arrays.asList("time"), BotUtils.formatMillis(Duration.between(start, Instant.now()).toMillis(), loc))).queue();
+						} else {
+							alh.setSending(false);
+							m.editMessage(loc.getString("g_list_fail")).queue();
+							BotUtils.sendToDev("Failed sending the list after two retries, check the logs please!");
+						}
+					});
+				});
+			} catch (Exception e) {
+				// no info channel
+			}
+			return send;
 		} catch (Exception e) {
-			log.error("", e);
+			return CompletableFuture.failedFuture(e);
 		}
 	}
 
 	@Override
 	public void init() {
 		log.debug("Initializing...");
-		jData.animeChannelIdProperty().bindAndSet(tcId);
-		jData.listChannelIdProperty().bind(tcId);
+		// jData.animeChannelIdProperty().bindAndSet(tcId);
+		jData.listChannelIdProperty().bindAndSet(tcId);
 		if (alrhDB.getData().size() != AnimeDB.size()) {
-			try {
-				alh.sendList();
-			} catch (Exception e) {
-				log.error("", e);
-			}
+			log.debug("Saved ALRHData doesn't fit loaded anime");
+			sendList();
 		} else {
-			alrhDB.forEachMessage(this::checkIfListChanged);
+			if (!checkIfListValid()) {
+				log.debug("List is invalid, resending it!");
+				BotUtils.clearChannel(Core.JDA.getGuildById(gId).getTextChannelById(tcId.get()));
+				alrhDB.clearData();
+				sendList();
+			}
 		}
 		initialized.set(true);
 		log.info("Initialized");
@@ -133,15 +175,35 @@ public class ALRHandler implements Initilizable {
 	 * newTc; sendList(); }
 	 */
 
-	private void checkIfListChanged(long msgId, Set<ALRHData> data) {
+	private boolean checkIfListValid() {
 		Guild g = Core.JDA.getGuildById(gId);
 		long tcId = alrhDB.getSentTextChannelId();
-		if (tcId != 0) {
+		if (tcId != 0 && g != null) {
 			TextChannel tc = g.getTextChannelById(alrhDB.getSentTextChannelId());
 			if (tc != null) {
-				arh.validateReactions(g, tc, msgId, data);
+				Pair<String, Long> seasonMsg = alrhDB.getSeasonMsg();
+				if (seasonMsg != null) {
+					try {
+						Message msg = tc.retrieveMessageById(seasonMsg.getRight()).submit().exceptionally(e -> {
+							return null;
+						}).get();
+						if (msg != null) {
+							for (Entry<Long, Set<ALRHData>> entry : alrhDB.getMsgIdDataMap().entrySet()) {
+								try {
+									Message m = tc.retrieveMessageById(entry.getKey()).submit().get();
+									return arh.validateReactions(m, entry.getValue());
+								} catch (InterruptedException | ExecutionException e) {
+									return false;
+								}
+							}
+						}
+					} catch (InterruptedException | ExecutionException e1) {
+						log.error("", e1);
+					}
+				}
 			}
 		}
+		return false;
 	}
 
 	boolean roleExists(Guild g, String name) {
@@ -161,7 +223,7 @@ public class ALRHandler implements Initilizable {
 				e.printStackTrace();
 			}
 		}
-		return noMsg.get() || ids.size() != amsgs.size() || oldTc == null || !(AnimeDB.getAnimeDBVersion() == alrhDB.getSentABVersion()) || !oldTc.getId().equals(tcId);
+		return noMsg.get() || ids.size() != amsgs.size() || oldTc == null || !oldTc.getId().equals(tcId);
 	}
 
 	void dataChanged() {
@@ -180,8 +242,16 @@ public class ALRHandler implements Initilizable {
 		alrhDB.addData(data);
 	}
 
+	void setMsgIdTitleMap(Map<Long, String> map) {
+		alrhDB.setMsgIdEmbedTitleMap(map);
+	}
+
 	public Set<ALRHData> getData() {
 		return alrhDB.getData();
+	}
+
+	public Map<Long, String> getMessageIdTitleMap() {
+		return alrhDB.getMsgIdTitleMap();
 	}
 
 	@Override
@@ -192,6 +262,14 @@ public class ALRHandler implements Initilizable {
 	void update(AnimeUpdate au) {
 		arh.update(au);
 		alh.update(au);
+	}
+
+	void setSeasonMsg(Pair<String, Long> msg) {
+		alrhDB.setSeasonMsg(msg);
+	}
+
+	public Pair<String, Long> getSeasonMsg() {
+		return alrhDB.getSeasonMsg();
 	}
 
 }

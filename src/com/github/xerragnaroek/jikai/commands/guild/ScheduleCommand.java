@@ -3,15 +3,15 @@ package com.github.xerragnaroek.jikai.commands.guild;
 
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 /**
  * The "schedule" command
  * 
  * @author XerRagnaroek
- *
  */
 public class ScheduleCommand implements GuildCommand {
 
@@ -21,7 +21,7 @@ public class ScheduleCommand implements GuildCommand {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments) {
 		ScheduleManager.sendScheduleToJikai(Core.JM.get(event.getGuild()));
 	}
 
@@ -31,7 +31,7 @@ public class ScheduleCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription() {
-		return "Sends this week's anime schedule, for this server's timezone.";
+	public String getDescription(JikaiLocale loc) {
+		return loc.getString("com_g_sched_desc");
 	}
 }

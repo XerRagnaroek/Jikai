@@ -4,6 +4,8 @@ package com.github.xerragnaroek.jikai.core;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
@@ -16,8 +18,10 @@ import org.apache.commons.collections4.IteratorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jikai.anime.ani.AniListSyncer;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.jikai.JikaiManager;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.BooleanProperty;
 import com.github.xerragnaroek.jikai.util.prop.Property;
@@ -25,6 +29,7 @@ import com.github.xerragnaroek.jikai.util.prop.Property;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.requests.RestAction;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
 public class Core {
@@ -34,33 +39,50 @@ public class Core {
 	private static String token;
 	public static long DEV_ID;
 	private static long saveDelay;
+	private static long aniSyncMinutes;
 	public final static Logger ERROR_LOG = LoggerFactory.getLogger("ERROR");
-	public static final JikaiManager JM = new JikaiManager();
 	public static final Path DATA_LOC = Paths.get("./data/");
 	public static final ScheduledExecutorService EXEC = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors() * 2);
 	public static final Property<String> CUR_SEASON = new Property<>();
 	public static BooleanProperty INITIAL_LOAD = new BooleanProperty(true);
+	public static final JikaiManager JM = new JikaiManager();
 
 	public static void main(String[] args) throws LoginException, InterruptedException, ExecutionException, ClassNotFoundException, IOException {
+		Instant start = Instant.now();
 		log.info("Initializing");
 		long mem = Runtime.getRuntime().freeMemory();
 		handleArgs(args);
-		JDABuilder builder = JDABuilder.create(token, GatewayIntent.DIRECT_MESSAGES, GatewayIntent.GUILD_MESSAGE_REACTIONS, GatewayIntent.GUILD_MESSAGES, GatewayIntent.GUILD_MEMBERS);
-		builder.disableCache(Arrays.asList(CacheFlag.ACTIVITY, CacheFlag.VOICE_STATE, CacheFlag.EMOTE, CacheFlag.CLIENT_STATUS));
-		builder.addEventListeners(new EventListener());
+		JDABuilder builder = JDABuilder.create(token, GatewayIntent.DIRECT_MESSAGES, GatewayIntent.DIRECT_MESSAGE_REACTIONS, GatewayIntent.GUILD_MESSAGE_REACTIONS, GatewayIntent.GUILD_MESSAGES, GatewayIntent.GUILD_MEMBERS);
+		builder.disableCache(Arrays.asList(CacheFlag.ACTIVITY, CacheFlag.VOICE_STATE, CacheFlag.EMOTE));
+		builder.setEventPool(EXEC, true);
+		builder.addEventListeners(new JikaiEventListener());
 		JDA = builder.build();
 		JDA.awaitReady();
 		init(args);
+		sendOnlineMsg(start);
 		log.info("Initialized, using a total of " + ((mem - Runtime.getRuntime().freeMemory()) / 1024) + " kb of memory");
 	}
 
 	private static void init(String[] args) {
-		// RestAction.setDefaultFailure(e -> BotUtils.logAndSendToDev(ERROR_LOG, "", e));
+		RestAction.setDefaultFailure(Core::logThrowable);
 		CUR_SEASON.dontRunConsumerIf(() -> INITIAL_LOAD.get());
 		JM.init();
 		JM.startSaveThread(saveDelay);
-		BotUtils.sendToAllInfoChannels("I'm online again!");
 		INITIAL_LOAD.set(false);
+		AniListSyncer.init();
+		AniListSyncer.startSyncThread(aniSyncMinutes);
+	}
+
+	private static void sendOnlineMsg(Instant start) {
+		long millis = Duration.between(start, Instant.now()).toMillis();
+		JM.forEach(j -> {
+			JikaiLocale loc = j.getLocale();
+			try {
+				j.getInfoChannel().sendMessage(loc.getStringFormatted("g_online_msg", Arrays.asList("time"), BotUtils.formatMillis(millis, loc))).submit();
+			} catch (Exception e) {
+				ERROR_LOG.error("", e);
+			}
+		});
 	}
 
 	private static void handleArgs(String args[]) {
@@ -90,6 +112,10 @@ public class Core {
 					tmp = Long.parseLong(it.next());
 					AnimeDB.setUpdateRate(tmp);
 					log.info("Set anime_base_update_rate to " + tmp);
+					break;
+				case "-ani_sync_rate":
+					aniSyncMinutes = Long.parseLong(it.next());
+					log.info("Set AniList sync rate to " + aniSyncMinutes);
 					break;
 				default:
 					ERROR_LOG.error("Unrecognized option '" + arg + "'");

@@ -16,8 +16,10 @@ import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
+import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Initilizable;
 import com.github.xerragnaroek.jikai.util.Manager;
+import com.github.xerragnaroek.jikai.util.Pair;
 import com.github.xerragnaroek.jikai.util.prop.Property;
 
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -29,7 +31,6 @@ import net.dv8tion.jda.internal.utils.EncodingUtil;
  * messages.
  * 
  * @author XerRagnaroek
- *
  */
 public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 
@@ -40,7 +41,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 	private Map<String, List<String>> aniAlph = new TreeMap<>();
 	private Property<Set<DTO>> listMsgs = new Property<>();
 	private final Logger log = LoggerFactory.getLogger(ALRHManager.class);
-	private Map<Long, Set<ALRHData>> initMap = new TreeMap<>();
+	private Map<Long, InitData> initMap = new TreeMap<>();
 
 	@Override
 	public void init() {
@@ -70,24 +71,34 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 
 	private void initImpls() {
 		log.debug("Loading ALRHs");
-		initMap.forEach((l, data) -> {
-			ALRHandler impl = new ALRHandler(l);
-			if (data != null) {
-				removeOldEntries(data);
-				impl.setData(data);
+		initMap.forEach((l, id) -> {
+			Jikai j = Core.JM.get(l);
+			// j would be null if the bot's loading data for a guild that it isn't connected to
+			if (j != null) {
+				Set<ALRHData> data = id.getData();
+				Map<Long, String> msgIdTitleMap = id.getMsgIdEmbedTitlesMap();
+				Pair<String, Long> seasonMsg = id.getSeasonMsg();
+				ALRHandler impl = new ALRHandler(l);
+				if (data != null && !data.isEmpty()) {
+					removeOldEntries(data);
+					impl.setData(data);
+				}
+				if (msgIdTitleMap != null && !msgIdTitleMap.isEmpty()) {
+					impl.setMsgIdTitleMap(msgIdTitleMap);
+				}
+				impl.setSeasonMsg(seasonMsg);
+				j.setALRH(impl);
+				impl.init();
+				impls.put(l, impl);
 			}
-			Jikai j = Core.JM.get(impl.gId);
-			j.setALRH(impl);
-			impl.init();
-			impls.put(l, impl);
 		});
-		//not needed anymore
+		// not needed anymore
 		initMap.clear();
 		initMap = null;
 	}
 
 	private void removeOldEntries(Set<ALRHData> data) {
-		Set<String> anime = AnimeDB.getSeasonalAnime().stream().map(Anime::getTitleRomaji).collect(Collectors.toSet());
+		Set<String> anime = AnimeDB.getLoadedAnime().stream().map(Anime::getTitleRomaji).collect(Collectors.toSet());
 		new TreeSet<>(data).stream().filter(t -> !anime.contains(t.getTitle())).forEach(t -> {
 			data.remove(t);
 			log.debug("Removed old ALRHData for '{}'", t);
@@ -129,8 +140,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		log.debug("Creating list for letter {} with {} titles", letter, titles.size());
 		Set<ALRHData> data = new TreeSet<>();
 		StringBuilder mb = new StringBuilder();
-		mb.append("**" + letter + "**\n");
-		//:regional_indicator_a:
+		// :regional_indicator_a:
 		int cp = 0x1F1E6;
 		String uni = "";
 		for (String t : titles) {
@@ -141,7 +151,9 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 			cp++;
 		}
 		EmbedBuilder eb = new EmbedBuilder();
+		eb.setTitle(letter);
 		eb.setDescription(mb);
+		BotUtils.addJikaiMark(eb);
 		return new DTO(eb.build(), data);
 	}
 
@@ -154,7 +166,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 	 */
 	private void mapAnimesToStartingLetter() {
 		log.debug("Mapping animes to starting letter");
-		Set<Anime> data = AnimeDB.getSeasonalAnime();
+		Set<Anime> data = AnimeDB.getLoadedAnime();
 		aniAlph = checkReactionLimit(data.stream().map(Anime::getTitleRomaji).sorted(String.CASE_INSENSITIVE_ORDER).collect(Collectors.groupingBy(a -> "" + a.toUpperCase().charAt(0))));
 		log.info("Mapped {} anime to {} letters", data.size(), aniAlph.size());
 	}
@@ -181,8 +193,8 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		return checked;
 	}
 
-	public void addToInitMap(long id, Set<ALRHData> data) {
-		initMap.put(id, data);
+	public void addToInitMap(long id, Set<ALRHData> data, Map<Long, String> map, Pair<String, Long> seasonMsg) {
+		initMap.put(id, new InitData(data, map, seasonMsg));
 	}
 
 	@Override
@@ -195,7 +207,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 /**
  * Utility class for passing a message and a map of titles and unicodes
  */
-class DTO {
+class DTO implements Comparable<DTO> {
 	Set<ALRHData> data;
 	MessageEmbed me;
 
@@ -210,5 +222,15 @@ class DTO {
 
 	Set<ALRHData> getALRHData() {
 		return data;
+	}
+
+	@Override
+	public int compareTo(DTO o) {
+		return me.getTitle().compareTo(o.me.getTitle());
+	}
+
+	@Override
+	public String toString() {
+		return "DTO:[" + me.getTitle() + "," + data.size() + "]";
 	}
 }

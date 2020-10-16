@@ -13,8 +13,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -35,7 +37,6 @@ import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
  * Or text.
  * 
  * @author XerRagnaroek
- *
  */
 public class AnimeTable {
 
@@ -54,7 +55,7 @@ public class AnimeTable {
 		zone = z;
 		initMap();
 		loadFont();
-		//font = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB).getGraphics().getFont();
+		// font = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB).getGraphics().getFont();
 	}
 
 	private void loadFont() {
@@ -153,8 +154,8 @@ public class AnimeTable {
 		log.debug("Image has dimensions: width={}, height={}", img.getWidth(), img.getHeight());
 		g = img.getGraphics();
 		log.debug("Set color to {}", backgroundCol.toString());
-		//g.setColor(backgroundCol);
-		//g.fillRect(0, 0, img.getWidth(), img.getHeight());
+		// g.setColor(backgroundCol);
+		// g.fillRect(0, 0, img.getWidth(), img.getHeight());
 		g.setColor(Color.white);
 		g.setFont(dayFont);
 		int curY = (int) dayBounds.getHeight();
@@ -170,7 +171,7 @@ public class AnimeTable {
 		}
 		log.debug("Image successfully created");
 		return img;
-		//return map.values().stream().findAny().get().toImage(padding, font);
+		// return map.values().stream().findAny().get().toImage(padding, font);
 	}
 
 	private void addJikaiMark(BufferedImage img) {
@@ -183,13 +184,14 @@ public class AnimeTable {
 		g.drawString(mark, img.getWidth() - padding - strWidth, img.getHeight() - padding);
 	}
 
-	public Map<DayOfWeek, String> toFormatedWeekString(TitleLanguage tl, boolean includeDay) {
+	public Map<DayOfWeek, String> toFormatedWeekString(TitleLanguage tl, boolean includeDay, Locale loc) {
 		Map<DayOfWeek, String> m = new TreeMap<>();
 		table.forEach((day, map) -> {
 			StringBuilder bob = new StringBuilder();
 			if (includeDay) {
-				bob.append(day + "\n");
-				bob.append(StringUtils.repeat("=", day.toString().length()) + "\n");
+				String dayLoc = day.getDisplayName(TextStyle.FULL, loc);
+				bob.append(dayLoc + "\n");
+				bob.append(StringUtils.repeat("=", dayLoc.length()) + "\n");
 			}
 			map.forEach((lt, cell) -> {
 				bob.append(String.format("[%s]%n", dtf.format(lt)));
@@ -202,7 +204,7 @@ public class AnimeTable {
 
 	@Override
 	public String toString() {
-		return StringUtils.joinWith("\n", toFormatedWeekString(TitleLanguage.ROMAJI, true).values());
+		return StringUtils.joinWith("\n", toFormatedWeekString(TitleLanguage.ROMAJI, true, new Locale("en")).values());
 	}
 }
 
@@ -242,9 +244,9 @@ class Cell implements Comparable<Cell> {
 			Rectangle2D titleBounds = fm.getStringBounds(a.getTitle(TitleLanguage.ROMAJI), g);
 			double titleWidth = titleBounds.getWidth();
 			double imgWidth = img.getWidth();
-			//greatest width is the width of the cell
+			// greatest width is the width of the cell
 			double cellWidth = (titleWidth > imgWidth ? titleWidth : imgWidth) + padding * 2;
-			//width of image is width of widest cell
+			// width of image is width of widest cell
 			width = width > cellWidth ? width : cellWidth;
 			height += titleBounds.getHeight() + padding * 2 + img.getHeight();
 		}
@@ -252,8 +254,8 @@ class Cell implements Comparable<Cell> {
 		log.debug("Image has dimensions: width={}, height={}", (int) width, (int) height);
 		BufferedImage img = new BufferedImage((int) width, (int) height, BufferedImage.TYPE_4BYTE_ABGR);
 		g = img.getGraphics();
-		//g.setColor(backgroundCol);
-		//g.fillRect(0, 0, img.getWidth(), img.getHeight());
+		// g.setColor(backgroundCol);
+		// g.fillRect(0, 0, img.getWidth(), img.getHeight());
 		g.setColor(Color.white);
 		g.setFont(timeFont);
 		fm = g.getFontMetrics(f);
@@ -262,7 +264,7 @@ class Cell implements Comparable<Cell> {
 		g.drawString(timeStr, curX, curY);
 		g.setFont(f);
 		fm = g.getFontMetrics();
-		//curY += padding;
+		// curY += padding;
 		for (Entry<Anime, BufferedImage> entry : ani.entrySet()) {
 			if (entry.getKey().getId() == 115136) {
 				log.debug("debug point :)");

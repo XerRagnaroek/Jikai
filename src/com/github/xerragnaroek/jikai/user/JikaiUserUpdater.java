@@ -2,27 +2,34 @@
 package com.github.xerragnaroek.jikai.user;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
@@ -71,25 +78,54 @@ public class JikaiUserUpdater {
 	}
 
 	private void subAdd(JikaiUser ju) {
-		ju.subscribedAnimesProperty().onAdd(id -> {
-			log.debug("{} subscribed to {}", ju.getId(), id);
+		ju.getSubscribedAnime().onAdd((id, cause) -> {
+			MDC.put("id", String.valueOf(ju.getId()));
+			log.debug("subscribed to {}", id);
 			Anime a = AnimeDB.getAnime(id);
+			MessageEmbed me = BotUtils.makeSimpleEmbed("If you get this message, please report it as a bug!");
 			if (a.hasDataForNextEpisode()) {
 				animeAddImpl(a, id, ju);
+				me = subAddMsg(a, ju, cause);
 			} else {
-				JikaiLocale loc = ju.getLocale();
-				if (!Core.INITIAL_LOAD.get()) {
-					EmbedBuilder eb = new EmbedBuilder();
-					eb.setTitle(loc.getString("ju_eb_anime_no_data_available_title"), a.getAniUrl());
-					eb.setThumbnail(a.getCoverImageMedium());
-					eb.setDescription(loc.getStringFormatted("ju_eb_anime_no_data_available_desc", Arrays.asList("%title%"), a.getTitle(ju.getTitleLanguage())));
-					ju.sendPM(eb.build());
-				}
+				me = subAddNoDataMsg(a, ju, cause);
 			}
+			if (!Core.INITIAL_LOAD.get()) {
+				ju.sendPM(me);
+			}
+			MDC.remove("id");
 		});
 	}
 
+	private MessageEmbed subAddMsg(Anime a, JikaiUser ju, String cause) {
+		JikaiLocale loc = ju.getLocale();
+		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
+		eb.setThumbnail(a.getBiggestAvailableCoverImage());
+		eb.setTitle(loc.getString("ju_eb_sub_add_title"));
+		long seconds = Duration.between(LocalDateTime.now(ju.getTimeZone()), a.getNextEpisodeDateTime(ju.getTimeZone()).get()).toSeconds();
+		eb.setDescription(loc.getStringFormatted("ju_eb_sub_add_desc", Arrays.asList("title", "time", "cause"), "[" + a.getTitle(ju.getTitleLanguage()) + "](" + a.getAniUrl() + ")", BotUtils.formatSeconds(seconds, loc), cause));
+		return eb.build();
+	}
+
+	private MessageEmbed subAddNoDataMsg(Anime a, JikaiUser ju, String cause) {
+		JikaiLocale loc = ju.getLocale();
+		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
+		eb.setTitle(loc.getString("ju_eb_sub_add_title"));
+		eb.setThumbnail(a.getBiggestAvailableCoverImage());
+		eb.setDescription(loc.getStringFormatted("ju_eb_sub_add_no_data_desc", Arrays.asList("title", "cause"), "[" + a.getTitle(ju.getTitleLanguage()) + "](" + a.getAniUrl() + ")", cause));
+		return eb.build();
+	}
+
+	private MessageEmbed subRemMsg(Anime a, JikaiUser ju, String cause) {
+		JikaiLocale loc = ju.getLocale();
+		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
+		eb.setThumbnail(a.getBiggestAvailableCoverImage());
+		eb.setTitle(loc.getString("ju_eb_sub_rem_title"));
+		eb.setDescription(loc.getStringFormatted("ju_eb_sub_rem_desc", Arrays.asList("title", "cause"), "[" + a.getTitle(ju.getTitleLanguage()) + "](" + a.getAniUrl() + ")", cause));
+		return eb.build();
+	}
+
 	private void animeAddImpl(Anime a, int id, JikaiUser ju) {
+		log.debug("Scheduling Anime {} for JUser {}", a.getTitleRomaji(), ju.getId());
 		stepMap.putIfAbsent(id, new ConcurrentHashMap<>());
 		stepMap.compute(id, (idA, map) -> {
 			ju.getPreReleaseNotifcationSteps().forEach(step -> {
@@ -101,6 +137,7 @@ public class JikaiUserUpdater {
 
 	private void stepAdd(JikaiUser ju) {
 		ju.preReleaseNotificationStepsProperty().onAdd(step -> {
+			MDC.put("id", String.valueOf(ju.getId()));
 			log.debug("{} added PreReleaseNotificationStep {}", ju.getId(), step);
 			ju.getSubscribedAnime().forEach(id -> {
 				Anime a = AnimeDB.getAnime(id);
@@ -108,6 +145,7 @@ public class JikaiUserUpdater {
 					addToAnimeStepMap(id, step, a, ju);
 				}
 			});
+			MDC.remove("id");
 		});
 	}
 
@@ -121,7 +159,9 @@ public class JikaiUserUpdater {
 	private Map<Integer, Set<JikaiUser>> addToStepUserMap(Map<Integer, Set<JikaiUser>> map, int step, Anime a, int id, JikaiUser ju) {
 		map.putIfAbsent(step, Collections.synchronizedSet(new HashSet<>()));
 		map.get(step).add(ju);
+		log.debug("JUser {} has been added to map for {}, step {}", ju.getId(), a.getTitleRomaji(), step);
 		if (!hasFuture(id, step)) {
+			log.debug("Scheduling new future for {}, step {}", a.getTitleRomaji(), step);
 			scheduleStepUpdate(a, step);
 			log.debug("Scheduled new update future {} minutes before release of {}", step / 60, a.getId());
 		}
@@ -129,7 +169,7 @@ public class JikaiUserUpdater {
 	}
 
 	private void subRem(JikaiUser ju) {
-		ju.subscribedAnimesProperty().onRemove(id -> {
+		ju.getSubscribedAnime().onRemove((id, cause) -> {
 			if (stepMap.containsKey(id)) {
 				stepMap.compute(id, (idA, map) -> {
 					ju.getPreReleaseNotifcationSteps().forEach(step -> {
@@ -138,6 +178,10 @@ public class JikaiUserUpdater {
 					return handleMapEmpty(map, id);
 				});
 			}
+			Anime a;
+			if ((a = AnimeDB.getAnime(id)) != null) {
+				ju.sendPM(subRemMsg(a, ju, cause));
+			}
 		});
 
 	}
@@ -145,11 +189,14 @@ public class JikaiUserUpdater {
 	private void stepRem(JikaiUser ju) {
 		ju.preReleaseNotificationStepsProperty().onRemove(step -> {
 			ju.getSubscribedAnime().forEach(id -> {
-				stepMap.compute(id, (idA, map) -> {
-					removeFromStepJUMap(id, step, ju, map);
-					return handleMapEmpty(map, id);
-				});
+				if (stepMap.containsKey(id)) {
+					stepMap.compute(id, (idA, map) -> {
+						removeFromStepJUMap(id, step, ju, map);
+						return handleMapEmpty(map, id);
+					});
+				}
 			});
+
 		});
 	}
 
@@ -217,8 +264,16 @@ public class JikaiUserUpdater {
 
 	public void updateUser(Anime a, int step) {
 		stepMap.get(a.getId()).get(step).forEach(ju -> {
+			log.debug("Sending update: JUser={},Anime={},Step={}", ju.getId(), a.getTitleRomaji(), step);
 			MessageEmbed me = step == 0 ? makeNotifyRelease(a, ju) : makeNotifyEmbed(a, step, ju);
-			ju.sendPM(me);
+			BotUtils.retryFuture(2, () -> BotUtils.sendPM(ju.getUser(), me).thenAccept(m -> {
+				if (step == 0) {
+					m.addReaction(ReleaseMessageReactionHandler.getWatchedEmojiUnicode()).submit().thenAccept(v -> {
+						log.debug("Added watched emoji to message {}" + m.getIdLong());
+						ReleaseMessageReactionHandler.getRMRH().registerNewReleaseMessage(m.getIdLong());
+					});
+				}
+			}));
 		});
 	}
 
@@ -246,14 +301,24 @@ public class JikaiUserUpdater {
 	private void updateRem(AnimeUpdate au) {
 		if (au.hasRemovedAnime()) {
 			List<Anime> removed = au.getRemovedAnime();
+			Map<Integer, Anime> remA = removed.stream().collect(Collectors.toMap(Anime::getId, a -> a));
 			Set<JikaiUser> jus = jum.users();
 			jus.forEach(ju -> {
 				Set<Integer> rem = removed.stream().map(Anime::getId).collect(Collectors.toSet());
 				rem.retainAll(ju.getSubscribedAnime());
 				if (!rem.isEmpty()) {
-					ju.sendPMFormat("%d anime %s finished airing!", rem.size(), rem.size() > 1 ? "have" : "has");
-					rem.stream().map(AnimeDB::getAnime).forEach(a -> {
-						ju.unsubscribeAnime(a.getId());
+					rem.forEach(id -> {
+						Anime a = remA.get(id);
+						JikaiLocale loc = ju.getLocale();
+						String cause = null;
+						if (a.isFinished()) {
+							cause = loc.getString("ju_sub_rem_cause_finished");
+						} else {
+							List<String> externalLinks = a.getExternalLinks().stream().filter(es -> es.getSite().equals("Twitter") || es.getSite().equals("Official Site")).map(es -> String.format("[**%s**](%s)", es.getSite(), es.getUrl())).collect(Collectors.toList());
+							cause = loc.getStringFormatted("ju_sub_rem_cause_unknown", Arrays.asList("links"), String.join(", ", externalLinks));
+						}
+						ju.unsubscribeAnime(a, cause);
+						ju.sendPM(subRemMsg(a, ju, cause));
 					});
 				}
 			});
@@ -286,8 +351,8 @@ public class JikaiUserUpdater {
 				jum.getJUSubscribedToAnime(a).forEach(ju -> {
 					JikaiLocale loc = ju.getLocale();
 					EmbedBuilder eb = new EmbedBuilder();
-					eb.setTitle(loc.getStringFormatted("ju_eb_period_change_title", Arrays.asList("%title%"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl()).setThumbnail(a.getBiggestAvailableCoverImage());
-					eb.setDescription(loc.getStringFormatted("ju_eb_period_change_desc", Arrays.asList("%time%", "%date%"), BotUtils.formatSeconds(dif, loc), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get())));
+					eb.setTitle(loc.getStringFormatted("ju_eb_period_change_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl()).setThumbnail(a.getBiggestAvailableCoverImage());
+					eb.setDescription(loc.getStringFormatted("ju_eb_period_change_desc", Arrays.asList("time", "date"), BotUtils.formatSeconds(dif, loc), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale())));
 					ju.sendPM(eb.build());
 				});
 			});
@@ -297,7 +362,7 @@ public class JikaiUserUpdater {
 	private static MessageEmbed makeReleaseChangedEmbed(JikaiUser ju, Anime a, long delay) {
 		EmbedBuilder eb = new EmbedBuilder();
 		JikaiLocale loc = ju.getLocale();
-		eb.setTitle(loc.getStringFormatted("ju_eb_release_change_title", Arrays.asList("%title%"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
+		eb.setTitle(loc.getStringFormatted("ju_eb_release_change_title", Arrays.asList("%itle"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
 		if (a.hasCoverImageMedium()) {
 			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
@@ -305,12 +370,12 @@ public class JikaiUserUpdater {
 		StringBuilder bob = new StringBuilder();
 		String date = formatter.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(a.getNextEpisodesAirsAt()), ju.getTimeZone()));
 		if (delay > 0) {
-			bob.append(loc.getStringFormatted("ju_eb_release_change_pp", Arrays.asList("%time%", "%date%"), BotUtils.formatSeconds(delay, loc), date));
+			bob.append(loc.getStringFormatted("ju_eb_release_change_pp", Arrays.asList("time", "date"), BotUtils.formatSeconds(delay, loc), date));
 		} else {
-			bob.append(loc.getStringFormatted("ju_eb_release_change_earlier", Arrays.asList("%time%", "%date%"), BotUtils.formatSeconds(delay, loc), date));
+			bob.append(loc.getStringFormatted("ju_eb_release_change_earlier", Arrays.asList("time", "date"), BotUtils.formatSeconds(delay, loc), date));
 		}
 		if (!externalLinks.isEmpty()) {
-			bob.append(loc.getStringFormatted("ju_eb_release_change_links", Arrays.asList("%links%"), StringUtils.joinWith(", ", externalLinks.toArray())));
+			bob.append(loc.getStringFormatted("ju_eb_release_change_links", Arrays.asList("links"), StringUtils.joinWith(", ", externalLinks)));
 		}
 		eb.setDescription(bob).setTimestamp(Instant.now());
 		return eb.build();
@@ -341,38 +406,44 @@ public class JikaiUserUpdater {
 	}
 
 	private static MessageEmbed makeNotifyEmbed(Anime a, int step, JikaiUser ju) {
-		EmbedBuilder eb = new EmbedBuilder();
+		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		if (a.hasCoverImageMedium()) {
 			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
 		JikaiLocale loc = ju.getLocale();
-		eb.setTitle(loc.getStringFormatted("ju_eb_notify_title", Arrays.asList("%title%"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
-		eb.setDescription(loc.getStringFormatted("ju_eb_notify_desc", Arrays.asList("%date%", "%episodes%", "%time%"), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get()), String.format("%2d/%2d", a.getNextEpisodeNumber(), a.getEpisodes()), BotUtils.formatSeconds(step, loc)));
-		eb.setTimestamp(Instant.now());
+		eb.setTitle(loc.getStringFormatted("ju_eb_notify_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
+		int eps = a.getEpisodes();
+		String episodes = eps == 0 ? "" : String.format("/%2d", eps);
+		eb.setDescription(loc.getStringFormatted("ju_eb_notify_desc", Arrays.asList("date", "episodes", "time"), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale()), String.format("%2d%s", a.getNextEpisodeNumber(), episodes), BotUtils.formatSeconds(step, loc)));
 		return eb.build();
 	}
 
-	private static String formatAirDateTime(LocalDateTime ldt) {
-		return ldt.format(DateTimeFormatter.ofPattern("eeee, dd.MM.yyyy")) + " at " + ldt.format(DateTimeFormatter.ofPattern("HH:mm"));
+	private static String formatAirDateTime(LocalDateTime ldt, Locale loc) {
+		return ldt.format(DateTimeFormatter.ofPattern("eeee, dd.MM.yyyy, HH:mm").localizedBy(loc));
 	}
 
 	private static MessageEmbed makeNotifyRelease(Anime a, JikaiUser ju) {
-		EmbedBuilder eb = new EmbedBuilder();
+		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		if (a.hasCoverImageMedium()) {
 			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
 		JikaiLocale loc = ju.getLocale();
-		eb.setTitle(loc.getStringFormatted("ju_eb_notify_release_title", Arrays.asList("%title%"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
-		eb.setDescription(loc.getStringFormatted("ju_eb_notify_release_desc", Arrays.asList("%episodes%"), String.format("%2d/%2d", a.getNextEpisodeNumber(), a.getEpisodes())));
-		eb.setTimestamp(Instant.now());
+		eb.setTitle(loc.getStringFormatted("ju_eb_notify_release_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
+		int eps = a.getEpisodes();
+		String episodes = eps == 0 ? "" : String.format("/%2d", eps);
+		eb.setDescription(loc.getStringFormatted("ju_eb_notify_release_desc", Arrays.asList("episodes"), String.format("%2d%s", a.getNextEpisodeNumber(), episodes)));
 		return eb.build();
 	}
 
-	public static MessageEmbed testNotify(Anime a, int step, JikaiUser ju) {
-		return step == 0 ? makeNotifyRelease(a, ju) : makeNotifyEmbed(a, step, ju);
+	public MessageEmbed testNotify(Anime a, int step, JikaiUser ju) {
+		if (a.hasDataForNextEpisode()) {
+			return step == 0 ? makeNotifyRelease(a, ju) : makeNotifyEmbed(a, step, ju);
+		} else {
+			return BotUtils.addJikaiMark(new EmbedBuilder()).setDescription("**" + a.getTitle(ju.getTitleLanguage()) + "** has no data available! step: " + step).build();
+		}
 	}
 
-	public static MessageEmbed testPostpone(Anime a, long delay, JikaiUser ju) {
+	public MessageEmbed testPostpone(Anime a, long delay, JikaiUser ju) {
 		return makeReleaseChangedEmbed(ju, a, delay);
 	}
 
@@ -380,35 +451,64 @@ public class JikaiUserUpdater {
 		sendDailyUpdate(ju);
 	}
 
-	private Message createDailyMessage(JikaiUser ju, AnimeTable at, DayOfWeek day) {
-		String content = at.toFormatedWeekString(ju.getTitleLanguage(), false).get(day);
+	private Queue<MessageEmbed> createDailyMessage(JikaiUser ju, AnimeTable at, DayOfWeek day) {
+		JikaiLocale loc = ju.getLocale();
+		String content = at.toFormatedWeekString(ju.getTitleLanguage(), false, loc.getLocale()).get(day);
 		StringBuilder bob = new StringBuilder();
+		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
+		eb.setTitle(loc.getString("ju_eb_daily_update_msg"));
 		if (content.isBlank()) {
-			bob.append("Jikai tried her best but couldn't find any anime airing on " + StringUtils.capitalize(day.toString().toLowerCase()) + "s that you are subscribed to :(");
+			eb.setDescription(loc.getStringFormatted("ju_eb_daily_update_none", Arrays.asList("day"), day.getDisplayName(TextStyle.FULL, loc.getLocale())));
+			Queue<MessageEmbed> single = new LinkedList<>();
+			single.add(eb.build());
+			return single;
 		} else {
 			bob.append(content);
 		}
 		MessageBuilder mb = new MessageBuilder();
-		String str = "Your daily anime are:";
-		mb.appendCodeBlock(str + "\n" + "=".repeat(str.length()) + "\n" + bob.toString(), "asciidoc");
-		return mb.build();
+		mb.setContent(bob.toString());
+		Queue<MessageEmbed> q = new LinkedList<>();
+		Queue<Message> msgs = mb.buildAll(SplitPolicy.NEWLINE);
+		Consumer<Message> setAndAdd = m -> {
+			eb.setDescription("```asciidoc\n" + m.getContentRaw() + "\n```");
+			q.add(eb.build());
+		};
+		setAndAdd.accept(msgs.poll());
+		eb.setTitle(null);
+		msgs.forEach(setAndAdd);
+		return q;
+	}
+
+	private Queue<MessageEmbed> createWeeklySchedule(JikaiUser ju, AnimeTable at) {
+		JikaiLocale loc = ju.getLocale();
+		StringBuilder bob = new StringBuilder();
+		at.toFormatedWeekString(ju.getTitleLanguage(), true, loc.getLocale()).values().forEach(s -> bob.append("\n" + s));
+		MessageBuilder mb = new MessageBuilder();
+		mb.setContent(bob.toString());
+		Queue<MessageEmbed> q = new LinkedList<>();
+		Queue<Message> msgs = mb.buildAll(SplitPolicy.NEWLINE);
+		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
+		eb.setTitle(loc.getString("ju_weekly_sched_msg"));
+		Consumer<Message> setAndAdd = m -> {
+			eb.setDescription("```asciidoc\n" + m.getContentRaw() + "\n```");
+			q.add(eb.build());
+		};
+		setAndAdd.accept(msgs.poll());
+		eb.setTitle(null);
+		msgs.forEach(setAndAdd);
+		return q;
 	}
 
 	private void sendDailyUpdate(JikaiUser ju) {
+		log.debug("Sending daily update to JUser '{}'", ju.getId());
 		ZoneId zone = ju.getTimeZone();
 		LocalDate ld = ZonedDateTime.now(zone).toLocalDate();
 		DayOfWeek today = ld.getDayOfWeek();
 		AnimeTable at = ScheduleManager.getSchedule(zone).makeUserTable(ju);
 		if (today == DayOfWeek.MONDAY && ju.isSentWeeklySchedule()) {
-			StringBuilder bob = new StringBuilder();
-			String str = "Here's your anime schedule for this week:";
-			bob.append(str + "\n" + "=".repeat(str.length()));
-			at.toFormatedWeekString(ju.getTitleLanguage(), true).values().forEach(s -> bob.append("\n" + s));
-			MessageBuilder mb = new MessageBuilder();
-			mb.appendCodeBlock(bob, "asciidoc");
-			mb.buildAll(SplitPolicy.NEWLINE).forEach(ju::sendPM);
+			BotUtils.sendPMsEmbed(ju.getUser(), createWeeklySchedule(ju, at));
 		} else if (ju.isUpdatedDaily()) {
-			ju.sendPM(createDailyMessage(ju, at, today));
+			BotUtils.sendPMsEmbed(ju.getUser(), createDailyMessage(ju, at, today));
 		}
 	}
 }

@@ -11,9 +11,10 @@ import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.commands.ComUtils;
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 /**
  * The "set" command. Handles executing whatever set commands there are.
@@ -36,7 +37,7 @@ public class SetCommand implements GuildCommand {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments) {
 		if (arguments.length >= 1) {
 			String com = arguments[0].toLowerCase();
 			GuildCommand c = ComUtils.findCommand(setComs, com);
@@ -50,7 +51,7 @@ public class SetCommand implements GuildCommand {
 
 	private void init() {
 		log = LoggerFactory.getLogger(this.getClass());
-		GuildCommand[] commands = new GuildCommand[] { new SetCommandChannelCommand(), new SetScheduleChannelCommand(), new SetTriggerCommand(), new SetAnimeChannelCommand(), new SetTimeZoneCommand(), new SetListChannelCommand(), new SetInfoChannelCommand() };
+		GuildCommand[] commands = new GuildCommand[] { new SetLanguageCommand(), new SetCommandChannelCommand(), new SetScheduleChannelCommand(), new SetPrefixCommand(), new SetAnimeChannelCommand(), new SetTimeZoneCommand(), new SetListChannelCommand(), new SetInfoChannelCommand() };
 		setComs.addAll(Arrays.asList(commands));
 		log.info("Loaded {} SetCommands", setComs.size());
 	}
@@ -61,7 +62,12 @@ public class SetCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription() {
-		return "**set** <option>\n" + setComs.stream().map(com -> "**" + com.getName() + "** <value>" + ":" + com.getDescription()).collect(Collectors.joining("\n"));
+	public String getDescription(JikaiLocale loc) {
+		return loc.getStringFormatted("com_g_set_desc", Arrays.asList("coms"), setComs.stream().map(com -> "**" + com.getName() + "** <value>" + ":\n" + com.getDescription(loc)).collect(Collectors.joining("\n")));
+	}
+
+	@Override
+	public String getUsage(JikaiLocale loc) {
+		return loc.getStringFormatted("com_g_set_use", Arrays.asList("com"), getName());
 	}
 }

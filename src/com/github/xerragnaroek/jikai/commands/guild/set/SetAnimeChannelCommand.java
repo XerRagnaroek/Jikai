@@ -1,15 +1,17 @@
 package com.github.xerragnaroek.jikai.commands.guild.set;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 /**
  * Command that sets the channel the bot posts automated stuff in.
@@ -26,26 +28,27 @@ public class SetAnimeChannelCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getUsage() {
-		return "anime_channel <textchannel>";
+	public String getUsage(JikaiLocale loc) {
+		return loc.getStringFormatted("com_g_set_ani_use", Arrays.asList("com"), getName());
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String[] arguments) {
+	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments) {
 		Guild g = event.getGuild();
-		TextChannel textC = event.getTextChannel();
+		Jikai j = Core.JM.get(g);
+		TextChannel textC = event.getChannel();
 		if (arguments.length >= 1) {
 			List<TextChannel> tcs = g.getTextChannelsByName(arguments[0], false);
 			if (!tcs.isEmpty()) {
 				textC = tcs.get(0);
 			} else {
-				textC.sendMessage('"' + arguments[0] + "\" isn't a channel!").queue();
+				textC.sendMessage(j.getLocale().getStringFormatted("com_g_set_ani_fail", Arrays.asList("channel"), arguments[0])).queue();
+				return;
 			}
 		}
-		Jikai j = Core.JM.get(g);
 		j.getJikaiData().setAnimeChannelId(textC.getIdLong());
 		try {
-			j.getInfoChannel().sendMessage(textC.getAsMention() + " has been set as the new anime channel!").queue();
+			j.getInfoChannel().sendMessage(j.getLocale().getStringFormatted("com_g_set_ani_success", Arrays.asList("channel"), textC.getAsMention())).queue();
 		} catch (Exception e) {}
 	}
 
@@ -55,7 +58,12 @@ public class SetAnimeChannelCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription() {
-		return "The channel for anime release updates.";
+	public String getDescription(JikaiLocale loc) {
+		return loc.getString("com_g_set_ani_desc");
+	}
+
+	@Override
+	public List<String> getAlternativeNames() {
+		return Arrays.asList("anime_chan", "a_chan", "ac");
 	}
 }

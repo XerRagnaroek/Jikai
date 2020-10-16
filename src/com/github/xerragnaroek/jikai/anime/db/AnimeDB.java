@@ -1,13 +1,10 @@
 package com.github.xerragnaroek.jikai.anime.db;
 
 import java.awt.image.BufferedImage;
-import java.time.DayOfWeek;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -22,8 +19,6 @@ import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.IntegerProperty;
-
-import net.dv8tion.jda.api.entities.Guild;
 
 public class AnimeDB {
 
@@ -43,23 +38,19 @@ public class AnimeDB {
 			log.error("Already initialized!");
 			throw new IllegalStateException("Already initialized!");
 		}
-		"test".isBlank();
 	}
 
-	public static Set<Anime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
-		return aDB.getAnimesAiringOnWeekday(day, g);
-	}
+	/*
+	 * public static Set<Anime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
+	 * return aDB.getAnimesAiringOnWeekday(day, g);
+	 * }
+	 * public static Set<Anime> getAnimesAiringOnWeekday(DayOfWeek day, ZoneId z) {
+	 * return aDB.getAnimesAiringOnWeekday(day, z);
+	 * }
+	 */
 
-	public static Set<Anime> getAnimesAiringOnWeekday(DayOfWeek day, ZoneId z) {
-		return aDB.getAnimesAiringOnWeekday(day, z);
-	}
-
-	public static Map<DayOfWeek, Set<Anime>> getAnimesMappedToDayOfAiring(ZoneId zone) {
-		return aDB.getAnimeMappedToDayOfWeek(zone);
-	}
-
-	public static Set<Anime> getSeasonalAnime() {
-		return aDB.getSeasonalAnime();
+	public static Set<Anime> getLoadedAnime() {
+		return aDB.getLoadedAnime();
 	}
 
 	public static void waitUntilLoaded() {
@@ -103,6 +94,10 @@ public class AnimeDB {
 
 	public static int size() {
 		return aDB.size();
+	}
+
+	public static int countAnimeWithNextEpData() {
+		return (int) aDB.getLoadedAnime().stream().filter(Anime::hasDataForNextEpisode).count();
 	}
 
 	public static void setDBVersionProperty(IntegerProperty prop) {

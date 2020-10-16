@@ -6,14 +6,19 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +30,6 @@ import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.util.Pair;
 import com.github.xerragnaroek.jikai.util.prop.BooleanProperty;
-import com.github.xerragnaroek.jikai.util.prop.Property;
 import com.github.xerragnaroek.jikai.util.prop.SelfResettingFlagProperty;
 
 /**
@@ -48,9 +52,17 @@ public class Schedule {
 	}
 
 	void init() {
+		init(null);
+	}
+
+	void init(Set<Anime> anime) {
 		log.debug("Initializing schedule...");
 		setMonDate();
-		populateSchedule();
+		if (anime != null) {
+			populateSchedule(anime);
+		} else {
+			populateSchedule();
+		}
 		updateImage();
 		log.debug("Schedule initialized!");
 	}
@@ -75,14 +87,18 @@ public class Schedule {
 	}
 
 	private void setMonDate() {
-		monDate = adjustedToPastMonday(LocalDate.now(zone));
+		monDate = adjustedToPastOrSameMonday(LocalDate.now(zone));
 		log.debug("Set monDate to {}", monDate);
 	}
 
 	private void populateSchedule() {
+		populateSchedule(AnimeDB.getLoadedAnime());
+	}
+
+	void populateSchedule(Collection<Anime> anime) {
 		log.debug("Populating schedule, clearing map");
 		week.clear();
-		AnimeDB.getAnimesMappedToDayOfAiring(zone).forEach((day, set) -> set.stream().filter(this::airsLaterThisWeek).peek(a -> log.debug("{} airs this week", a.getTitle(TitleLanguage.ROMAJI))).forEach(a -> addAnimeToWeek(day, a)));
+		mapAnimeToDayOfWeek(zone, anime).forEach((day, set) -> set.stream().filter(this::airsLaterThisWeek).peek(a -> log.debug("{} airs this week", a.getTitle(TitleLanguage.ROMAJI))).forEach(a -> addAnimeToWeek(day, a)));
 	}
 
 	private void addAnimeToWeek(DayOfWeek day, Anime a) {
@@ -162,7 +178,7 @@ public class Schedule {
 
 	private boolean handleRemoved(LocalDateTime now, DayOfWeek today, Anime a) {
 		log.debug("Handling removed anime {}", a.getTitleRomaji());
-		if (airsThisWeek(a)) {
+		if (airsLaterThisWeek(a)) {
 			return removeAnime(a) != null;
 		}
 		return false;
@@ -184,42 +200,43 @@ public class Schedule {
 		return isThisWeek(now.toLocalDate(), aLDT.toLocalDate()) && aLDT.isAfter(now);
 	}
 
-	private LocalDate adjustedToPastMonday(LocalDate ld) {
-		DayOfWeek day = ld.getDayOfWeek();
-		if (day != DayOfWeek.MONDAY) {
-			// get day difference from monday
-			int dayFromMon = day.getValue() - 1;
-			ld = ld.minusDays(dayFromMon);
-		}
-		return ld;
+	private LocalDate adjustedToPastOrSameMonday(LocalDate ld) {
+		/*
+		 * DayOfWeek day = ld.getDayOfWeek();
+		 * if (day != DayOfWeek.MONDAY) {
+		 * // get day difference from monday
+		 * int dayFromMon = day.getValue() - 1;
+		 * ld = ld.minusDays(dayFromMon);
+		 * }
+		 * return ld;
+		 */
+		return ld.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
 	}
 
 	private boolean isThisWeek(LocalDate today, LocalDate date) {
 		if (today.isEqual(date)) {
 			return true;
 		}
-		return adjustedToPastMonday(today).isEqual(adjustedToPastMonday(date));
+		return adjustedToPastOrSameMonday(today).isEqual(adjustedToPastOrSameMonday(date));
 	}
 
 	private Anime removeAnime(DayOfWeek day, Anime a) {
-		Property<Anime> rem = new Property<>();
-		week.compute(day, (d, map) -> {
-			Iterator<LocalTime> keys = map.keySet().iterator();
-			keys.forEachRemaining(key -> {
-				List<Anime> list = map.get(key);
-				int oldIndex = list.indexOf(a);
-				if (oldIndex > -1) {
-					log.debug("Removed old entry {},{},{}", day, key, a.getTitle(TitleLanguage.ROMAJI));
-					rem.set(list.get(oldIndex));
-					list.remove(oldIndex);
-					if (list.isEmpty()) {
-						keys.remove();
-					}
+		Map<LocalTime, List<Anime>> map = week.get(day);
+		for (LocalTime lt : map.keySet()) {
+			List<Anime> l = map.get(lt);
+			int oldIndex = l.indexOf(a);
+			if (oldIndex > -1) {
+				Anime rem = l.get(oldIndex);
+				l.remove(oldIndex);
+				log.debug("Removed old entry {},{},{}", day, lt, a.getTitle(TitleLanguage.ROMAJI));
+				if (l.isEmpty()) {
+					log.debug("Anime list for {},{} is empty, removing", day, lt);
+					map.remove(lt);
 				}
-			});
-			return map;
-		});
-		return rem.get();
+				return rem;
+			}
+		}
+		return null;
 	}
 
 	private Anime removeAnime(Anime a) {
@@ -240,5 +257,26 @@ public class Schedule {
 				Collections.sort(list);
 			});
 		});
+	}
+
+	private Map<DayOfWeek, Set<Anime>> mapAnimeToDayOfWeek(ZoneId zone, Collection<Anime> anime) {
+		Map<DayOfWeek, Set<Anime>> map = new TreeMap<>();
+		for (DayOfWeek d : DayOfWeek.values()) {
+			map.put(d, new TreeSet<>());
+		}
+		anime.forEach(a -> {
+			Optional<LocalDateTime> ldt = a.getNextEpisodeDateTime(zone);
+			if (ldt.isPresent()) {
+				map.compute(ldt.get().getDayOfWeek(), (d, s) -> {
+					s.add(a);
+					return s;
+				});
+			}
+		});
+		return map;
+	}
+
+	Set<Anime> getAnimeInSchedule() {
+		return week.values().stream().flatMap(v -> v.values().stream()).flatMap(l -> l.stream()).collect(Collectors.toSet());
 	}
 }

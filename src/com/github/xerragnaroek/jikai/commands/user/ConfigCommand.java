@@ -1,20 +1,17 @@
 
 package com.github.xerragnaroek.jikai.commands.user;
 
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
+import com.github.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 
 /**
  * @author XerRagnaroek
- *
  */
 public class ConfigCommand implements JUCommand {
 	private final Logger log = LoggerFactory.getLogger(ConfigCommand.class);
@@ -25,24 +22,15 @@ public class ConfigCommand implements JUCommand {
 	}
 
 	@Override
-	public String getDescription() {
-		return "Shows your current configuration.";
+	public String getDescription(JikaiLocale loc) {
+		return loc.getString("com_ju_config_desc");
 	}
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		StringBuilder bob = new StringBuilder();
-		bob.append("```asciidoc\n");
-		bob.append("Time zone :: " + ju.getTimeZone() + "\n");
-		bob.append("Send daily overview :: " + (ju.isUpdatedDaily() ? "yes" : "no") + "\n");
-		bob.append("Send weekly schedule :: " + (ju.isSentWeeklySchedule() ? "yes" : "no") + "\n");
-		bob.append("Notified on release :: " + (ju.isNotfiedOnRelease() ? "yes" : "no") + "\n");
-		bob.append("Title language :: " + ju.getTitleLanguage() + "\n");
-		Set<Integer> steps = ju.getPreReleaseNotifcationSteps().stream().map(i -> i / 60).collect(Collectors.toSet());
-		bob.append("Release update steps :: " + (steps.isEmpty() ? "None" : StringUtils.join(steps, "min, ") + "min before a release") + "\n```");
 		EmbedBuilder eb = new EmbedBuilder();
-		eb.setDescription(bob);
-		ju.setSetupCompleted(true);
+		eb.setDescription(ju.getConfigFormatted());
+		BotUtils.addJikaiMark(eb);
 		ju.sendPM(eb.build());
 	}
 

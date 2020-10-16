@@ -1,20 +1,25 @@
 package com.github.xerragnaroek.jikai.commands.user;
 
-import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.function.Consumer;
 
 import com.github.xerragnaroek.jikai.anime.schedule.AnimeTable;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
+import com.github.xerragnaroek.jikai.util.BotUtils;
 
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.MessageBuilder.SplitPolicy;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 
 /**
  * @author XerRagnaroek
- *
  */
 public class TestDailyUpdateCommand implements JUCommand {
 
@@ -24,7 +29,7 @@ public class TestDailyUpdateCommand implements JUCommand {
 	}
 
 	@Override
-	public String getDescription() {
+	public String getDescription(JikaiLocale loc) {
 		return "Sends the daily update usually send at midnight.";
 	}
 
@@ -32,16 +37,24 @@ public class TestDailyUpdateCommand implements JUCommand {
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		JikaiUserManager.getInstance().getUserUpdater().testDailyUpdate(ju);
 		ZoneId zone = ju.getTimeZone();
-		LocalDate ld = ZonedDateTime.now(zone).toLocalDate();
 		AnimeTable at = ScheduleManager.getSchedule(zone).makeUserTable(ju);
-		//BotUtils.sendFile(ju.getUser(), "Your anime schedule for this week:", BotUtils.imageToByteArray(at.toImage()), "Schedule_" + BotUtils.formatTime(ld, "dd.MM.yy") + ".png");
+		JikaiLocale loc = ju.getLocale();
 		StringBuilder bob = new StringBuilder();
-		String str = "Here's your anime schedule for this week:\n";
-		bob.append(str + "=".repeat(str.length()));
-		at.toFormatedWeekString(ju.getTitleLanguage(), true).values().forEach(s -> bob.append("\n" + s));
+		at.toFormatedWeekString(ju.getTitleLanguage(), true, loc.getLocale()).values().forEach(s -> bob.append("\n" + s));
 		MessageBuilder mb = new MessageBuilder();
-		mb.appendCodeBlock(bob, "asciidoc");
-		mb.buildAll(SplitPolicy.NEWLINE).forEach(ju::sendPM);
+		mb.setContent(bob.toString());
+		Queue<MessageEmbed> q = new LinkedList<>();
+		Queue<Message> msgs = mb.buildAll(SplitPolicy.NEWLINE);
+		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
+		eb.setTitle(loc.getString("ju_eb_weekly_sched_msg"));
+		Consumer<Message> setAndAdd = m -> {
+			eb.setDescription("```asciidoc\n" + m.getContentRaw() + "\n```");
+			q.add(eb.build());
+		};
+		setAndAdd.accept(msgs.poll());
+		eb.setTitle(null);
+		msgs.forEach(setAndAdd);
+		BotUtils.sendPMsEmbed(ju.getUser(), q);
 	}
 
 	@Override

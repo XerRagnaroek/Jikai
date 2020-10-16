@@ -2,12 +2,16 @@
 package com.github.xerragnaroek.jikai.commands.user;
 
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
-import com.github.xerragnaroek.jikai.user.JikaiUserUpdater;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
+import com.github.xerragnaroek.jikai.user.ReleaseMessageReactionHandler;
+import com.github.xerragnaroek.jikai.util.BotUtils;
+
+import net.dv8tion.jda.api.entities.User;
 
 /**
  * @author XerRagnaroek
- *
  */
 public class TestNotifyCommand implements JUCommand {
 
@@ -17,15 +21,20 @@ public class TestNotifyCommand implements JUCommand {
 	}
 
 	@Override
-	public String getDescription() {
+	public String getDescription(JikaiLocale loc) {
 		return "Tests the notfication system";
 	}
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
+		User u = ju.getUser();
 		ju.getSubscribedAnime().stream().map(AnimeDB::getAnime).forEach(a -> {
 			ju.getPreReleaseNotifcationSteps().forEach(step -> {
-				ju.sendPM(JikaiUserUpdater.testNotify(a, step, ju));
+				BotUtils.sendPM(u, JikaiUserManager.getInstance().getUserUpdater().testNotify(a, step, ju)).thenAccept(m -> {
+					if (step == 0) {
+						m.addReaction(ReleaseMessageReactionHandler.getWatchedEmojiUnicode()).queue();
+					}
+				});
 			});
 		});
 	}

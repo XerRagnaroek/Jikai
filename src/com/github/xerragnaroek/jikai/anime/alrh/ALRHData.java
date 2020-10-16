@@ -7,9 +7,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-@JsonPropertyOrder({ "message_id", "sent_textchannel_id", "sent_ab_version", "title", "role_id", "uni_codepoint", "reacted" })
+@JsonPropertyOrder({ "message_id", "sent_textchannel_id", "title", "uni_codepoint", "reacted" })
 public class ALRHData implements Comparable<ALRHData> {
-	private int abVersion;
 	private long tcId;
 	private long msgId;
 	private String title;
@@ -18,12 +17,11 @@ public class ALRHData implements Comparable<ALRHData> {
 	private final Logger log;
 
 	@JsonCreator
-	public ALRHData(@JsonProperty("message_id") long mId, @JsonProperty("title") String title, @JsonProperty("uni_codepoint") String cp, @JsonProperty("sent_textchannel_id") long tcId, @JsonProperty("sent_ab_version") int abVersion, @JsonProperty("reacted") boolean reactedTo) {
+	public ALRHData(@JsonProperty("message_id") long mId, @JsonProperty("title") String title, @JsonProperty("uni_codepoint") String cp, @JsonProperty("sent_textchannel_id") long tcId, @JsonProperty("reacted") boolean reactedTo) {
 		msgId = mId;
 		this.title = title;
 		codepoint = cp;
 		this.tcId = tcId;
-		this.abVersion = abVersion;
 		reacted = reactedTo;
 		log = LoggerFactory.getLogger(ALRHData.class + "#" + title);
 	}
@@ -52,11 +50,6 @@ public class ALRHData implements Comparable<ALRHData> {
 	@JsonProperty("sent_textchannel_id")
 	public long getTextChannelId() {
 		return tcId;
-	}
-
-	@JsonProperty("sent_ab_version")
-	public int getABVersion() {
-		return abVersion;
 	}
 
 	@JsonProperty("reacted")
@@ -90,11 +83,6 @@ public class ALRHData implements Comparable<ALRHData> {
 		this.tcId = tcId;
 	}
 
-	@JsonProperty("sent_ab_version")
-	public void setABVersion(int version) {
-		abVersion = version;
-	}
-
 	@Override
 	public int compareTo(ALRHData o) {
 		return String.CASE_INSENSITIVE_ORDER.compare(title, o.title);
@@ -108,13 +96,14 @@ public class ALRHData implements Comparable<ALRHData> {
 	@Override
 	public boolean equals(Object obj) {
 		if (obj instanceof ALRHData) {
-			return title.equals(((ALRHData) obj).title);
+			ALRHData d = (ALRHData) obj;
+			return title.equals(d.title) && msgId == d.msgId;
 		}
 		return false;
 	}
 
 	@Override
 	public String toString() {
-		return super.toString();
+		return String.format("ALRHData[tcId=%d,msgId=%d,title='%s',codepoint=%s,reacted=%b]", tcId, msgId, title, codepoint, reacted);
 	}
 }

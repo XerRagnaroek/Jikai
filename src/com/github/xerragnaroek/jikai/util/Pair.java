@@ -1,6 +1,9 @@
 
 package com.github.xerragnaroek.jikai.util;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class Pair<U, T> {
 	private U left;
 	private T right;
@@ -28,7 +31,8 @@ public class Pair<U, T> {
 		}
 	}
 
-	public static <U, T> Pair<U, T> of(U left, T right) {
+	@JsonCreator
+	public static <U, T> Pair<U, T> of(@JsonProperty("left") U left, @JsonProperty("right") T right) {
 		return new Pair<>(left, right);
 	}
 }

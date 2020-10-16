@@ -36,10 +36,7 @@ public class AnimeUpdate {
 	private AnimeUpdate() {}
 
 	private void listChanges(List<Anime> oldA, List<Anime> newAnime) {
-		removed = oldA.stream().filter(a -> !newAnime.contains(a)).collect(Collectors.toCollection(() -> Collections.synchronizedList(new ArrayList<>())));
-		// removed.addAll(newAnime.stream().filter(a ->
-		// !a.hasDataForNextEpisode()).collect(Collectors.toList()));
-		removed.forEach(a -> log.debug("{} has been removed!", a.getTitleRomaji()));
+		handleRemoved(newAnime, oldA);
 		newA = newAnime.stream().filter(a -> !oldA.contains(a)).collect(Collectors.toCollection(() -> Collections.synchronizedList(new ArrayList<>())));
 		newA.forEach(a -> log.debug("New anime: {}", a.getTitleRomaji()));
 		handleReleaseChanged(newAnime, oldA);
@@ -50,6 +47,17 @@ public class AnimeUpdate {
 		if (!removed.isEmpty() || !newA.isEmpty() || !changed.isEmpty() || !nextEp.isEmpty()) {
 			BotUtils.sendToAllInfoChannels(msg);
 		}
+	}
+
+	private void handleRemoved(List<Anime> newA, List<Anime> old) {
+		List<Anime> removedOldA = old.stream().filter(a -> !newA.contains(a)).collect(Collectors.toCollection(() -> Collections.synchronizedList(new ArrayList<>())));
+		removed = newA.stream().filter(a -> a.getStatus().equals("FINISHED")).collect(Collectors.toList());
+		removedOldA.forEach(a -> {
+			if (!removed.stream().anyMatch(an -> an.getId() == a.getId())) {
+				removed.add(a);
+			}
+		});
+		removed.forEach(a -> log.debug("{} has been removed or finshed! status: {}", a.getTitleRomaji(), a.getStatus()));
 	}
 
 	private void handleReleaseChanged(List<Anime> newA, List<Anime> old) {

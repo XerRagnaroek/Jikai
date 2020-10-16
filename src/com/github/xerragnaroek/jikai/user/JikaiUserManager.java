@@ -9,8 +9,10 @@ import java.time.ZoneId;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
@@ -19,8 +21,10 @@ import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
+import com.github.xerragnaroek.jikai.anime.ani.AniListSyncer;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.MapProperty;
@@ -46,11 +50,12 @@ public class JikaiUserManager {
 		return instance;
 	}
 
-	public JikaiUser registerUser(long id) {
+	public JikaiUser registerUser(long id, Jikai j) {
 		JikaiUser ju = new JikaiUser(id);
 		registerImpl(ju);
+		AniListSyncer.getInstance().registerUser(ju);
 		if (!ju.isSetupCompleted()) {
-			JikaiUserSetup.runSetup(ju);
+			JikaiUserSetup.runSetup(ju, j);
 		}
 		log.debug("Registered new JikaiUser");
 		return ju;
@@ -69,6 +74,7 @@ public class JikaiUserManager {
 		handleTimeZoneChange(ju);
 		juu.registerUser(ju);
 		user.put(ju.getId(), ju);
+		// AniListSyncer.getInstance().registerUser(ju);
 	}
 
 	public JikaiUser getUser(long id) {
@@ -76,7 +82,7 @@ public class JikaiUserManager {
 	}
 
 	private void handleSubscriptions(JikaiUser ju) {
-		ju.subscribedAnimesProperty().onAdd(id -> {
+		ju.getSubscribedAnime().onAdd((id, cause) -> {
 			subscriptionMap.compute(id, (t, s) -> {
 				if (s == null) {
 					s = Collections.synchronizedSet(new HashSet<>());
@@ -85,7 +91,7 @@ public class JikaiUserManager {
 				return s;
 			});
 		});
-		ju.subscribedAnimesProperty().onRemove(id -> {
+		ju.getSubscribedAnime().onRemove((id, cause) -> {
 			subscriptionMap.computeIfPresent(id, (t, s) -> {
 				s.remove(ju);
 				return s.isEmpty() ? null : s;
@@ -130,7 +136,7 @@ public class JikaiUserManager {
 
 	public void save() throws IOException {
 		Path loc = Paths.get(Core.DATA_LOC.toString(), "/user.db");
-		Files.write(loc, BotUtils.collectionToIterableStr(user.values()));
+		Files.write(loc, BotUtils.collectionToIterableStr(user.values().stream().filter(JikaiUser::isSetupCompleted).collect(Collectors.toList())));
 	}
 
 	public void load(Path loc) {
@@ -165,7 +171,7 @@ public class JikaiUserManager {
 		 * not quoted. - by Luke Sheppard (regexr.com)
 		 */
 		String[] data = str.split(",(?=(?:[^\\\"]*\\\"[^\\\"]*\\\")*(?![^\\\"]*\\\"))");
-		if (data.length < 8) {
+		if (data.length < 9) {
 			throw new IllegalArgumentException("Expected data length 8, got " + data.length + " instead");
 		}
 		for (int i = 0; i < data.length; i++) {
@@ -173,18 +179,19 @@ public class JikaiUserManager {
 		}
 		JikaiUser ju = new JikaiUser(Long.parseLong(data[0]));
 		registerImpl(ju);
-		ju.setTitleLanguage(TitleLanguage.values()[Integer.parseInt(data[1])]);
-		ju.setTimeZone(ZoneId.of(data[2]));
-		ju.setLocale(JikaiLocaleManager.getInstance().getLocale(data[3]));
-		ju.setUpdateDaily(data[4].equals("1"));
-		ju.setSentWeeklySchedule(data[5].equals("1"));
-		String tmp = StringUtils.substringBetween(data[6], "[", "]");
+		ju.setAniId(Integer.parseInt(data[1]));
+		ju.setTitleLanguage(TitleLanguage.values()[Integer.parseInt(data[2])]);
+		ju.setTimeZone(ZoneId.of(data[3]));
+		ju.setLocale(JikaiLocaleManager.getInstance().getLocale(data[4]));
+		ju.setUpdateDaily(data[5].equals("1"));
+		ju.setSentWeeklySchedule(data[6].equals("1"));
+		String tmp = StringUtils.substringBetween(data[7], "[", "]");
 		if (tmp != null && !tmp.isEmpty()) {
 			Stream.of(tmp.split(",")).mapToInt(Integer::parseInt).forEach(ju::addPreReleaseNotificaionStep);
 		}
-		tmp = StringUtils.substringBetween(data[7], "[", "]");
+		tmp = StringUtils.substringBetween(data[8], "[", "]");
 		if (tmp != null && !tmp.isEmpty()) {
-			Stream.of(tmp.split(", ")).mapToInt(Integer::parseInt).mapToObj(AnimeDB::getAnime).forEach(a -> ju.subscribeAnime(a.getId()));
+			Stream.of(tmp.split(", ")).mapToInt(Integer::parseInt).mapToObj(AnimeDB::getAnime).filter(Objects::nonNull).forEach(a -> ju.subscribeAnime(a.getId(), "Startup load"));
 		}
 		ju.setSetupCompleted(true);
 		log.info("Loaded JikaiUser: '{}'", ju);

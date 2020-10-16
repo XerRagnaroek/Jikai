@@ -1,38 +1,42 @@
 package com.github.xerragnaroek.jikai.commands;
 
+import java.util.List;
+
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
+
 import net.dv8tion.jda.api.Permission;
 
 public interface Command extends Comparable<Command> {
 	/**
 	 * The command's "name", whatever triggers it.
-	 * 
 	 */
 	public String getName();
 
 	/**
 	 * How to use the command.
 	 */
-	public default String getUsage() {
+	public default String getUsage(JikaiLocale loc) {
 		String use = null;
-		if (hasAlternativeName()) {
-			use = getName() + "|" + getAlternativeName();
+		if (hasAlternativeNames()) {
+			use = getName() + " | " + getAlternativeNames();
 		}
 		return use;
 	}
 
 	public default boolean hasUsage() {
-		return getUsage() != null;
+		return getUsage(JikaiLocaleManager.getEN()) != null;
 	}
 
-	public default boolean hasAlternativeName() {
-		return getAlternativeName() != null;
+	public default boolean hasAlternativeNames() {
+		return getAlternativeNames() != null;
 	}
 
-	public default String getAlternativeName() {
+	public default List<String> getAlternativeNames() {
 		return null;
 	}
 
-	public String getDescription();
+	public String getDescription(JikaiLocale loc);
 
 	public default Permission[] getRequiredPermissions() {
 		return Permission.EMPTY_PERMISSIONS;

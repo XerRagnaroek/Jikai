@@ -3,16 +3,11 @@ package com.github.xerragnaroek.jikai.anime.db;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
-import java.time.DayOfWeek;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -32,7 +27,6 @@ import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Initilizable;
 
 import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.entities.Guild;
 
 /**
  * Does the animes.
@@ -57,11 +51,12 @@ class AnimeDBImpl implements Initilizable {
 
 	void loadAiringAnime() {
 		loading.set(true);
-		Core.CUR_SEASON.set(jasa.getCurrentSeason());
 		Core.JDA.getPresence().setPresence(Activity.watching("the anime load!"), false);
 		try {
-			List<Anime> newAnime = jasa.fetchAllAiringAnime(0, 2020);
-			newAnime.addAll(jasa.fetchSeasonalAnime(0));
+			Set<Anime> distinctAnime = new TreeSet<>();
+			distinctAnime.addAll(jasa.fetchAllAiringAnime(0, LocalDate.now().getYear() + 1));
+			distinctAnime.addAll(jasa.fetchSeasonalAnime(1));
+			List<Anime> newAnime = distinctAnime.stream().filter(a -> !a.getStatus().equals("FINISHED")).collect(Collectors.toList());
 			loadImages(newAnime);
 			List<Anime> old = new ArrayList<>();
 			CollectionUtils.addAll(old, anime.values());
@@ -70,7 +65,7 @@ class AnimeDBImpl implements Initilizable {
 			} else {
 				handleUpdate(old, newAnime);
 			}
-
+			Core.CUR_SEASON.set(jasa.getCurrentSeason());
 		} catch (AniException | IOException e) {
 			BotUtils.logAndSendToDev(log, "Exception while updating AnimeDB", e);
 		}
@@ -78,35 +73,35 @@ class AnimeDBImpl implements Initilizable {
 		loading.set(false);
 	}
 
-	Set<Anime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
-		return getAnimesAiringOnWeekday(day, Core.JM.get(g).getJikaiData().getTimeZone());
-	}
+	/*
+	 * Set<Anime> getAnimesAiringOnWeekday(DayOfWeek day, Guild g) {
+	 * return getAnimesAiringOnWeekday(day, Core.JM.get(g).getJikaiData().getTimeZone());
+	 * }
+	 * Set<Anime> getAnimesAiringOnWeekday(DayOfWeek day, ZoneId zone) {
+	 * return getAnimeMappedToDayOfWeek(zone).get(day);
+	 * }
+	 * Map<DayOfWeek, Set<Anime>> getAnimeMappedToDayOfWeek(ZoneId zone) {
+	 * Map<DayOfWeek, Set<Anime>> map = new TreeMap<>();
+	 * for (DayOfWeek d : DayOfWeek.values()) {
+	 * map.put(d, new TreeSet<>());
+	 * }
+	 * Collection<Anime> vals = anime.values();
+	 * synchronized (vals) {
+	 * vals.forEach(a -> {
+	 * Optional<LocalDateTime> ldt = a.getNextEpisodeDateTime(zone);
+	 * if (ldt.isPresent()) {
+	 * map.compute(ldt.get().getDayOfWeek(), (d, s) -> {
+	 * s.add(a);
+	 * return s;
+	 * });
+	 * }
+	 * });
+	 * }
+	 * return map;
+	 * }
+	 */
 
-	Set<Anime> getAnimesAiringOnWeekday(DayOfWeek day, ZoneId zone) {
-		return getAnimeMappedToDayOfWeek(zone).get(day);
-	}
-
-	Map<DayOfWeek, Set<Anime>> getAnimeMappedToDayOfWeek(ZoneId zone) {
-		Map<DayOfWeek, Set<Anime>> map = new TreeMap<>();
-		for (DayOfWeek d : DayOfWeek.values()) {
-			map.put(d, new TreeSet<>());
-		}
-		Collection<Anime> vals = anime.values();
-		synchronized (vals) {
-			vals.forEach(a -> {
-				Optional<LocalDateTime> ldt = a.getNextEpisodeDateTime(zone);
-				if (ldt.isPresent()) {
-					map.compute(ldt.get().getDayOfWeek(), (d, s) -> {
-						s.add(a);
-						return s;
-					});
-				}
-			});
-		}
-		return map;
-	}
-
-	Set<Anime> getSeasonalAnime() {
+	Set<Anime> getLoadedAnime() {
 		return anime.values().stream().sorted().collect(Collectors.toSet());
 	}
 
@@ -132,12 +127,20 @@ class AnimeDBImpl implements Initilizable {
 
 	private void loadImages(List<Anime> list) {
 		list.stream().parallel().filter(a -> !coverImages.containsKey(a.getId())).forEach(a -> {
-			try {
-				log.debug("Loading medium cover image for {}", a.getTitleRomaji());
-				coverImages.put(a.getId(), ImageIO.read(new URL(a.getCoverImageMedium())));
-				log.debug("Loaded medium cover image for {}", a.getTitleRomaji());
-			} catch (IOException e) {
-				log.error("", e);
+			for (int tries = 0; tries < 5; tries++) {
+				try {
+					log.debug("Loading medium cover image for {}", a.getTitleRomaji());
+					coverImages.put(a.getId(), ImageIO.read(new URL(a.getCoverImageMedium())));
+					log.debug("Loaded medium cover image for {}", a.getTitleRomaji());
+					break;
+				} catch (IOException e) {
+					log.error("Failed loading image for '{}', retrying after 250ms (current try: {})", a.getTitleRomaji(), tries, e);
+					try {
+						Thread.sleep(250);
+					} catch (InterruptedException e1) {
+						log.error("", e1);
+					}
+				}
 			}
 		});
 	}

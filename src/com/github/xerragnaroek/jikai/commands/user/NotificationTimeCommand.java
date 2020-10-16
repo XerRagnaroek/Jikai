@@ -1,12 +1,16 @@
 
 package com.github.xerragnaroek.jikai.commands.user;
 
+import java.util.Arrays;
+import java.util.List;
+
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 
 /**
  * @author XerRagnaroek
  */
-public class ReleaseStepCommand implements JUCommand {
+public class NotificationTimeCommand implements JUCommand {
 
 	@Override
 	public String getName() {
@@ -14,20 +18,20 @@ public class ReleaseStepCommand implements JUCommand {
 	}
 
 	@Override
-	public String getAlternativeName() {
-		return "nt";
+	public List<String> getAlternativeNames() {
+		return Arrays.asList("nt");
 	}
 
 	@Override
-	public String getDescription() {
-		return "Add or remove times before the release of an anime where you'll be notfied.\nExample: `!notif_time add 2d,12h,45m` to add a step at 2 days, at 12 hours and at 45 minutes before a release.";
+	public String getDescription(JikaiLocale loc) {
+		return loc.getString("com_ju_notif_time_desc");
 	}
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		String tmp = arguments[1];
 		if (!tmp.contains("d") && !tmp.contains("h") && !tmp.contains("m") && !tmp.contains(",")) {
-			ju.sendPMFormat("'%s' isn't a valid format string! Seperate your times with a ',' and 'd' = days, 'h' = hours, 'm' = minutes. E.g. `1d,6h,30m`", tmp);
+			ju.sendPMFormat(ju.getLocale().getStringFormatted("com_ju_notif_time_invalid", Arrays.asList("input"), tmp));
 			return;
 		}
 		if (arguments[0].equals("add")) {
@@ -39,7 +43,7 @@ public class ReleaseStepCommand implements JUCommand {
 	}
 
 	@Override
-	public String getUsage() {
-		return "notif_time <add|remove> <steps> ";
+	public String getUsage(JikaiLocale loc) {
+		return loc.getStringFormatted("com_ju_notif_time_use", Arrays.asList("com"), getName());
 	}
 }

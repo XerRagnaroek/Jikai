@@ -1,9 +1,11 @@
 
 package com.github.xerragnaroek.jikai.commands.guild;
 
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.MessageChannel;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 public class PingCommand implements GuildCommand {
 
@@ -13,7 +15,7 @@ public class PingCommand implements GuildCommand {
 	}
 
 	@Override
-	public void executeCommand(MessageReceivedEvent event, String[] content) {
+	public void executeCommand(GuildMessageReceivedEvent event, String[] content) {
 		MessageChannel channel = event.getChannel();
 		long time = System.currentTimeMillis();
 		channel.sendMessage("Pong") /* => RestAction<Message> */
@@ -28,7 +30,7 @@ public class PingCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription() {
+	public String getDescription(JikaiLocale loc) {
 		return "Shows the latency of the bot.";
 	}
 
