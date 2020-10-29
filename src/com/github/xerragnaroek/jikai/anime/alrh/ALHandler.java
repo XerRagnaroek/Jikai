@@ -171,10 +171,12 @@ class ALHandler {
 			}
 		}
 		MDC.remove("id");
-		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).orTimeout(5, TimeUnit.MINUTES).thenAccept(v -> {
-			log.debug("List sent successfully!");
-			alrh.dataChanged();
-			alrh.jData.save(true);
+		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).orTimeout(5, TimeUnit.MINUTES).whenComplete((v, e) -> {
+			if (e == null) {
+				log.debug("List sent successfully!");
+				alrh.dataChanged();
+				alrh.jData.save(true);
+			}
 			sending.set(false);
 		});
 	}
@@ -300,7 +302,7 @@ class ALHandler {
 				try {
 					String title = a.getTitle(TitleLanguage.ROMAJI);
 					JikaiLocale loc = alrh.j.getLocale();
-					eb.setTitle(loc.getStringFormatted("g_eb_new_anime_title", Arrays.asList("title"), title), a.getAniUrl()).setDescription(loc.getStringFormatted("g_eb_new_anime_desc", Arrays.asList("listch"), alrh.j.getListChannel().getAsMention()));
+					eb.setTitle(loc.getStringFormatted("g_eb_new_anime_title", Arrays.asList("title"), title), a.getAniUrl()).setDescription(loc.getStringFormatted("g_eb_new_anime_desc", Arrays.asList("listch", "links"), alrh.j.getListChannel().getAsMention(), BotUtils.formatExternalSites(a)));
 					alrh.j.getAnimeChannel().sendMessage(eb.build()).submit().thenAccept(m -> log.debug("Sent embed for {}", title));
 				} catch (Exception e) {
 					log.error("", e);
@@ -325,6 +327,7 @@ class ALHandler {
 				if (a.isFinished()) {
 					eb.setDescription(loc.getString("g_eb_rem_anime_desc_finished"));
 				} else {
+					log.debug("{} has been removed but isn't finished. NextEpNum={},Episodes={}", a.getTitleRomaji(), a.getNextEpisodeNumber(), a.getEpisodes());
 					eb.setDescription(loc.getString("g_eb_rem_anime_desc_unknown"));
 				}
 				alrh.j.getAnimeChannel().sendMessage(eb.build()).submit().thenAccept(m -> log.debug("Sent embed for {}", title));

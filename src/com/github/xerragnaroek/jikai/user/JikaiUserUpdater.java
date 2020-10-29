@@ -314,8 +314,7 @@ public class JikaiUserUpdater {
 						if (a.isFinished()) {
 							cause = loc.getString("ju_sub_rem_cause_finished");
 						} else {
-							List<String> externalLinks = a.getExternalLinks().stream().filter(es -> es.getSite().equals("Twitter") || es.getSite().equals("Official Site")).map(es -> String.format("[**%s**](%s)", es.getSite(), es.getUrl())).collect(Collectors.toList());
-							cause = loc.getStringFormatted("ju_sub_rem_cause_unknown", Arrays.asList("links"), String.join(", ", externalLinks));
+							cause = loc.getStringFormatted("ju_sub_rem_cause_unknown", Arrays.asList("links"), BotUtils.formatExternalSites(a));
 						}
 						ju.unsubscribeAnime(a, cause);
 						ju.sendPM(subRemMsg(a, ju, cause));

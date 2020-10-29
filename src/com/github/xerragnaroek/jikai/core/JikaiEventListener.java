@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.commands.user.JUCommandHandler;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
+import com.github.xerragnaroek.jikai.jikai.JikaiSetup;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.user.ReleaseMessageReactionHandler;
@@ -104,7 +105,8 @@ public class JikaiEventListener extends ListenerAdapter {
 		if (!JM.isKnownGuild(gId)) {
 			Guild g = event.getGuild();
 			log.info("New Guild {}#{}, running setup", g.getName(), g.getId());
-			SetupHelper.runSetup(g);
+			// SetupHelper.runSetup(g);
+			JikaiSetup.runSetup(g);
 		}
 	}
 

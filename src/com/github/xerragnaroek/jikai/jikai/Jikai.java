@@ -41,7 +41,8 @@ public class Jikai {
 			MDC.remove("id");
 			return BotUtils.getTextChannelChecked(jd.getGuildId(), jd.getInfoChannelId());
 		} catch (Exception e) {
-			noInfoCh();
+			// noInfoCh();
+			log.debug("Info channel either hasn't been set or doesn't exist");
 			MDC.remove("id");
 			throw e;
 		}
@@ -54,7 +55,8 @@ public class Jikai {
 			MDC.remove("id");
 			return BotUtils.getTextChannelChecked(jd.getGuildId(), jd.getScheduleChannelId());
 		} catch (Exception e) {
-			noSchedCh();
+			// noSchedCh();
+			log.debug("Schedule channel either hasn't been set or doesn't exist");
 			MDC.remove("id");
 			throw e;
 		}
@@ -67,7 +69,8 @@ public class Jikai {
 			MDC.remove("id");
 			return BotUtils.getTextChannelChecked(jd.getGuildId(), jd.getAnimeChannelId());
 		} catch (Exception e) {
-			noAnimeCh();
+			// noAnimeCh();
+			log.debug("Anime channel either hasn't been set or doesn't exist");
 			MDC.remove("id");
 			throw e;
 		}
@@ -80,7 +83,8 @@ public class Jikai {
 			MDC.remove("id");
 			return BotUtils.getTextChannelChecked(jd.getGuildId(), jd.getListChannelId());
 		} catch (Exception e) {
-			noListCh();
+			// noListCh();
+			log.debug("List channel either hasn't been set or doesn't exist");
 			MDC.remove("id");
 			throw e;
 		}
@@ -179,6 +183,22 @@ public class Jikai {
 
 	public void setALRH(ALRHandler alrh) {
 		this.alrh = alrh;
+	}
+
+	public boolean hasListChannelSet() {
+		return jd.getListChannelId() != 0;
+	}
+
+	public boolean hasAnimeChannelSet() {
+		return jd.getAnimeChannelId() != 0;
+	}
+
+	public boolean hasScheduleChannelSet() {
+		return jd.getScheduleChannelId() != 0;
+	}
+
+	public boolean hasInfoChannelSet() {
+		return jd.getInfoChannelId() != 0;
 	}
 
 }

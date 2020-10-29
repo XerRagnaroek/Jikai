@@ -85,7 +85,7 @@ public class CommandHandler implements Initilizable {
 					// any recognised commands?
 					String[] tmp = content.trim().split(" ");
 					GuildCommand com = ComUtils.findCommand(commands, tmp[0]);
-					if (com != null) {
+					if (com != null && com.isEnabled()) {
 						log.info("Recognised command {}", com.getName());
 						// remove the command from the content and execute it
 						tmp = (String[]) ArrayUtils.subarray(tmp, 1, tmp.length);

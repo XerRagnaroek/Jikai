@@ -14,7 +14,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.text.StringEscapeUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,22 +33,23 @@ import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Pair;
 import com.github.xerragnaroek.jikai.util.prop.IntegerProperty;
+import com.github.xerragnaroek.jikai.util.prop.LongProperty;
 import com.github.xerragnaroek.jikai.util.prop.Property;
 
 @JsonInclude(Include.NON_EMPTY)
 @JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "prefix", "timezone", "language", "exec_command_count", "list_channel_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "command_channel_id", "last_mentioned", "msg_id_title", "alrh_data", "season_msg" })
 public class JikaiData {
-	private Property<Long> aniChId = new Property<>(0l);
+	private LongProperty aniChId = new LongProperty(0l);
 	private AtomicBoolean changed = new AtomicBoolean(false);
 	private Property<Boolean> completedSetup = new Property<>(false);
 	private Property<Boolean> comsEnabled = new Property<>(true);
 	private Path fileLoc;
 	private long gId;
-	private Property<Long> infoChId = new Property<>(0l);
-	private Property<Long> listChId = new Property<>(0l);
-	private Property<Long> commandChId = new Property<>(0l);
+	private LongProperty infoChId = new LongProperty(0l);
+	private LongProperty listChId = new LongProperty(0l);
+	private LongProperty commandChId = new LongProperty(0l);
 	private final Logger log;
-	private Property<Long> schedChId = new Property<>(0l);
+	private LongProperty schedChId = new LongProperty(0l);
 	private Property<String> prefix = new Property<>();
 	private Property<ZoneId> zone = new Property<>();
 	private IntegerProperty execComs = new IntegerProperty(0);
@@ -71,7 +72,7 @@ public class JikaiData {
 		log.info("Made configuration for {}", guildId);
 	}
 
-	public Property<Long> animeChannelIdProperty() {
+	public LongProperty animeChannelIdProperty() {
 		return aniChId;
 	}
 
@@ -181,34 +182,34 @@ public class JikaiData {
 	}
 
 	public boolean hasScheduleChannelId() {
-		return schedChId.get() != 0l;
+		return schedChId.get() > 0;
 	}
 
 	public boolean hasListChannelId() {
-		return listChId.get() != 0l;
+		return listChId.get() > 0;
 	}
 
 	public boolean hasInfoChannelId() {
-		return infoChId.get() != 0l;
+		return infoChId.get() > 0;
 	}
 
 	public boolean hasAnimeChannelId() {
-		return aniChId.get() != 0l;
+		return aniChId.get() > 0;
 	}
 
 	public boolean hasCommandChannelId() {
-		return commandChId.get() != 0l;
+		return commandChId.get() > 0;
 	}
 
-	public Property<Long> infoChannelIdProperty() {
+	public LongProperty infoChannelIdProperty() {
 		return infoChId;
 	}
 
-	public Property<Long> listChannelIdProperty() {
+	public LongProperty listChannelIdProperty() {
 		return listChId;
 	}
 
-	public Property<Long> scheduleChannelIdProperty() {
+	public LongProperty scheduleChannelIdProperty() {
 		return schedChId;
 	}
 
@@ -249,7 +250,11 @@ public class JikaiData {
 	}
 
 	public String setPrefix(String prefix) {
-		prefix = StringEscapeUtils.escapeJava(prefix);
+		// prefix = StringEscapeUtils.escapeJava(prefix);
+		prefix = prefix.split("\\n")[0];
+		if (prefix.length() > 3 && StringUtils.isAlphanumericSpace(prefix)) {
+			prefix = prefix.trim() + " ";
+		}
 		return setData(this.prefix, prefix, "prefix");
 	}
 
@@ -273,7 +278,7 @@ public class JikaiData {
 		boolean tmp = false;
 		log.debug("Seeing if any data changed:");
 		if (changed.get()) {
-			log.debug("GuildData changed");
+			log.debug("JikaiData changed");
 			tmp = true;
 		}
 		ALRHandler h = JM.get(gId).getALRHandler();
@@ -287,13 +292,13 @@ public class JikaiData {
 	private <T> T setData(Property<T> field, T newData, String name) {
 		T tmp = field.get();
 		field.set(newData);
-		log.info(name + " changed '{}'->'{}'", tmp, newData);
+		log.debug(name + " changed '{}'->'{}'", tmp, newData);
 		hasChanged();
 		return tmp;
 	}
 
 	@JsonCreator
-	public static JikaiData of(@JsonProperty("language") String lang, @JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") long gId, @JsonProperty("prefix") Property<String> pre, @JsonProperty("anime_channel_id") Property<Long> aniChId, @JsonProperty("list_channel_id") Property<Long> listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") Property<Long> icId, @JsonProperty("schedule_channel_id") Property<Long> schId, @JsonProperty("command_channel_id") Property<Long> comChId, @JsonProperty("msg_id_title") Map<Long, String> msgIdTitleMap, @JsonProperty("season_msg") Pair<String, Long> seasonMsg) {
+	public static JikaiData of(@JsonProperty("language") String lang, @JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") long gId, @JsonProperty("prefix") Property<String> pre, @JsonProperty("anime_channel_id") LongProperty aniChId, @JsonProperty("list_channel_id") LongProperty listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") LongProperty icId, @JsonProperty("schedule_channel_id") LongProperty schId, @JsonProperty("command_channel_id") LongProperty comChId, @JsonProperty("msg_id_title") Map<Long, String> msgIdTitleMap, @JsonProperty("season_msg") Pair<String, Long> seasonMsg) {
 		JikaiData jd = new JikaiData(gId, false);
 		setIfNonNull(jd.prefix, pre);
 		setIfNonNull(jd.aniChId, aniChId);

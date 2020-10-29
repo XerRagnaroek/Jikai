@@ -54,4 +54,8 @@ public interface Command extends Comparable<Command> {
 	public default boolean isDevOnly() {
 		return false;
 	}
+
+	public default boolean isEnabled() {
+		return true;
+	}
 }

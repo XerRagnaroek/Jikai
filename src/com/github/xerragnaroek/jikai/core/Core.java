@@ -42,7 +42,7 @@ public class Core {
 	private static long aniSyncMinutes;
 	public final static Logger ERROR_LOG = LoggerFactory.getLogger("ERROR");
 	public static final Path DATA_LOC = Paths.get("./data/");
-	public static final ScheduledExecutorService EXEC = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors() * 2);
+	public static final ScheduledExecutorService EXEC = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 	public static final Property<String> CUR_SEASON = new Property<>();
 	public static BooleanProperty INITIAL_LOAD = new BooleanProperty(true);
 	public static final JikaiManager JM = new JikaiManager();
@@ -78,7 +78,9 @@ public class Core {
 		JM.forEach(j -> {
 			JikaiLocale loc = j.getLocale();
 			try {
-				j.getInfoChannel().sendMessage(loc.getStringFormatted("g_online_msg", Arrays.asList("time"), BotUtils.formatMillis(millis, loc))).submit();
+				if (j.hasInfoChannelSet()) {
+					j.getInfoChannel().sendMessage(loc.getStringFormatted("g_online_msg", Arrays.asList("time"), BotUtils.formatMillis(millis, loc))).submit();
+				}
 			} catch (Exception e) {
 				ERROR_LOG.error("", e);
 			}

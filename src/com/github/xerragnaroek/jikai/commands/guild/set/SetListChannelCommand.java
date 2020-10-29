@@ -45,8 +45,12 @@ public class SetListChannelCommand implements GuildCommand {
 				return;
 			}
 		}
-
+		boolean firstTimeSet = !j.hasListChannelSet();
 		j.getJikaiData().setListChannelId(textC.getIdLong());
+		if (firstTimeSet) {
+			j.getALRHandler().sendList();
+		}
+
 		try {
 			j.getInfoChannel().sendMessage(j.getLocale().getStringFormatted("com_g_set_list_success", Arrays.asList("channel"), textC.getAsMention())).queue();
 		} catch (Exception e) {}

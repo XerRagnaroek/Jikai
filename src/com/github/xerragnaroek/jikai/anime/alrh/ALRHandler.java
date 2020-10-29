@@ -112,36 +112,40 @@ public class ALRHandler implements Initilizable {
 	 * Send the anime list.
 	 */
 	public CompletableFuture<Void> sendList() {
-		try {
-			CompletableFuture<Void> send = BotUtils.retryFuture(2, () -> {
-				try {
-					return alh.sendListNew();
-				} catch (Exception e1) {
-					return CompletableFuture.failedFuture(e1);
-				}
-			});
+		if (j.hasListChannelSet()) {
 			try {
-				TextChannel info = j.getInfoChannel();
-				JikaiLocale loc = j.getLocale();
-				info.sendMessage(loc.getString("g_list_send")).submit().thenAccept(m -> {
-					Instant start = Instant.now();
-					send.whenComplete((v, e) -> {
-						if (e == null) {
-							m.editMessage(loc.getStringFormatted("g_list_done", Arrays.asList("time"), BotUtils.formatMillis(Duration.between(start, Instant.now()).toMillis(), loc))).queue();
-						} else {
-							alh.setSending(false);
-							m.editMessage(loc.getString("g_list_fail")).queue();
-							BotUtils.sendToDev("Failed sending the list after two retries, check the logs please!");
-						}
-					});
+				CompletableFuture<Void> send = BotUtils.retryFuture(2, () -> {
+					try {
+						return alh.sendListNew();
+					} catch (Exception e1) {
+						return CompletableFuture.failedFuture(e1);
+					}
 				});
+				try {
+					TextChannel info = j.getInfoChannel();
+					JikaiLocale loc = j.getLocale();
+					info.sendMessage(loc.getString("g_list_send")).submit().thenAccept(m -> {
+						Instant start = Instant.now();
+						send.whenComplete((v, e) -> {
+							if (e == null) {
+								m.editMessage(loc.getStringFormatted("g_list_done", Arrays.asList("time"), BotUtils.formatMillis(Duration.between(start, Instant.now()).toMillis(), loc))).queue();
+							} else {
+								alh.setSending(false);
+								m.editMessage(loc.getString("g_list_fail")).queue();
+								BotUtils.sendToDev("Failed sending the list after two retries, check the logs please!");
+							}
+						});
+					});
+				} catch (Exception e) {
+					// no info channel
+				}
+				return send;
 			} catch (Exception e) {
-				// no info channel
+				return CompletableFuture.failedFuture(e);
 			}
-			return send;
-		} catch (Exception e) {
-			return CompletableFuture.failedFuture(e);
 		}
+		log.debug("List channel hasn't been set, not sending list");
+		return CompletableFuture.completedFuture(null);
 	}
 
 	@Override

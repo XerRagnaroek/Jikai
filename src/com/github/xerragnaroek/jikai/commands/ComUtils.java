@@ -24,15 +24,10 @@ public class ComUtils {
 		} else {
 			for (Permission p : perms) {
 				if (m.hasPermission(p)) {
-					tmp = true;
-					break;
+					return true;
 				}
 			}
 		}
-		if (c.isDevOnly()) {
-			tmp = m.getIdLong() == Core.DEV_ID;
-		}
-
 		// this is mostly to stop non jus from using commands but allowing them to still use commands like
 		// help and register
 		if (c instanceof GuildCommand) {
@@ -44,6 +39,9 @@ public class ComUtils {
 					tmp = JikaiUserManager.getInstance().isKnownJikaiUser(m.getIdLong());
 				}
 			}
+		}
+		if (c.isDevOnly()) {
+			tmp = m.getIdLong() == Core.DEV_ID;
 		}
 		LoggerFactory.getLogger(CommandHandler.class).debug("Member has {}sufficient permission for command {}", (tmp ? "" : "in"), c.getName());
 		return tmp;

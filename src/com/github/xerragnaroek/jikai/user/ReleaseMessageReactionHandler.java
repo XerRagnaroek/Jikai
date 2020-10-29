@@ -8,6 +8,7 @@ import java.util.TreeSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 
@@ -30,6 +31,8 @@ public class ReleaseMessageReactionHandler {
 
 	private ReleaseMessageReactionHandler() {
 		codePoints = EncodingUtil.encodeCodepoints(emojiUnicode);
+		// purge old messages when a new seasons starts
+		Core.CUR_SEASON.onChange((old, newS) -> releaseMessageIds.clear());
 	}
 
 	public synchronized static ReleaseMessageReactionHandler getRMRH() {

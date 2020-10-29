@@ -3,6 +3,7 @@ package com.github.xerragnaroek.jikai.commands.guild.set;
 import java.util.Arrays;
 import java.util.List;
 
+import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
@@ -42,7 +43,11 @@ public class SetScheduleChannelCommand implements GuildCommand {
 			}
 		}
 
+		boolean firstTimeSet = !j.hasScheduleChannelSet();
 		j.getJikaiData().setScheduleChannelId(textC.getIdLong());
+		if (firstTimeSet) {
+			ScheduleManager.sendScheduleToJikai(j);
+		}
 		try {
 			j.getInfoChannel().sendMessage(j.getLocale().getStringFormatted("com_g_set_sched_success", Arrays.asList("channel"), textC.getAsMention())).queue();
 		} catch (Exception e) {}

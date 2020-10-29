@@ -22,6 +22,6 @@ public interface GuildCommand extends Command {
 	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments);
 
 	public default boolean isJikaiUserOnly() {
-		return true;
+		return !isDevOnly();
 	}
 }

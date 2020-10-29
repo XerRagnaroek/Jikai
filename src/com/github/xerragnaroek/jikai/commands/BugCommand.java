@@ -59,4 +59,9 @@ public class BugCommand implements GuildCommand, JUCommand {
 		ju.sendPM(ju.getLocale().getStringFormatted("ju_bug", Arrays.asList("bugN"), bugs.get()));
 		BotUtils.sendToDev(message);
 	}
+
+	@Override
+	public boolean isEnabled() {
+		return false;
+	}
 }

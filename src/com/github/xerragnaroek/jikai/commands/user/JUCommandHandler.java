@@ -35,7 +35,7 @@ public class JUCommandHandler {
 		content = content.substring(1);
 		String[] tmp = content.trim().split(" ");
 		JUCommand com = ComUtils.findCommand(commands, tmp[0]);
-		if (com != null) {
+		if (com != null && com.isEnabled()) {
 			log.debug("Found command: '{}'", com.getName());
 			// remove the command from the content and execute it
 			tmp = (String[]) ArrayUtils.subarray(tmp, 1, tmp.length);

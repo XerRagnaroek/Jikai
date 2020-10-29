@@ -30,6 +30,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.BotData;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
@@ -512,5 +513,10 @@ public class BotUtils {
 
 	public static String getTodayDateForJUserFormatted(JikaiUser ju) {
 		return formatTime(ZonedDateTime.now(ju.getTimeZone()), "eeee, dd.MM.yy", ju.getLocale().getLocale());
+	}
+
+	public static String formatExternalSites(Anime a) {
+		return a.getExternalLinks().stream().filter(es -> es.getSite().equals("Twitter") || es.getSite().equals("Official Site")).map(es -> String.format("[**%s**](%s)", es.getSite(), es.getUrl())).collect(Collectors.joining(", "));
+
 	}
 }
