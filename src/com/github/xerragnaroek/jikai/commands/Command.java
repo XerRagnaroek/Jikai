@@ -19,7 +19,7 @@ public interface Command extends Comparable<Command> {
 	public default String getUsage(JikaiLocale loc) {
 		String use = null;
 		if (hasAlternativeNames()) {
-			use = getName() + " | " + getAlternativeNames();
+			use = getName();
 		}
 		return use;
 	}

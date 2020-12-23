@@ -4,13 +4,21 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
@@ -23,6 +31,7 @@ import com.github.xerragnaroek.jasa.AniException;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.JASA;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Initilizable;
 
@@ -40,6 +49,8 @@ class AnimeDBImpl implements Initilizable {
 	private AtomicBoolean loading = new AtomicBoolean(true);
 	private AtomicBoolean initialized = new AtomicBoolean(false);
 	private JASA jasa = new JASA();
+	private Set<Consumer<AnimeUpdate>> updateCon = Collections.synchronizedSet(new HashSet<>());
+	private ScheduledFuture<?> updateFuture;
 
 	AnimeDBImpl() {}
 
@@ -125,11 +136,41 @@ class AnimeDBImpl implements Initilizable {
 		return coverImages.get(a.getId());
 	}
 
+	void addUpdateCon(Consumer<AnimeUpdate> con) {
+		updateCon.add(con);
+	}
+
+	void dbUpdated(AnimeUpdate au) {
+		Core.EXEC.execute(() -> updateCon.forEach(con -> con.accept(au)));
+	}
+
+	void startUpdateThread(long updateRateSeconds) {
+		LocalDateTime now = LocalDateTime.now();
+		long untilNextFullHour = now.until(now.truncatedTo(ChronoUnit.HOURS).plusHours(1), ChronoUnit.SECONDS);
+		updateFuture = Core.EXEC.scheduleAtFixedRate(this::loadAiringAnime, untilNextFullHour, updateRateSeconds, TimeUnit.SECONDS);
+		startUpdateErrorChecking();
+		log.debug("Update thread started, first running in {} and updating every {} hours", BotUtils.formatSeconds(untilNextFullHour, JikaiLocaleManager.getEN()), BotUtils.formatSeconds(updateRateSeconds, JikaiLocaleManager.getEN()));
+	}
+
+	void startUpdateErrorChecking() {
+		Core.EXEC.execute(() -> {
+			Exception ex = null;
+			try {
+				updateFuture.get();
+				String msg = "UpdateThread completed for some reason! Restarting.";
+				log.error(msg);
+				BotUtils.sendToDev(msg);
+			} catch (InterruptedException | ExecutionException e) {
+				BotUtils.logAndSendToDev(log, "UpdateThread threw an exception! Restarting it.", ex);
+			}
+			AnimeDB.startUpdateThread();
+		});
+	}
+
 	private void loadImages(List<Anime> list) {
 		list.stream().parallel().filter(a -> !coverImages.containsKey(a.getId())).forEach(a -> {
 			for (int tries = 0; tries < 5; tries++) {
 				try {
-					log.debug("Loading medium cover image for {}", a.getTitleRomaji());
 					coverImages.put(a.getId(), ImageIO.read(new URL(a.getCoverImageMedium())));
 					log.debug("Loaded medium cover image for {}", a.getTitleRomaji());
 					break;
@@ -145,6 +186,10 @@ class AnimeDBImpl implements Initilizable {
 		});
 	}
 
+	boolean isUpdateThreadRunning() {
+		return !updateFuture.isDone();
+	}
+
 	private void handleUpdate(List<Anime> old, List<Anime> newA) {
 		AnimeUpdate au = AnimeUpdate.categoriseUpdates(old, newA);
 		if (au.hasChange()) {
@@ -158,4 +203,5 @@ class AnimeDBImpl implements Initilizable {
 	public boolean isInitialized() {
 		return initialized.get();
 	}
+
 }

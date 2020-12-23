@@ -58,11 +58,7 @@ public class Schedule {
 	void init(Set<Anime> anime) {
 		log.debug("Initializing schedule...");
 		setMonDate();
-		if (anime != null) {
-			populateSchedule(anime);
-		} else {
-			populateSchedule();
-		}
+		populateSchedule(anime);
 		updateImage();
 		log.debug("Schedule initialized!");
 	}
@@ -91,11 +87,12 @@ public class Schedule {
 		log.debug("Set monDate to {}", monDate);
 	}
 
-	private void populateSchedule() {
-		populateSchedule(AnimeDB.getLoadedAnime());
-	}
-
-	void populateSchedule(Collection<Anime> anime) {
+	void populateSchedule(Collection<Anime> oldA) {
+		List<Anime> anime = new ArrayList<>();
+		anime.addAll(AnimeDB.getLoadedAnime());
+		if (oldA != null) {
+			anime.addAll(oldA);
+		}
 		log.debug("Populating schedule, clearing map");
 		week.clear();
 		mapAnimeToDayOfWeek(zone, anime).forEach((day, set) -> set.stream().filter(this::airsLaterThisWeek).peek(a -> log.debug("{} airs this week", a.getTitle(TitleLanguage.ROMAJI))).forEach(a -> addAnimeToWeek(day, a)));
@@ -123,7 +120,7 @@ public class Schedule {
 		DayOfWeek today = now.getDayOfWeek();
 		if (today == DayOfWeek.MONDAY && !now.toLocalDate().equals(monDate)) {
 			setMonDate();
-			populateSchedule();
+			populateSchedule(null);
 			updateImage();
 		} else {
 			BooleanProperty hasChanged = new BooleanProperty();
@@ -197,6 +194,7 @@ public class Schedule {
 		}
 		LocalDateTime now = LocalDateTime.now(zone);
 		LocalDateTime aLDT = a.getNextEpisodeDateTime(zone).get();
+		log.debug("{} airs on {}", a.getTitleRomaji(), aLDT);
 		return isThisWeek(now.toLocalDate(), aLDT.toLocalDate()) && aLDT.isAfter(now);
 	}
 
