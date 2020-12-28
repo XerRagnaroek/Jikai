@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -144,27 +143,40 @@ class AnimeDBImpl implements Initilizable {
 		Core.EXEC.execute(() -> updateCon.forEach(con -> con.accept(au)));
 	}
 
-	void startUpdateThread(long updateRateSeconds) {
+	void startUpdateThread(long updateRateSeconds, boolean errorCheck) {
+		startUpdateThreadImpl(updateRateSeconds);
+		if (errorCheck) {
+			startUpdateErrorChecking();
+		}
+	}
+
+	void startUpdateThreadImpl(long updateRateSeconds) {
 		LocalDateTime now = LocalDateTime.now();
 		long untilNextFullHour = now.until(now.truncatedTo(ChronoUnit.HOURS).plusHours(1), ChronoUnit.SECONDS);
 		updateFuture = Core.EXEC.scheduleAtFixedRate(this::loadAiringAnime, untilNextFullHour, updateRateSeconds, TimeUnit.SECONDS);
-		startUpdateErrorChecking();
 		log.debug("Update thread started, first running in {} and updating every {} hours", BotUtils.formatSeconds(untilNextFullHour, JikaiLocaleManager.getEN()), BotUtils.formatSeconds(updateRateSeconds, JikaiLocaleManager.getEN()));
 	}
 
 	void startUpdateErrorChecking() {
-		Core.EXEC.execute(() -> {
-			Exception ex = null;
-			try {
-				updateFuture.get();
-				String msg = "UpdateThread completed for some reason! Restarting.";
-				log.error(msg);
-				BotUtils.sendToDev(msg);
-			} catch (InterruptedException | ExecutionException e) {
-				BotUtils.logAndSendToDev(log, "UpdateThread threw an exception! Restarting it.", ex);
+		log.debug("Starting update thread error checking");
+		Core.EXEC.scheduleAtFixedRate((() -> {
+			log.debug("Checking if update thread is still running...");
+			if (updateFuture.isDone()) {
+				log.debug("Update thread is done, checking cause...");
+				try {
+					updateFuture.get();
+					log.debug("It finished without exception, cancelled? " + updateFuture.isCancelled());
+					// catch Exceptions and Errors, explicitly catching Interrupted and ExecutionExceptions still causes
+					// the executor to halt!
+				} catch (Throwable e) {
+					BotUtils.logAndSendToDev(log, "Update thread threw an exception!", e);
+				}
+				log.info("Restarting update thread...");
+				AnimeDB.startUpdateThread(false);
+			} else {
+				log.debug("Update thread is still running!");
 			}
-			AnimeDB.startUpdateThread();
-		});
+		}), 0, 15, TimeUnit.MINUTES);
 	}
 
 	private void loadImages(List<Anime> list) {
@@ -188,6 +200,10 @@ class AnimeDBImpl implements Initilizable {
 
 	boolean isUpdateThreadRunning() {
 		return !updateFuture.isDone();
+	}
+
+	boolean cancelUpdateFuture() {
+		return updateFuture.cancel(true);
 	}
 
 	private void handleUpdate(List<Anime> old, List<Anime> newA) {

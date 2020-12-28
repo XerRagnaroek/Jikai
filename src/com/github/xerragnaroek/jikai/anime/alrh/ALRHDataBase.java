@@ -164,9 +164,11 @@ public class ALRHDataBase {
 
 	void removeDataForMessage(long id, String title) {
 		Set<ALRHData> data = getDataForMessage(id);
-		log.debug("Deleting {} entries for message {}", data.size(), title);
-		msgIdEmbedTitleMap.removeValue(title);
-		data.forEach(this::deleteEntry);
+		if (data != null) {
+			log.debug("Deleting {} entries for message {}", data.size(), title);
+			msgIdEmbedTitleMap.removeValue(title);
+			data.forEach(this::deleteEntry);
+		}
 	}
 
 	List<String> getAllMessageIdsAsList() {

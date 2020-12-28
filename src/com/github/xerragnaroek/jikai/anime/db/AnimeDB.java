@@ -51,8 +51,8 @@ public class AnimeDB {
 		return aDB.getAnime(title);
 	}
 
-	public static void startUpdateThread() {
-		aDB.startUpdateThread(updateRate);
+	public static void startUpdateThread(boolean errorCheck) {
+		aDB.startUpdateThread(updateRate, errorCheck);
 	}
 
 	public static void setUpdateRate(long rate) {
@@ -85,5 +85,9 @@ public class AnimeDB {
 
 	public static boolean isUpdateThreadRunning() {
 		return aDB.isUpdateThreadRunning();
+	}
+
+	public static boolean cancelUpdateFuture() {
+		return aDB.cancelUpdateFuture();
 	}
 }

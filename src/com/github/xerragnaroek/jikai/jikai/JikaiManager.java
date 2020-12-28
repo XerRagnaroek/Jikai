@@ -34,7 +34,7 @@ public class JikaiManager extends Manager<Jikai> {
 		JikaiLocaleManager.loadLocales();
 		AnimeDB.init();
 		AnimeDB.waitUntilLoaded();
-		AnimeDB.startUpdateThread();
+		AnimeDB.startUpdateThread(true);
 		JikaiUserManager.init();
 		JikaiIO.load();
 		jdm.getGuildIds().forEach(this::registerNew);

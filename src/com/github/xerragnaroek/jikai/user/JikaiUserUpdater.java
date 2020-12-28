@@ -361,7 +361,7 @@ public class JikaiUserUpdater {
 	private static MessageEmbed makeReleaseChangedEmbed(JikaiUser ju, Anime a, long delay) {
 		EmbedBuilder eb = new EmbedBuilder();
 		JikaiLocale loc = ju.getLocale();
-		eb.setTitle(loc.getStringFormatted("ju_eb_release_change_title", Arrays.asList("%itle"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
+		eb.setTitle(loc.getStringFormatted("ju_eb_release_change_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
 		if (a.hasCoverImageMedium()) {
 			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
