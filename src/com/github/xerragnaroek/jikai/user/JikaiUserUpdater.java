@@ -348,17 +348,27 @@ public class JikaiUserUpdater {
 				Anime a = pair.getLeft();
 				long dif = pair.getRight();
 				jum.getJUSubscribedToAnime(a).forEach(ju -> {
-					JikaiLocale loc = ju.getLocale();
-					EmbedBuilder eb = new EmbedBuilder();
-					eb.setTitle(loc.getStringFormatted("ju_eb_period_change_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl()).setThumbnail(a.getBiggestAvailableCoverImage());
-					eb.setDescription(loc.getStringFormatted("ju_eb_period_change_desc", Arrays.asList("time", "date"), BotUtils.formatSeconds(dif, loc), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale())));
-					ju.sendPM(eb.build());
+					ju.sendPM(makePeriodChangedEmbed(ju, a, dif));
 				});
 			});
 		}
 	}
 
-	private static MessageEmbed makeReleaseChangedEmbed(JikaiUser ju, Anime a, long delay) {
+	private MessageEmbed makePeriodChangedEmbed(JikaiUser ju, Anime a, long dif) {
+		JikaiLocale loc = ju.getLocale();
+		EmbedBuilder eb = new EmbedBuilder();
+		eb.setTitle(loc.getStringFormatted("ju_eb_period_change_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl()).setThumbnail(a.getBiggestAvailableCoverImage());
+		// later
+		if (dif > 0) {
+			eb.setDescription(loc.getStringFormatted("ju_eb_period_change_later_desc", Arrays.asList("dif", "time", "date"), BotUtils.formatSeconds(dif, loc), BotUtils.formatSeconds(a.getNextEpisodesAirsIn(), loc), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale())));
+		} else {
+			// earlier
+			eb.setDescription(loc.getStringFormatted("ju_eb_period_change_earlier_desc", Arrays.asList("dif", "time", "date"), BotUtils.formatSeconds(dif, loc), BotUtils.formatSeconds(a.getNextEpisodesAirsIn(), loc), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale())));
+		}
+		return eb.build();
+	}
+
+	private MessageEmbed makeReleaseChangedEmbed(JikaiUser ju, Anime a, long delay) {
 		EmbedBuilder eb = new EmbedBuilder();
 		JikaiLocale loc = ju.getLocale();
 		eb.setTitle(loc.getStringFormatted("ju_eb_release_change_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
@@ -367,7 +377,7 @@ public class JikaiUserUpdater {
 		}
 		List<String> externalLinks = a.getExternalLinks().stream().filter(es -> es.getSite().equals("Twitter") || es.getSite().equals("Official Site")).map(es -> String.format("[**%s**](%s)", es.getSite(), es.getUrl())).collect(Collectors.toList());
 		StringBuilder bob = new StringBuilder();
-		String date = formatter.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(a.getNextEpisodesAirsAt()), ju.getTimeZone()));
+		String date = formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale());
 		if (delay > 0) {
 			bob.append(loc.getStringFormatted("ju_eb_release_change_pp", Arrays.asList("time", "date"), BotUtils.formatSeconds(delay, loc), date));
 		} else {
@@ -448,6 +458,10 @@ public class JikaiUserUpdater {
 
 	public void testDailyUpdate(JikaiUser ju) {
 		sendDailyUpdate(ju);
+	}
+
+	public MessageEmbed testPeriodChanged(Anime a, long dif, JikaiUser ju) {
+		return makePeriodChangedEmbed(ju, a, dif);
 	}
 
 	private Queue<MessageEmbed> createDailyMessage(JikaiUser ju, AnimeTable at, DayOfWeek day) {

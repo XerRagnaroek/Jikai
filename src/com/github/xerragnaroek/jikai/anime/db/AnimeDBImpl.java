@@ -72,6 +72,7 @@ class AnimeDBImpl implements Initilizable {
 			CollectionUtils.addAll(old, anime.values());
 			if (old.isEmpty()) {
 				anime = newAnime.stream().collect(Collectors.toConcurrentMap(a -> a.getId(), a -> a));
+				AnimeReleaseTracker.getInstance().addAllAnime(newAnime);
 			} else {
 				handleUpdate(old, newAnime);
 			}

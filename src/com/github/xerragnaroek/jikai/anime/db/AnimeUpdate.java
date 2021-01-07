@@ -4,12 +4,9 @@ import java.time.Duration;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +26,6 @@ public class AnimeUpdate {
 	private List<Anime> newA;
 	private List<Pair<Anime, Long>> changed = new ArrayList<>();
 	private List<Anime> nextEp = new ArrayList<>();
-	private Map<Anime, CircularFifoQueue<Integer>> releasePeriods = new HashMap<>();
 	private List<Pair<Anime, Long>> changedPeriod = new ArrayList<>();
 	private final Logger log = LoggerFactory.getLogger(AnimeUpdate.class);
 
@@ -41,12 +37,10 @@ public class AnimeUpdate {
 		newA.forEach(a -> log.debug("New anime: {}", a.getTitleRomaji()));
 		handleReleaseChanged(newAnime, oldA);
 		handleNextEp(newAnime, oldA);
-		handleReleasePeriod(newAnime, oldA);
-		String msg = String.format("Updated AnimeDB. Removed: %d, New: %d, Postponed: %d, Next Episode: %d", removed.size(), newA.size(), changed.size(), nextEp.size());
+		handleReleasePeriod(newAnime);
+		String msg = String.format("Updated AnimeDB. removed: %d, new: %d, postponed: %d, next episode: %d, different release period: %d", removed.size(), newA.size(), changed.size(), nextEp.size(), changedPeriod.size());
 		log.info(msg);
-		if (!removed.isEmpty() || !newA.isEmpty() || !changed.isEmpty() || !nextEp.isEmpty()) {
-			BotUtils.sendToAllInfoChannels(msg);
-		}
+		BotUtils.sendToAllInfoChannels(msg);
 	}
 
 	private void handleRemoved(List<Anime> newA, List<Anime> old) {
@@ -87,24 +81,33 @@ public class AnimeUpdate {
 		});
 	}
 
-	private void handleReleasePeriod(List<Anime> newA, List<Anime> old) {
+	private void handleReleasePeriod(List<Anime> newA) {
+		/*
+		 * newA.forEach(a -> {
+		 * if (old.contains(a) && nextEp.contains(a)) {
+		 * releasePeriods.compute(a, (an, q) -> {
+		 * Duration dif = getDifference(old.get(old.indexOf(a)), a);
+		 * int dayDif = (int) dif.toDays();
+		 * if (q == null) {
+		 * q = new CircularFifoQueue<>(2);
+		 * q.offer(dayDif);
+		 * } else {
+		 * if (q.isAtFullCapacity() && !q.contains(dayDif)) {
+		 * log.debug("{} has a changed release period: {} instead of {}", a.getTitleRomaji(), dayDif, q);
+		 * q.offer(dayDif);
+		 * changedPeriod.add(Pair.of(a, dif.toSeconds()));
+		 * }
+		 * }
+		 * return q;
+		 * });
+		 * }
+		 * });
+		 */
+		AnimeReleaseTracker art = AnimeReleaseTracker.getInstance();
 		newA.forEach(a -> {
-			if (old.contains(a) && nextEp.contains(a)) {
-				releasePeriods.compute(a, (an, q) -> {
-					Duration dif = getDifference(old.get(old.indexOf(a)), a);
-					int dayDif = (int) dif.toDays();
-					if (q == null) {
-						q = new CircularFifoQueue<>(2);
-						q.offer(dayDif);
-					} else {
-						if (q.isAtFullCapacity() && !q.contains(dayDif)) {
-							log.debug("{} has a changed release period: {} instead of {}", a.getTitleRomaji(), dayDif, q);
-							q.offer(dayDif);
-							changedPeriod.add(Pair.of(a, dif.toSeconds()));
-						}
-					}
-					return q;
-				});
+			long dif = 0;
+			if ((dif = art.addAnime(a)) != 0) {
+				changedPeriod.add(Pair.of(a, dif));
 			}
 		});
 	}
