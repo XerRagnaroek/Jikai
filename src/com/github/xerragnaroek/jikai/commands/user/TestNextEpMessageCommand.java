@@ -1,35 +1,31 @@
 package com.github.xerragnaroek.jikai.commands.user;
 
-import java.util.Random;
-
+import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
+import com.github.xerragnaroek.jikai.user.JikaiUserUpdater;
 
 /**
- * @author XerRagnaroek
+ * 
  */
-public class TestPostponeCommand implements JUCommand {
+public class TestNextEpMessageCommand implements JUCommand {
 
 	@Override
 	public String getName() {
-		return "test_postpone";
+		return "test_next_ep_msg";
 	}
 
 	@Override
 	public String getDescription(JikaiLocale loc) {
-		return "Sends the postpone embeds";
+		return "Test the next episode message";
 	}
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		long delay = new Random().nextInt(10080) + 1;
-		ju.getSubscribedAnime().stream().map(AnimeDB::getAnime).forEach(a -> ju.sendPM(JikaiUserManager.getInstance().getUserUpdater().testPostpone(a, delay, ju)));
+		JikaiUserUpdater juu = JikaiUserManager.getInstance().getUserUpdater();
+		ju.getSubscribedAnime().stream().map(AnimeDB::getAnime).filter(Anime::hasDataForNextEpisode).forEach(a -> juu.testNextEpMessage(ju, a));
 	}
 
-	@Override
-	public boolean isDevOnly() {
-		return true;
-	}
 }

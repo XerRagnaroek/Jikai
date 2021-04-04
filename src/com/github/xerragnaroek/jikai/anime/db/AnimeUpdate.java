@@ -37,7 +37,7 @@ public class AnimeUpdate {
 		newA.forEach(a -> log.debug("New anime: {}", a.getTitleRomaji()));
 		handleReleaseChanged(newAnime, oldA);
 		handleNextEp(newAnime, oldA);
-		handleReleasePeriod(newAnime);
+		// handleReleasePeriod(newAnime);
 		String msg = String.format("Updated AnimeDB. removed: %d, new: %d, postponed: %d, next episode: %d, different release period: %d", removed.size(), newA.size(), changed.size(), nextEp.size(), changedPeriod.size());
 		log.info(msg);
 		BotUtils.sendToAllInfoChannels(msg);

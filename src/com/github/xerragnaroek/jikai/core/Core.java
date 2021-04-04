@@ -133,4 +133,14 @@ public class Core {
 		ERROR_LOG.error("", e);
 	}
 
+	public static void executeLogException(Runnable r) {
+		EXEC.execute(() -> {
+			try {
+				r.run();
+			} catch (Exception e) {
+				logThrowable(e);
+			}
+		});
+	}
+
 }

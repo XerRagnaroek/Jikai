@@ -5,18 +5,17 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.queue.CircularFifoQueue;
+import org.apache.commons.collections4.iterators.ReverseListIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jikai.util.BoundedArrayList;
 
 /**
  * 
@@ -25,8 +24,8 @@ public class AnimeReleaseTracker {
 
 	private static AnimeReleaseTracker instance;
 	// id -> last ep unix time
-	private Map<Integer, Queue<Long>> releaseTimes = Collections.synchronizedMap(new TreeMap<>());
-	private int queueMax = 3;
+	private Map<Integer, BoundedArrayList<Long>> releaseTimes = Collections.synchronizedMap(new TreeMap<>());
+	private int listMax = 3;
 
 	private final Logger log = LoggerFactory.getLogger(AnimeReleaseTracker.class);
 
@@ -44,29 +43,30 @@ public class AnimeReleaseTracker {
 	public long addAnime(Anime a) {
 		log.debug("Adding new anime \"{}\",{}", a.getTitleRomaji(), a.getId());
 		long[] wrapper = new long[] { 0 };
-		releaseTimes.compute(a.getId(), (id, q) -> {
-			if (q == null) {
-				q = new CircularFifoQueue<>(queueMax);
+		releaseTimes.compute(a.getId(), (id, l) -> {
+			if (l == null) {
+				l = new BoundedArrayList<>(listMax);
 				log.debug("First entry!");
 			}
 			long nextEpAirsAt = a.getNextEpisodesAirsAt();
-			if (q.contains(nextEpAirsAt)) {
+			if (l.contains(nextEpAirsAt)) {
 				// already in queue, no reason to mess around
-				return q;
+				return l;
 			}
 			long dif = 0;
-			if (q.size() > 2) {
-				Iterator<Long> it = q.iterator();
-
+			if (l.size() > 2) {
+				// last release time is also the last in the list, list goes oldest -> newest so we need to iterate
+				// backwards over it to go newest -> oldest
+				ReverseListIterator<Long> it = l.reverseListIterator();
 				long lastEp = it.next();
 				long curEp = nextEpAirsAt;
 				long curPeriod = LocalDateTime.ofEpochSecond(lastEp, 0, ZoneOffset.UTC).until(LocalDateTime.ofEpochSecond(curEp, 0, ZoneOffset.UTC), ChronoUnit.MINUTES);
 				log.debug("Current release period is {} minutes", curPeriod);
 				while (it.hasNext()) {
-					lastEp = curEp;
-					curEp = it.next();
-					long p = LocalDateTime.ofEpochSecond(lastEp, 0, ZoneOffset.UTC).until(LocalDateTime.ofEpochSecond(curEp, 0, ZoneOffset.UTC), ChronoUnit.MINUTES);
-					if ((dif = curEp - p) == 0) {
+					long newer = curEp;
+					long older = it.next();
+					long oldPeriod = LocalDateTime.ofEpochSecond(older, 0, ZoneOffset.UTC).until(LocalDateTime.ofEpochSecond(newer, 0, ZoneOffset.UTC), ChronoUnit.MINUTES);
+					if ((dif = curPeriod - oldPeriod) == 0) {
 						// not a new release period
 						log.debug("Not a new period.");
 						break;
@@ -77,8 +77,8 @@ public class AnimeReleaseTracker {
 				}
 			}
 			wrapper[0] = dif;
-			q.add(nextEpAirsAt);
-			return q;
+			l.add(nextEpAirsAt);
+			return l;
 		});
 		return wrapper[0];
 	}
@@ -87,34 +87,29 @@ public class AnimeReleaseTracker {
 		col.forEach(this::addAnime);
 	}
 
-	public Map<Integer, Queue<Long>> getMap() {
-		TreeMap<Integer, Queue<Long>> tmp = new TreeMap<>();
+	public Map<Integer, BoundedArrayList<Long>> getMap() {
+		TreeMap<Integer, BoundedArrayList<Long>> tmp = new TreeMap<>();
 		tmp.putAll(releaseTimes);
 		return tmp;
 	}
 
-	public void loadMap(Map<Integer, Queue<Long>> map) {
+	public void loadMap(Map<Integer, BoundedArrayList<Long>> map) {
 		Set<Integer> loadedIds = AnimeDB.getLoadedAnime().stream().map(Anime::getId).collect(Collectors.toSet());
 		map.keySet().retainAll(loadedIds);
-		TreeMap<Integer, Queue<Long>> tmp = new TreeMap<>();
-		map.forEach((i, q) -> {
-			Queue<Long> tmpQ = new CircularFifoQueue<>(queueMax);
-			tmpQ.addAll(q);
-			tmp.put(i, tmpQ);
-		});
-		log.debug("Loaded {} entries", tmp.size());
-		tmp.forEach((i, q) -> {
+		map.forEach((i, l) -> l.setMaxCapacity(listMax));
+		log.debug("Loaded {} entries", map.size());
+		map.forEach((i, l) -> {
 			if (releaseTimes.containsKey(i)) {
-				Queue<Long> curQ = releaseTimes.get(i);
-				if (curQ != null && !curQ.isEmpty()) {
-					long latest = curQ.peek();
-					if (latest != q.peek()) {
-						q.add(latest);
+				BoundedArrayList<Long> curL = releaseTimes.get(i);
+				if (curL != null && !curL.isEmpty()) {
+					long latest = curL.get(curL.size() - 1);
+					if (latest != l.get(l.size() - 1)) {
+						l.add(latest);
 					}
-					releaseTimes.put(i, q);
+					releaseTimes.put(i, l);
 				}
 			} else {
-				releaseTimes.put(i, q);
+				releaseTimes.put(i, l);
 			}
 		});
 	}

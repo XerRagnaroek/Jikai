@@ -9,17 +9,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -29,6 +28,8 @@ import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.user.ReleaseMessageReactionHandler;
+import com.github.xerragnaroek.jikai.user.SubscriptionExportHandler;
+import com.github.xerragnaroek.jikai.util.BoundedArrayList;
 
 public class JikaiIO {
 	private final static Logger log = LoggerFactory.getLogger(JikaiIO.class);
@@ -39,7 +40,8 @@ public class JikaiIO {
 			JikaiUserManager.getInstance().save();
 			ScheduleManager.saveSchedule();
 			saveReleaseMessageIds();
-			saveAnimeReleaseTracker();
+			// saveAnimeReleaseTracker();
+			saveSubscriptionExportHandler();
 		} catch (IOException e) {
 			Core.ERROR_LOG.error("Failed saving", e);
 		}
@@ -60,7 +62,8 @@ public class JikaiIO {
 						case "schedules.json" -> ScheduleManager.loadSchedules(path);
 						case "guilds" -> loadGuilds(path);
 						case "rmids.txt" -> loadReleaseMessages(path);
-						case "art.json" -> loadAnimeReleaseTracker(path);
+						case "seh.json" -> loadSubscriptionExportHandler(path);
+						// case "art.json" -> loadAnimeReleaseTracker(path);
 					}
 				});
 
@@ -103,8 +106,30 @@ public class JikaiIO {
 		Files.write(loc, ids, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 	}
 
+	private static void saveSubscriptionExportHandler() throws JsonProcessingException, IOException {
+		Map<Long, String> map = SubscriptionExportHandler.getInstance().getKeyMap();
+		Path loc = Path.of(Core.DATA_LOC.toString(), "/seh.json");
+		log.debug("Saving SubscriptionExportHandler, size {}, to {}", map.size(), loc.toAbsolutePath());
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.enable(SerializationFeature.INDENT_OUTPUT);
+		// mapper.activateDefaultTyping(BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(),
+		// DefaultTyping.OBJECT_AND_NON_CONCRETE);
+		Files.writeString(loc, mapper.writeValueAsString(map), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
+	}
+
+	private static void loadSubscriptionExportHandler(Path path) {
+		TypeReference<TreeMap<Long, String>> ref = new TypeReference<TreeMap<Long, String>>() {};
+		try {
+			Map<Long, String> map = new ObjectMapper().readValue(Files.readString(path), ref);
+			log.debug("Loaded map(size {}) for subscription export handler", map.size());
+			SubscriptionExportHandler.loadMap(map);
+		} catch (IOException e) {
+			Core.ERROR_LOG.error("Failed loading the subscription export handler!", e);
+		}
+	}
+
 	private static void saveAnimeReleaseTracker() throws JsonProcessingException, IOException {
-		Map<Integer, Queue<Long>> map = AnimeReleaseTracker.getInstance().getMap();
+		Map<Integer, BoundedArrayList<Long>> map = AnimeReleaseTracker.getInstance().getMap();
 		Path loc = Path.of(Core.DATA_LOC.toString(), "/art.json");
 		log.debug("Saving Anime Release Tracker, size {}, to {}", map.size(), loc.toAbsolutePath());
 		ObjectMapper mapper = new ObjectMapper();
@@ -119,7 +144,7 @@ public class JikaiIO {
 		// mapper.activateDefaultTyping(BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(),
 		// DefaultTyping.OBJECT_AND_NON_CONCRETE);
 		TypeFactory def = TypeFactory.defaultInstance();
-		JavaType type = def.constructMapLikeType(TreeMap.class, def.constructFromCanonical("java.lang.Integer"), def.constructParametricType(CircularFifoQueue.class, Long.class));
+		JavaType type = def.constructMapLikeType(TreeMap.class, def.constructFromCanonical("java.lang.Integer"), def.constructParametricType(BoundedArrayList.class, Long.class));
 		try {
 			AnimeReleaseTracker.getInstance().loadMap(mapper.readValue(Files.readString(path), type));
 		} catch (IOException e) {

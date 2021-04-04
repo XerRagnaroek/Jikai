@@ -5,6 +5,7 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -89,7 +90,14 @@ public class JikaiUser {
 	}
 
 	public User getUser() {
-		return Core.JDA.retrieveUserById(id).complete();
+		try {
+			return Core.JDA.retrieveUserById(id).submit().get();
+		} catch (InterruptedException | ExecutionException e) {
+			MDC.put("id", String.valueOf(id));
+			Core.ERROR_LOG.error("Couldn't retrieve User");
+			MDC.remove("id");
+			return null;
+		}
 	}
 
 	public TitleLanguage getTitleLanguage() {

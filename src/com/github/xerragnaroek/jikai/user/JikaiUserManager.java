@@ -162,7 +162,8 @@ public class JikaiUserManager {
 	}
 
 	public Set<JikaiUser> getJUSubscribedToAnime(Anime a) {
-		return subscriptionMap.get(a.getId());
+		Set<JikaiUser> jums = subscriptionMap.get(a.getId());
+		return jums == null ? Collections.emptySet() : jums;
 	}
 
 	private JikaiUser loadUser(String str) {

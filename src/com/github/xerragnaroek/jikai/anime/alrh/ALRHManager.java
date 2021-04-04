@@ -65,7 +65,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		if (au.hasChange()) {
 			mapAnimesToStartingLetter();
 			makeListMessages();
-			Core.EXEC.execute(() -> impls.values().forEach(impl -> impl.update(au)));
+			Core.executeLogException(() -> impls.values().forEach(impl -> impl.update(au)));
 		}
 	}
 

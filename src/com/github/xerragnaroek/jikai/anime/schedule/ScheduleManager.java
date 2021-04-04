@@ -64,7 +64,7 @@ public class ScheduleManager {
 			byte[] data = BotUtils.imageToByteArray(sched.getScheduleImage());
 			LocalDateTime now = LocalDateTime.now(sched.getZoneId());
 			Core.JM.getJikaisWithTimeZone(sched.getZoneId()).forEach(j -> {
-				Core.EXEC.execute(() -> sendScheduleImpl(j, sched, now, data));
+				Core.executeLogException(() -> sendScheduleImpl(j, sched, now, data));
 			});
 		}
 	}

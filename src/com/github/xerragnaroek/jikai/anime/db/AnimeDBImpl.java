@@ -72,7 +72,8 @@ class AnimeDBImpl implements Initilizable {
 			CollectionUtils.addAll(old, anime.values());
 			if (old.isEmpty()) {
 				anime = newAnime.stream().collect(Collectors.toConcurrentMap(a -> a.getId(), a -> a));
-				AnimeReleaseTracker.getInstance().addAllAnime(newAnime);
+				// disabled cause it really isn't needed!
+				// AnimeReleaseTracker.getInstance().addAllAnime(newAnime);
 			} else {
 				handleUpdate(old, newAnime);
 			}
@@ -141,7 +142,7 @@ class AnimeDBImpl implements Initilizable {
 	}
 
 	void dbUpdated(AnimeUpdate au) {
-		Core.EXEC.execute(() -> updateCon.forEach(con -> con.accept(au)));
+		Core.executeLogException(() -> updateCon.forEach(con -> con.accept(au)));
 	}
 
 	void startUpdateThread(long updateRateSeconds, boolean errorCheck) {
@@ -213,7 +214,7 @@ class AnimeDBImpl implements Initilizable {
 			// newA.removeIf(a -> !a.hasDataForNextEpisode());
 			anime = newA.stream().collect(Collectors.toConcurrentMap(a -> a.getId(), a -> a));
 		}
-		AnimeDB.dBUpdated(au);
+		dbUpdated(au);
 	}
 
 	@Override

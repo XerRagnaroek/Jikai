@@ -369,6 +369,10 @@ public class BotUtils {
 		return formatSeconds(hours * 3600, loc);
 	}
 
+	public static String formatMinutes(long mins, JikaiLocale loc) {
+		return formatSeconds(mins * 60, loc);
+	}
+
 	public static String formatMillis(long millis, JikaiLocale loc) {
 		if (millis > 1000) {
 			long seconds = TimeUnit.MILLISECONDS.toSeconds(millis);

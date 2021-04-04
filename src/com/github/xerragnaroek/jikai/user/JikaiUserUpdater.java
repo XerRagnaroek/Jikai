@@ -52,10 +52,11 @@ public class JikaiUserUpdater {
 	private Map<Integer, Map<Integer, ScheduledFuture<?>>> futureMap = new ConcurrentHashMap<>();
 	private Map<ZoneId, ScheduledFuture<?>> dailyFutures = new ConcurrentHashMap<>();
 	private JikaiUserManager jum = JikaiUserManager.getInstance();
-	private final Logger log = LoggerFactory.getLogger(JikaiUserUpdater.class);
+	private final Logger log;
 	private final static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("eeee, dd.MM.yyyy");
 
 	public JikaiUserUpdater() {
+		log = LoggerFactory.getLogger(JikaiUserUpdater.class);
 		jum.timeZoneMapProperty().onPut((z, s) -> {
 			if (!dailyFutures.containsKey(z)) {
 				startDailyUpdateThread(z);
@@ -377,6 +378,8 @@ public class JikaiUserUpdater {
 		}
 		List<String> externalLinks = a.getExternalLinks().stream().filter(es -> es.getSite().equals("Twitter") || es.getSite().equals("Official Site")).map(es -> String.format("[**%s**](%s)", es.getSite(), es.getUrl())).collect(Collectors.toList());
 		StringBuilder bob = new StringBuilder();
+		// the optional here will always have a value since this method can only get called when its value
+		// changes
 		String date = formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale());
 		if (delay > 0) {
 			bob.append(loc.getStringFormatted("ju_eb_release_change_pp", Arrays.asList("time", "date"), BotUtils.formatSeconds(delay, loc), date));
@@ -392,10 +395,31 @@ public class JikaiUserUpdater {
 
 	private void updateNextEp(AnimeUpdate au) {
 		if (au.hasAnimeNextEp()) {
+			log.debug("Handling next eps");
 			au.getAnimeNextEp().forEach(a -> {
-				jum.getJUSubscribedToAnime(a).forEach(ju -> animeAddImpl(a, a.getId(), ju));
+				log.debug("Handling next ep for {}", a.getTitleRomaji());
+				jum.getJUSubscribedToAnime(a).forEach(ju -> {
+					animeAddImpl(a, a.getId(), ju);
+					sendNextEpMsg(ju, a);
+				});
 			});
 		}
+	}
+
+	private void sendNextEpMsg(JikaiUser ju, Anime a) {
+		MDC.put("id", ju.getId() + "");
+		log.debug("Sending next episode message for {}, {}", a.getTitleRomaji(), a.getId());
+		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
+		JikaiLocale loc = ju.getLocale();
+		eb.setTitle(loc.getStringFormatted("ju_eb_next_ep_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
+		long minsTillAir = Instant.now().until(Instant.ofEpochSecond(a.getNextEpisodesAirsAt()), ChronoUnit.MINUTES) + 1;
+		eb.setDescription(loc.getStringFormatted("ju_eb_next_ep_desc", Arrays.asList("time", "date"), BotUtils.formatMinutes(minsTillAir, loc), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale())));
+		if (a.hasCoverImageMedium()) {
+			eb.setThumbnail(a.getBiggestAvailableCoverImage());
+		}
+		ju.sendPM(eb.build());
+		log.debug("Message sent");
+		MDC.remove("id");
 	}
 
 	private void cancelAnime(Anime a) {
@@ -462,6 +486,10 @@ public class JikaiUserUpdater {
 
 	public MessageEmbed testPeriodChanged(Anime a, long dif, JikaiUser ju) {
 		return makePeriodChangedEmbed(ju, a, dif);
+	}
+
+	public void testNextEpMessage(JikaiUser ju, Anime a) {
+		sendNextEpMsg(ju, a);
 	}
 
 	private Queue<MessageEmbed> createDailyMessage(JikaiUser ju, AnimeTable at, DayOfWeek day) {

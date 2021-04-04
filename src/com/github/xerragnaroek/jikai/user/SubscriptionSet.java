@@ -1,9 +1,16 @@
 package com.github.xerragnaroek.jikai.user;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.BiConsumer;
+
+import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.github.xerragnaroek.jikai.util.BotUtils;
+
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 
 @SuppressWarnings("serial")
 public class SubscriptionSet extends TreeSet<Integer> {
@@ -54,5 +61,24 @@ public class SubscriptionSet extends TreeSet<Integer> {
 
 	public void onRemove(BiConsumer<Integer, String> idCauseCon) {
 		onRem.add(idCauseCon);
+	}
+
+	public MessageEmbed getSubscriptionsFormatted(JikaiUser ju) {
+		if (isEmpty()) {
+			return null;
+		}
+		/*
+		 * StringBuilder bob = new StringBuilder();
+		 * bob.append("```asciidoc\n");
+		 * stream().map(AnimeDB::getAnime).map(a -> "- " + a.getTitle(ju.getTitleLanguage()) +
+		 * "\n").sorted().forEach(bob::append);
+		 * bob.append("```");
+		 */
+
+		StringBuilder bob = new StringBuilder();
+		stream().map(AnimeDB::getAnime).map(a -> "[" + a.getTitle(ju.getTitleLanguage()) + "](" + a.getAniUrl() + ")\n").sorted().forEach(bob::append);
+		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
+		eb.setTitle(ju.getLocale().getStringFormatted("com_ju_subs_eb_title", Arrays.asList("anime"), size())).setDescription(bob);
+		return eb.build();
 	}
 }
