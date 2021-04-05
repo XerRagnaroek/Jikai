@@ -9,6 +9,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -526,5 +527,14 @@ public class BotUtils {
 	public static String formatExternalSites(Anime a) {
 		return a.getExternalLinks().stream().filter(es -> es.getSite().equals("Twitter") || es.getSite().equals("Official Site")).map(es -> String.format("[**%s**](%s)", es.getSite(), es.getUrl())).collect(Collectors.joining(", "));
 
+	}
+
+	public static <T> Collection<List<T>> partitionCollection(Collection<T> col, int chunkSize) {
+		AtomicInteger counter = new AtomicInteger();
+		return col.stream().collect(Collectors.groupingBy(e -> counter.getAndIncrement() / chunkSize)).values();
+	}
+
+	public static String processUnicode(String codePoints) {
+		return Arrays.stream(codePoints.split("U+")).filter(s -> !s.isEmpty()).map(s -> Integer.parseInt(s, 16)).map(Character::toString).collect(Collectors.joining());
 	}
 }

@@ -1,7 +1,6 @@
 package com.github.xerragnaroek.jikai.commands.guild;
 
 import com.github.xerragnaroek.jikai.core.Core;
-import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
@@ -22,12 +21,12 @@ public class ForceRegisterCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_g_register_desc");
+	public boolean isJikaiUserOnly() {
+		return false;
 	}
 
 	@Override
-	public boolean isJikaiUserOnly() {
-		return false;
+	public String getLocaleKey() {
+		return "com_g_register";
 	}
 }

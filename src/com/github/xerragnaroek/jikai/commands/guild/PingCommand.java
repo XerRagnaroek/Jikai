@@ -34,4 +34,9 @@ public class PingCommand implements GuildCommand {
 		return "Shows the latency of the bot.";
 	}
 
+	@Override
+	public String getLocaleKey() {
+		return "";
+	}
+
 }

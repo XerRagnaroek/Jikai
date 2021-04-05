@@ -49,4 +49,9 @@ public class ReloadLocalesCommand implements JUCommand, GuildCommand {
 		return true;
 	}
 
+	@Override
+	public String getLocaleKey() {
+		return "";
+	}
+
 }

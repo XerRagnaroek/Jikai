@@ -21,11 +21,6 @@ public class TimeZoneCommand implements JUCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_ju_tz_desc");
-	}
-
-	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		if (arguments.length > 0) {
 			String id = arguments[0];
@@ -41,8 +36,8 @@ public class TimeZoneCommand implements JUCommand {
 	}
 
 	@Override
-	public String getUsage(JikaiLocale loc) {
-		return loc.getStringFormatted("com_ju_tz_use", Arrays.asList("com"), getName());
+	public String getLocaleKey() {
+		return "com_ju_tz";
 	}
 
 }

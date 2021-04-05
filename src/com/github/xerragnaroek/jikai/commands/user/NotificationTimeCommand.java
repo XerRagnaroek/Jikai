@@ -4,7 +4,6 @@ package com.github.xerragnaroek.jikai.commands.user;
 import java.util.Arrays;
 import java.util.List;
 
-import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 
 /**
@@ -23,11 +22,6 @@ public class NotificationTimeCommand implements JUCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_ju_notif_time_desc");
-	}
-
-	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		String tmp = arguments[1];
 		if (!tmp.contains("d") && !tmp.contains("h") && !tmp.contains("m") && !tmp.contains(",")) {
@@ -43,7 +37,7 @@ public class NotificationTimeCommand implements JUCommand {
 	}
 
 	@Override
-	public String getUsage(JikaiLocale loc) {
-		return loc.getStringFormatted("com_ju_notif_time_use", Arrays.asList("com"), getName());
+	public String getLocaleKey() {
+		return "com_ju_notif_time";
 	}
 }

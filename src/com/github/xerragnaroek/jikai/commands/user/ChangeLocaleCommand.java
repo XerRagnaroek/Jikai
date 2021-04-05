@@ -38,8 +38,9 @@ public class ChangeLocaleCommand implements JUCommand {
 		return Arrays.asList("locale", "lang");
 	}
 
+
 	@Override
-	public String getUsage(JikaiLocale loc) {
-		return loc.getStringFormatted("com_ju_changeloc_use", Arrays.asList("%com%"), getName());
+	public String getLocaleKey() {
+		return "com_ju_changeloc";
 	}
 }

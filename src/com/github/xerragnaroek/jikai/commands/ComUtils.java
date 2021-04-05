@@ -3,10 +3,11 @@ package com.github.xerragnaroek.jikai.commands;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.xerragnaroek.jikai.commands.guild.CommandHandler;
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
+import com.github.xerragnaroek.jikai.commands.user.JUCommand;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
@@ -16,7 +17,9 @@ import net.dv8tion.jda.api.entities.Member;
 
 public class ComUtils {
 
-	public static boolean checkPermissions(Command c, Member m) {
+	private static final Logger log = LoggerFactory.getLogger(ComUtils.class);
+
+	public static boolean checkPermissions(GuildCommand c, Member m) {
 		boolean tmp = false;
 		Permission[] perms = c.getRequiredPermissions();
 		if (perms.length == 0) {
@@ -30,20 +33,26 @@ public class ComUtils {
 		}
 		// this is mostly to stop non jus from using commands but allowing them to still use commands like
 		// help and register
-		if (c instanceof GuildCommand) {
-			GuildCommand gc = (GuildCommand) c;
-			// user has the necessary perms
-			if (tmp) {
-				if (gc.isJikaiUserOnly()) {
-					// only known jus can use this command
-					tmp = JikaiUserManager.getInstance().isKnownJikaiUser(m.getIdLong());
-				}
+		// user has the necessary perms
+		if (tmp) {
+			if (c.isJikaiUserOnly()) {
+				// only known jus can use this command
+				tmp = JikaiUserManager.getInstance().isKnownJikaiUser(m.getIdLong());
 			}
 		}
 		if (c.isDevOnly()) {
 			tmp = m.getIdLong() == Core.DEV_ID;
 		}
-		LoggerFactory.getLogger(CommandHandler.class).debug("Member has {}sufficient permission for command {}", (tmp ? "" : "in"), c.getName());
+		log.debug("Member has {}sufficient permission for command {}", (tmp ? "" : "in"), c.getName());
+		return tmp;
+	}
+
+	public static boolean checkPermissions(JUCommand c, JikaiUser ju) {
+		boolean tmp = true;
+		if (c.isDevOnly()) {
+			tmp = ju.getId() == Core.DEV_ID;
+		}
+		log.debug("JikaiUser has {}sufficient permission for command {}", (tmp ? "" : "in"), c.getName());
 		return tmp;
 	}
 

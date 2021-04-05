@@ -1,8 +1,9 @@
-package com.github.xerragnaroek.jikai.commands.user;
+package com.github.xerragnaroek.jikai.commands.user.dev;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
+import com.github.xerragnaroek.jikai.commands.user.JUCommand;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
@@ -44,5 +45,10 @@ public class SendPMCommand implements JUCommand {
 	@Override
 	public String getUsage(JikaiLocale loc) {
 		return getName() + " <ID> <message>";
+	}
+
+	@Override
+	public String getLocaleKey() {
+		return "";
 	}
 }

@@ -6,7 +6,6 @@ import java.util.List;
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
-import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -18,11 +17,6 @@ public class SetInfoChannelCommand implements GuildCommand {
 	@Override
 	public String getName() {
 		return "info_channel";
-	}
-
-	@Override
-	public String getUsage(JikaiLocale loc) {
-		return loc.getStringFormatted("com_g_set_info_use", Arrays.asList("com"), getName());
 	}
 
 	@Override
@@ -52,12 +46,12 @@ public class SetInfoChannelCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_g_set_info_desc");
+	public List<String> getAlternativeNames() {
+		return Arrays.asList("info_chan", "i_chan", "ic");
 	}
 
 	@Override
-	public List<String> getAlternativeNames() {
-		return Arrays.asList("info_chan", "i_chan", "ic");
+	public String getLocaleKey() {
+		return "com_g_set_info";
 	}
 }

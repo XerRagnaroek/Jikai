@@ -1,7 +1,8 @@
-package com.github.xerragnaroek.jikai.commands.user;
+package com.github.xerragnaroek.jikai.commands.user.dev;
 
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.github.xerragnaroek.jikai.commands.user.JUCommand;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
@@ -26,6 +27,11 @@ public class TestNextEpMessageCommand implements JUCommand {
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		JikaiUserUpdater juu = JikaiUserManager.getInstance().getUserUpdater();
 		ju.getSubscribedAnime().stream().map(AnimeDB::getAnime).filter(Anime::hasDataForNextEpisode).forEach(a -> juu.testNextEpMessage(ju, a));
+	}
+
+	@Override
+	public String getLocaleKey() {
+		return "";
 	}
 
 }

@@ -50,4 +50,9 @@ public class SetupJikaiServerCommand implements GuildCommand {
 	public boolean isDevOnly() {
 		return true;
 	}
+
+	@Override
+	public String getLocaleKey() {
+		return "";
+	}
 }

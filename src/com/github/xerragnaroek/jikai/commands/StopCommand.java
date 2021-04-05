@@ -52,4 +52,9 @@ public class StopCommand implements JUCommand, GuildCommand {
 		log.info("Goodbye :)");
 		System.exit(1);
 	}
+
+	@Override
+	public String getLocaleKey() {
+		return "";
+	}
 }

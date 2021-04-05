@@ -25,11 +25,6 @@ public class SetLanguageCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_g_set_lang_desc");
-	}
-
-	@Override
 	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments) {
 		JikaiLocale loc = JikaiLocaleManager.getInstance().getLocale(arguments[0]);
 		Jikai j = Core.JM.get(event.getGuild());
@@ -47,7 +42,8 @@ public class SetLanguageCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getUsage(JikaiLocale loc) {
-		return loc.getStringFormatted("com_g_set_lang_use", Arrays.asList("com"), getName());
+	public String getLocaleKey() {
+		return "com_g_set_lang";
 	}
+
 }

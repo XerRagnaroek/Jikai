@@ -44,8 +44,8 @@ public class AnimeListCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_g_list_desc");
+	public String getLocaleKey() {
+		return "com_g_list";
 	}
 
 }

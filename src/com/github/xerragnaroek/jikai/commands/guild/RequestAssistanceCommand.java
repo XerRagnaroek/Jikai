@@ -53,4 +53,9 @@ public class RequestAssistanceCommand implements GuildCommand {
 		return CommandHandler.MOD_PERMS;
 	}
 
+	@Override
+	public String getLocaleKey() {
+		return "";
+	}
+
 }

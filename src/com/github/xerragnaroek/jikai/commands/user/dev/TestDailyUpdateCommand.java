@@ -1,4 +1,4 @@
-package com.github.xerragnaroek.jikai.commands.user;
+package com.github.xerragnaroek.jikai.commands.user.dev;
 
 import java.time.ZoneId;
 import java.util.LinkedList;
@@ -7,6 +7,7 @@ import java.util.function.Consumer;
 
 import com.github.xerragnaroek.jikai.anime.schedule.AnimeTable;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
+import com.github.xerragnaroek.jikai.commands.user.JUCommand;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
@@ -60,5 +61,10 @@ public class TestDailyUpdateCommand implements JUCommand {
 	@Override
 	public boolean isDevOnly() {
 		return true;
+	}
+
+	@Override
+	public String getLocaleKey() {
+		return "";
 	}
 }

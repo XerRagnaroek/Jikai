@@ -23,11 +23,6 @@ public class WeeklyScheduleCommand implements JUCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_ju_weekly_desc");
-	}
-
-	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		JikaiLocale loc = ju.getLocale();
 		ComUtils.trueFalseCommand(arguments[0], ju, (b) -> {
@@ -37,8 +32,8 @@ public class WeeklyScheduleCommand implements JUCommand {
 	}
 
 	@Override
-	public String getUsage(JikaiLocale loc) {
-		return loc.getStringFormatted("com_ju_weekly_use", Arrays.asList("com"), getName());
+	public String getLocaleKey() {
+		return "com_ju_weekly";
 	}
 
 }

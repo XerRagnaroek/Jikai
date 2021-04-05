@@ -74,18 +74,23 @@ public class HelpCommand implements GuildCommand, JUCommand {
 		String pmComs = JUCommandHandler.getCommands().stream().filter(com -> !com.getName().equals("help") && com.isEnabled() && (!com.isDevOnly() || userIsDev.get())).map(com -> "**__!" + (com.hasUsage() ? com.getUsage(loc) : com.getName()) + (com.hasAlternativeNames() ? com.getAlternativeNames() : "") + "__**" + "\n" + com.getDescription(loc)).collect(Collectors.joining("\n"));
 		EmbedBuilder eb = new EmbedBuilder();
 		BotUtils.addJikaiMark(eb);
-		eb.setTitle(loc.getString("com_eb_help_server_title"));
-		MessageBuilder splitter = new MessageBuilder(loc.getStringFormatted("com_eb_help_server_desc", Arrays.asList("sercoms"), serComs));
+		eb.setTitle(loc.getString("com_help_eb_server_title"));
+		MessageBuilder splitter = new MessageBuilder(loc.getStringFormatted("com_help_eb_server_desc", Arrays.asList("sercoms"), serComs));
 		splitter.buildAll(SplitPolicy.NEWLINE).forEach(msg -> {
 			eb.setDescription(msg.getContentRaw());
 			BotUtils.sendPMChecked(u, eb.build());
 		});
-		eb.setTitle(loc.getString("com_eb_help_pm_title"));
-		splitter.setContent(loc.getStringFormatted("com_eb_help_pm_desc", Arrays.asList("pmcoms"), pmComs));
+		eb.setTitle(loc.getString("com_help_eb_pm_title"));
+		splitter.setContent(loc.getStringFormatted("com_help_eb_pm_desc", Arrays.asList("pmcoms"), pmComs));
 		splitter.buildAll(SplitPolicy.NEWLINE).forEach(msg -> {
 			eb.setDescription(msg.getContentRaw());
 			BotUtils.sendPMChecked(u, eb.build());
 		});
+	}
+
+	@Override
+	public String getLocaleKey() {
+		return "com_help_eb";
 	}
 
 }

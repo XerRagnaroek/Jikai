@@ -64,4 +64,9 @@ public class BugCommand implements GuildCommand, JUCommand {
 	public boolean isEnabled() {
 		return false;
 	}
+
+	@Override
+	public String getLocaleKey() {
+		return "";
+	}
 }

@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
-import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
@@ -48,22 +47,17 @@ public class SetPrefixCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getUsage(JikaiLocale loc) {
-		return loc.getStringFormatted("com_g_set_pre_use", Arrays.asList("com"), getName());
-	}
-
-	@Override
 	public Permission[] getRequiredPermissions() {
 		return new Permission[] { Permission.MANAGE_SERVER };
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_g_set_pre_desc");
+	public List<String> getAlternativeNames() {
+		return Arrays.asList("pre");
 	}
 
 	@Override
-	public List<String> getAlternativeNames() {
-		return Arrays.asList("pre");
+	public String getLocaleKey() {
+		return "com_g_set_pre";
 	}
 }

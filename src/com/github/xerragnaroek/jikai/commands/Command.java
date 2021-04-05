@@ -1,6 +1,7 @@
 package com.github.xerragnaroek.jikai.commands;
 
 import java.util.List;
+import java.util.Objects;
 
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
@@ -13,15 +14,13 @@ public interface Command extends Comparable<Command> {
 	 */
 	public String getName();
 
+	public String getLocaleKey();
+
 	/**
 	 * How to use the command.
 	 */
 	public default String getUsage(JikaiLocale loc) {
-		String use = null;
-		if (hasAlternativeNames()) {
-			use = getName();
-		}
-		return use;
+		return (getName() + " " + Objects.requireNonNullElse(loc.getString(getLocaleKey() + "_use"), "")).trim();
 	}
 
 	public default boolean hasUsage() {
@@ -36,7 +35,9 @@ public interface Command extends Comparable<Command> {
 		return null;
 	}
 
-	public String getDescription(JikaiLocale loc);
+	public default String getDescription(JikaiLocale loc) {
+		return loc.getString(getLocaleKey() + "_desc");
+	}
 
 	public default Permission[] getRequiredPermissions() {
 		return Permission.EMPTY_PERMISSIONS;

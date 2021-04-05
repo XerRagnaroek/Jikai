@@ -24,11 +24,6 @@ public class TitleLanguageCommand implements JUCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_ju_title_lang_desc");
-	}
-
-	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		JikaiLocale loc = ju.getLocale();
 		try {
@@ -59,8 +54,8 @@ public class TitleLanguageCommand implements JUCommand {
 	}
 
 	@Override
-	public String getUsage(JikaiLocale loc) {
-		return loc.getStringFormatted("com_ju_title_lang_use", Arrays.asList("com"), getName());
+	public String getLocaleKey() {
+		return "com_ju_title_lang";
 	}
 
 }

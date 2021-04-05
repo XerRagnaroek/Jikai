@@ -1,12 +1,13 @@
 package com.github.xerragnaroek.jikai.commands.user;
 
+import java.util.Arrays;
+
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
+import com.github.xerragnaroek.jikai.user.PrivateList;
 import com.github.xerragnaroek.jikai.user.SubscriptionExportHandler;
 
-import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 
 /**
@@ -20,14 +21,10 @@ public class ImportSubscriptionsCommand implements JUCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return "";
-	}
-
-	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
+		JikaiLocale loc = ju.getLocale();
 		if (arguments.length < 1) {
-			ju.sendPM("You need to suppy an export key! Ask the other user for theirs!");
+			ju.sendPM(loc.getString(getLocaleKey() + "_no_key"));
 			return;
 		}
 		String key = arguments[0];
@@ -36,21 +33,26 @@ public class ImportSubscriptionsCommand implements JUCommand {
 			long id = seh.getJikaiUserIdFromKey(key);
 			JikaiUser user = JikaiUserManager.getInstance().getUser(id);
 			User dUser = user.getUser();
-			MessageEmbed msg = user.getSubscribedAnime().getSubscriptionsFormatted(user);
-			if (msg != null) {
-				EmbedBuilder eb = new EmbedBuilder(msg);
+			if (!user.getSubscribedAnime().isEmpty()) {
+				String name = "This user";
+				String thumb = null;
 				if (dUser != null) {
-					eb.setThumbnail(dUser.getAvatarUrl()).setTitle(dUser.getName() + "'s subscribed anime are:");
-				} else {
-					eb.setTitle("This user's subscribed anime are:");
+					name = dUser.getName();
+					thumb = dUser.getAvatarUrl();
 				}
-				ju.sendPM(eb.build());
+				PrivateList pl = new PrivateList(ju, loc.getStringFormatted(getLocaleKey() + "_eb_title", Arrays.asList("user"), name), thumb);
+				pl.sendList(user.getSubscribedAnime());
 			} else {
-				ju.sendPMFormat("%s hasn't subscribed to any anime yet!", dUser == null ? "This user" : dUser.getAsTag());
+				ju.sendPM(loc.getStringFormatted(getLocaleKey() + "_no_subs", Arrays.asList("user"), dUser == null ? "This user" : dUser.getAsTag()));
 			}
 		} else {
-			ju.sendPM("Invalid key!");
+			ju.sendPM(loc.getString(getLocaleKey()) + "_inv_key");
 		}
+	}
+
+	@Override
+	public String getLocaleKey() {
+		return "com_ju_import";
 	}
 
 }

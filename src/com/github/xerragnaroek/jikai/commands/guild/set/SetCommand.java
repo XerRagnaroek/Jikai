@@ -67,7 +67,7 @@ public class SetCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getUsage(JikaiLocale loc) {
-		return loc.getStringFormatted("com_g_set_use", Arrays.asList("com"), getName());
+	public String getLocaleKey() {
+		return "com_g_set";
 	}
 }

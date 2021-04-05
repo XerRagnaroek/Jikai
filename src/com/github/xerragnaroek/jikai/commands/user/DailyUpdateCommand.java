@@ -28,11 +28,6 @@ public class DailyUpdateCommand implements JUCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_ju_daily_ov_desc");
-	}
-
-	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		JikaiLocale en = ju.getLocale();
 		ComUtils.trueFalseCommand(arguments[0], ju, (b) -> {
@@ -42,7 +37,7 @@ public class DailyUpdateCommand implements JUCommand {
 	}
 
 	@Override
-	public String getUsage(JikaiLocale loc) {
-		return loc.getStringFormatted("com_ju_daily_ov_use", Arrays.asList("com"), getName());
+	public String getLocaleKey() {
+		return "com_ju_daily_ov";
 	}
 }

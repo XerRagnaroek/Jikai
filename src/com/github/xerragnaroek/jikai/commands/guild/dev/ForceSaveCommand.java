@@ -1,6 +1,7 @@
 
-package com.github.xerragnaroek.jikai.commands.guild;
+package com.github.xerragnaroek.jikai.commands.guild.dev;
 
+import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
 import com.github.xerragnaroek.jikai.jikai.JikaiIO;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 
@@ -26,5 +27,10 @@ public class ForceSaveCommand implements GuildCommand {
 	@Override
 	public boolean isDevOnly() {
 		return true;
+	}
+
+	@Override
+	public String getLocaleKey() {
+		return "";
 	}
 }

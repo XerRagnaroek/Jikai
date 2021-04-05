@@ -54,11 +54,6 @@ public class StatusCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_g_status_desc");
-	}
-
-	@Override
 	public boolean isAlwaysEnabled() {
 		return true;
 	}
@@ -66,5 +61,10 @@ public class StatusCommand implements GuildCommand {
 	@Override
 	public Permission[] getRequiredPermissions() {
 		return CommandHandler.MOD_PERMS;
+	}
+
+	@Override
+	public String getLocaleKey() {
+		return "com_g_status";
 	}
 }

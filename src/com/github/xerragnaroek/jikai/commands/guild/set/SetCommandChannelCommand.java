@@ -60,7 +60,7 @@ public class SetCommandChannelCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_g_set_com_desc");
+	public String getLocaleKey() {
+		return "com_g_set_com";
 	}
 }

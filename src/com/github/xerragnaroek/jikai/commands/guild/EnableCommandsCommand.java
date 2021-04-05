@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiData;
-import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -48,12 +47,12 @@ public class EnableCommandsCommand implements GuildCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_g_enable_com_desc");
+	public boolean isAlwaysEnabled() {
+		return true;
 	}
 
 	@Override
-	public boolean isAlwaysEnabled() {
-		return true;
+	public String getLocaleKey() {
+		return "com_g_enable_com";
 	}
 }

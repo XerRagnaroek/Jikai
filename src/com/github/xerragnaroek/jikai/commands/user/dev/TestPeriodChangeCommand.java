@@ -1,4 +1,4 @@
-package com.github.xerragnaroek.jikai.commands.user;
+package com.github.xerragnaroek.jikai.commands.user.dev;
 
 import java.util.Arrays;
 import java.util.List;
@@ -6,6 +6,7 @@ import java.util.Random;
 
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.github.xerragnaroek.jikai.commands.user.JUCommand;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
@@ -46,6 +47,11 @@ public class TestPeriodChangeCommand implements JUCommand {
 	@Override
 	public boolean isDevOnly() {
 		return true;
+	}
+
+	@Override
+	public String getLocaleKey() {
+		return "";
 	}
 
 }

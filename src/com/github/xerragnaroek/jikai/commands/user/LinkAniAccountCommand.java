@@ -1,7 +1,5 @@
 package com.github.xerragnaroek.jikai.commands.user;
 
-import java.util.Arrays;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,16 +19,6 @@ public class LinkAniAccountCommand implements JUCommand {
 	}
 
 	@Override
-	public String getDescription(JikaiLocale loc) {
-		return loc.getString("com_ju_link_ani_desc");
-	}
-
-	@Override
-	public String getUsage(JikaiLocale loc) {
-		return loc.getStringFormatted("com_ju_link_ani_use", Arrays.asList("com"), getName());
-	}
-
-	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		JikaiLocale loc = ju.getLocale();
 		if (arguments.length < 1) {
@@ -39,6 +27,11 @@ public class LinkAniAccountCommand implements JUCommand {
 			return;
 		}
 		AniLinker.linkAniAccount(ju, arguments[0]);
+	}
+
+	@Override
+	public String getLocaleKey() {
+		return "com_ju_link_ani";
 	}
 
 }
