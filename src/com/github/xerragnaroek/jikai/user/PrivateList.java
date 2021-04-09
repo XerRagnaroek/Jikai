@@ -20,6 +20,7 @@ import com.github.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.events.message.priv.react.PrivateMessageReactionAddEvent;
+import net.dv8tion.jda.api.events.message.priv.react.PrivateMessageReactionRemoveEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 /**
@@ -55,6 +56,9 @@ public class PrivateList extends ListenerAdapter {
 				Map<String, Anime> map = cpToAnime.get(i);
 				EmbedBuilder eb = buildEmbed(map);
 				eb.setTitle(title + (cpToAnime.size() > 1 ? " " + (i + 1) + "/" + cpToAnime.size() : ""));
+				if (i + 1 == cpToAnime.size()) {
+					eb.appendDescription(ju.getLocale().getString("ju_eb_private_list_timed"));
+				}
 				pc.sendMessage(eb.build()).submit().thenAccept(m -> {
 					map.keySet().forEach(s -> m.addReaction(s).queue());
 					Map<String, Integer> cpAni = new TreeMap<>();
@@ -83,7 +87,7 @@ public class PrivateList extends ListenerAdapter {
 			Core.JDA.removeEventListener(this);
 			log.debug("Removed listener after an hour");
 			MDC.remove("id");
-		}, 30, TimeUnit.SECONDS);
+		}, 1, TimeUnit.HOURS);
 	}
 
 	@Override
@@ -92,6 +96,19 @@ public class PrivateList extends ListenerAdapter {
 			msgReactionMap.computeIfPresent(event.getMessageIdLong(), (l, m) -> {
 				m.computeIfPresent(event.getReactionEmote().getAsCodepoints(), (s, i) -> {
 					ju.subscribeAnime(i, ju.getLocale().getString("ju_private_list_sub_cause"));
+					return i;
+				});
+				return m;
+			});
+		}
+	}
+
+	@Override
+	public void onPrivateMessageReactionRemove(PrivateMessageReactionRemoveEvent event) {
+		if (event.getUserIdLong() == ju.getId()) {
+			msgReactionMap.computeIfPresent(event.getMessageIdLong(), (l, m) -> {
+				m.computeIfPresent(event.getReactionEmote().getAsCodepoints(), (s, i) -> {
+					ju.unsubscribeAnime(i, ju.getLocale().getString("ju_private_list_unsub_cause"));
 					return i;
 				});
 				return m;
