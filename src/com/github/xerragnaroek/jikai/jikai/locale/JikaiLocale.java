@@ -5,6 +5,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.github.xerragnaroek.jikai.util.BotUtils;
+
+import net.dv8tion.jda.api.entities.MessageEmbed;
+
 /**
  * 
  */
@@ -43,6 +47,14 @@ public class JikaiLocale {
 			tmp = tmp.replace("%" + str.get(i) + "%", objs[i].toString());
 		}
 		return tmp;
+	}
+
+	public MessageEmbed getAsEmbed(String key) {
+		return BotUtils.makeSimpleEmbed(getString(key));
+	}
+
+	public MessageEmbed getAsEmbedFormatted(String key, List<String> str, Object... objs) {
+		return BotUtils.makeSimpleEmbed(getStringFormatted(key, str, objs));
 	}
 
 	public Locale getLocale() {

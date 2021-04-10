@@ -26,9 +26,9 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.github.xerragnaroek.jikai.anime.db.AnimeReleaseTracker;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.user.ExportKeyHandler;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.user.ReleaseMessageReactionHandler;
-import com.github.xerragnaroek.jikai.user.SubscriptionExportHandler;
 import com.github.xerragnaroek.jikai.util.BoundedArrayList;
 
 public class JikaiIO {
@@ -41,7 +41,7 @@ public class JikaiIO {
 			ScheduleManager.saveSchedule();
 			saveReleaseMessageIds();
 			// saveAnimeReleaseTracker();
-			saveSubscriptionExportHandler();
+			saveExportKeyHandler();
 		} catch (IOException e) {
 			Core.ERROR_LOG.error("Failed saving", e);
 		}
@@ -62,7 +62,7 @@ public class JikaiIO {
 						case "schedules.json" -> ScheduleManager.loadSchedules(path);
 						case "guilds" -> loadGuilds(path);
 						case "rmids.txt" -> loadReleaseMessages(path);
-						case "seh.json" -> loadSubscriptionExportHandler(path);
+						case "keys.json" -> loadExportKeyHandler(path);
 						// case "art.json" -> loadAnimeReleaseTracker(path);
 					}
 				});
@@ -106,9 +106,9 @@ public class JikaiIO {
 		Files.write(loc, ids, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 	}
 
-	private static void saveSubscriptionExportHandler() throws JsonProcessingException, IOException {
-		Map<Long, String> map = SubscriptionExportHandler.getInstance().getKeyMap();
-		Path loc = Path.of(Core.DATA_LOC.toString(), "/seh.json");
+	private static void saveExportKeyHandler() throws JsonProcessingException, IOException {
+		Map<Long, String> map = ExportKeyHandler.getInstance().getKeyMap();
+		Path loc = Path.of(Core.DATA_LOC.toString(), "/keys.json");
 		log.debug("Saving SubscriptionExportHandler, size {}, to {}", map.size(), loc.toAbsolutePath());
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -117,12 +117,12 @@ public class JikaiIO {
 		Files.writeString(loc, mapper.writeValueAsString(map), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
 	}
 
-	private static void loadSubscriptionExportHandler(Path path) {
+	private static void loadExportKeyHandler(Path path) {
 		TypeReference<TreeMap<Long, String>> ref = new TypeReference<TreeMap<Long, String>>() {};
 		try {
 			Map<Long, String> map = new ObjectMapper().readValue(Files.readString(path), ref);
 			log.debug("Loaded map(size {}) for subscription export handler", map.size());
-			SubscriptionExportHandler.loadMap(map);
+			ExportKeyHandler.loadMap(map);
 		} catch (IOException e) {
 			Core.ERROR_LOG.error("Failed loading the subscription export handler!", e);
 		}

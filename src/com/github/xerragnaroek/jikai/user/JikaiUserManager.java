@@ -148,9 +148,19 @@ public class JikaiUserManager {
 					removeUser(ju.getId());
 				}
 			});
+			setUpLinks();
 		} catch (IOException e) {
 			Core.ERROR_LOG.error("Failed loading users", e);
 		}
+	}
+
+	private void setUpLinks() {
+		log.debug("Setting up links...");
+		user.values().forEach(ju -> {
+			ju.getLinkedUsers().stream().map(this::getUser).forEach(u -> u.linkToUser(ju.getId()));
+			log.debug("Links established for {}", ju.getId());
+		});
+		log.debug("{} links established", user.size());
 	}
 
 	public Set<JikaiUser> users() {
@@ -172,9 +182,11 @@ public class JikaiUserManager {
 		 * not quoted. - by Luke Sheppard (regexr.com)
 		 */
 		String[] data = str.split(",(?=(?:[^\\\"]*\\\"[^\\\"]*\\\")*(?![^\\\"]*\\\"))");
-		if (data.length < 9) {
-			throw new IllegalArgumentException("Expected data length 8, got " + data.length + " instead");
-		}
+		/*
+		 * if (data.length < 10) {
+		 * throw new IllegalArgumentException("Expected data length 9, got " + data.length + " instead");
+		 * }
+		 */
 		for (int i = 0; i < data.length; i++) {
 			data[i] = StringUtils.substringBetween(data[i], "\"");
 		}
@@ -192,7 +204,13 @@ public class JikaiUserManager {
 		}
 		tmp = StringUtils.substringBetween(data[8], "[", "]");
 		if (tmp != null && !tmp.isEmpty()) {
-			Stream.of(tmp.split(", ")).mapToInt(Integer::parseInt).mapToObj(AnimeDB::getAnime).filter(Objects::nonNull).forEach(a -> ju.subscribeAnime(a.getId(), "Startup load"));
+			Stream.of(tmp.split(", ")).map(Integer::parseInt).map(AnimeDB::getAnime).filter(Objects::nonNull).forEach(a -> ju.subscribeAnime(a.getId(), "Startup load"));
+		}
+		if (data.length > 9) {
+			tmp = StringUtils.substringBetween(data[9], "[", "]");
+			if (tmp != null && !tmp.isEmpty()) {
+				Stream.of(tmp.split(", ")).map(Long::parseLong).forEach(ju::linkUser);
+			}
 		}
 		ju.setSetupCompleted(true);
 		log.info("Loaded JikaiUser: '{}'", ju);

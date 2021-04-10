@@ -4,6 +4,7 @@ package com.github.xerragnaroek.jikai.user;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +39,11 @@ public class JikaiUser {
 	private BooleanProperty sendDailyUpdate = new BooleanProperty();
 	private BooleanProperty sendWeeklySchedule = new BooleanProperty();
 	private SetProperty<Integer> notifBeforeRelease = new SetProperty<>();
+	// set of users that are linked to this user
+	private SetProperty<Long> linkedUsers = new SetProperty<>();
+
+	// set of users this user is linked to
+	private Set<Long> linkedToUsers = new TreeSet<Long>();
 	private Property<ZoneId> zone = new Property<>();
 	private Property<String> locale = new Property<>("en");
 	private boolean setupComplete = false;
@@ -51,6 +57,7 @@ public class JikaiUser {
 		subscribedAnime.onRemove((aid, str) -> log("unsubscribed from {}, cause: {}", aid, str));
 		notifBeforeRelease.onAdd(l -> log("added step {}", l));
 		notifBeforeRelease.onRemove(l -> log("removed step {}", l));
+		linkedUsers.onAdd(uid -> log("linked user {}", uid));
 		sendDailyUpdate.onChange((o, n) -> log("change send daily update {}", n));
 		sendWeeklySchedule.onChange((o, n) -> log("change send weekly schedule {}", n));
 		locale.onChange((o, n) -> log("change locale: {}", n));
@@ -138,6 +145,18 @@ public class JikaiUser {
 	}
 
 	public void subscribeAnime(int id, String cause) {
+		subscribedAnime.add(id, cause);
+		for (long uid : linkedUsers) {
+			JikaiUser ju = JikaiUserManager.getInstance().getUser(uid);
+			if (ju == null) {
+				JikaiUserManager.getInstance().removeUser(uid);
+			} else {
+				ju.subscribeLinked(id, "Synced sub");
+			}
+		}
+	}
+
+	private void subscribeLinked(int id, String cause) {
 		subscribedAnime.add(id, cause);
 	}
 
@@ -229,6 +248,59 @@ public class JikaiUser {
 		locale.set(loc.getIdentifier());
 	}
 
+	/**
+	 * User links are stored in two ways:
+	 * 1. Set containing the ids of all users that are linked to a user. (user -> this)
+	 * (un/linkUser)
+	 * 2. Set containing the ids of all users that a user is linked to. (this -> user)
+	 * (linkTo/unlinkFromUser)
+	 * First is needed to speed up syncing of subs and such. If I'd only employ #2 I'd have to iterate
+	 * through every user to filter out who is linked to this one.
+	 * Second is mostly just there so a user can see who they're linked to.
+	 * #1 is also how the links are saved, #2 gets populated at runtime.
+	 */
+
+	/**
+	 * Link a user to this user. user -> this
+	 */
+	public void linkUser(JikaiUser ju) {
+		linkedUsers.add(ju.getId());
+		ju.linkToUser(id);
+	}
+
+	/**
+	 * Link a user to this user. user -> this
+	 * Preferred to use {@link #linkUser(JikaiUser)}
+	 */
+	public void linkUser(long id) {
+		linkedUsers.add(id);
+	}
+
+	/**
+	 * Basically subscribing to a user. Needed for internal tracking of what users this one is linked
+	 * to.
+	 */
+	public void linkToUser(long id) {
+		linkedToUsers.add(id);
+	}
+
+	public boolean unlinkUser(JikaiUser ju) {
+		ju.linkedToUsers.remove(id);
+		return linkedUsers.remove(ju.getId());
+	}
+
+	public boolean unlinkUser(long id) {
+		return linkedUsers.remove(id);
+	}
+
+	public void unlinkFromUser(long id) {
+		linkedToUsers.remove(id);
+	}
+
+	public Set<Long> getLinkedUsers() {
+		return linkedUsers.get();
+	}
+
 	private boolean stepImpl(String input, boolean add) {
 		int nfe = 0;
 		String[] tmp = input.split(",");
@@ -284,7 +356,10 @@ public class JikaiUser {
 		String schedule = sendWeeklySchedule.get() ? yes : no;
 		String title = tt.toString();
 		String steps = getPreReleaseNotifcationSteps().stream().map(i -> i / 60).sorted().map(String::valueOf).collect(Collectors.joining(", "));
-		return loc.getStringFormatted("ju_config", Arrays.asList("lang", "zone", "daily", "release", "schedule", "title", "steps", "aniId"), loc.getString("u_lang_name"), zone, daily, release, schedule, title, steps, aniId.get());
+		String aniId = (aniId = this.aniId.toString()).equals("0") ? "/" : aniId;
+		String users = linkedToUsers.stream().map(juId -> JikaiUserManager.getInstance().getUser(juId)).map(ju -> ju.getUser().getName()).sorted().collect(Collectors.joining(", "));
+		users = users.isEmpty() ? "/" : users;
+		return loc.getStringFormatted("ju_config", Arrays.asList("lang", "zone", "daily", "release", "schedule", "title", "steps", "aniId", "users"), loc.getString("u_lang_name"), zone, daily, release, schedule, title, steps, aniId, users);
 	}
 
 	public IntegerProperty aniIdProperty() {
@@ -316,7 +391,7 @@ public class JikaiUser {
 
 	@Override
 	public String toString() {
-		// id,titletype,zone,localeIdentifier,sendDailyUpdate,notifBeforeRelease,anime
-		return String.format("\"%d\",\"%d\",\"%d\",\"%s\",\"%s\",\"%d\",\"%d\",\"%s\",\"%s\"", id, aniId.get(), tt.ordinal(), zone.get().getId(), locale.get(), sendDailyUpdate.get() ? 1 : 0, sendWeeklySchedule.get() ? 1 : 0, notifBeforeRelease.toString(), subscribedAnime);
+		// id,titletype,zone,localeIdentifier,sendDailyUpdate,notifBeforeRelease,anime,linked user
+		return String.format("\"%d\",\"%d\",\"%d\",\"%s\",\"%s\",\"%d\",\"%d\",\"%s\",\"%s\",\"%s\"", id, aniId.get(), tt.ordinal(), zone.get().getId(), locale.get(), sendDailyUpdate.get() ? 1 : 0, sendWeeklySchedule.get() ? 1 : 0, notifBeforeRelease.toString(), subscribedAnime, linkedUsers.toString());
 	}
 }

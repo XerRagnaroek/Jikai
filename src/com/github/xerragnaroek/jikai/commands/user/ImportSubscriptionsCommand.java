@@ -6,7 +6,7 @@ import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.user.PrivateList;
-import com.github.xerragnaroek.jikai.user.SubscriptionExportHandler;
+import com.github.xerragnaroek.jikai.user.ExportKeyHandler;
 
 import net.dv8tion.jda.api.entities.User;
 
@@ -28,7 +28,7 @@ public class ImportSubscriptionsCommand implements JUCommand {
 			return;
 		}
 		String key = arguments[0];
-		SubscriptionExportHandler seh = SubscriptionExportHandler.getInstance();
+		ExportKeyHandler seh = ExportKeyHandler.getInstance();
 		if (seh.hasIdForKey(key)) {
 			long id = seh.getJikaiUserIdFromKey(key);
 			JikaiUser user = JikaiUserManager.getInstance().getUser(id);

@@ -37,7 +37,9 @@ import com.github.xerragnaroek.jikai.jikai.BotData;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
+import com.github.xerragnaroek.jikai.user.ExportKeyHandler;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.MessageBuilder;
@@ -490,7 +492,7 @@ public class BotUtils {
 	}
 
 	public static MessageEmbed makeSimpleEmbed(String message) {
-		return addJikaiMark(new EmbedBuilder()).setDescription(message).build();
+		return embedBuilder().setDescription(message).build();
 	}
 
 	public static <T> CompletableFuture<T> retryFuture(int times, Supplier<CompletableFuture<T>> futureSup) {
@@ -536,5 +538,32 @@ public class BotUtils {
 
 	public static String processUnicode(String codePoints) {
 		return Arrays.stream(codePoints.split("U+")).filter(s -> !s.isEmpty()).map(s -> Integer.parseInt(s, 16)).map(Character::toString).collect(Collectors.joining());
+	}
+
+	public static EmbedBuilder embedBuilder() {
+		return BotUtils.addJikaiMark(new EmbedBuilder());
+	}
+
+	public static MessageEmbed localedEmbed(JikaiLocale loc, String titleKey, String descKey) {
+		return embedBuilder().setTitle(loc.getString(titleKey)).setDescription(loc.getString(descKey)).build();
+	}
+
+	public static MessageEmbed localedEmbed(JikaiLocale loc, String locKeyBase) {
+		return localedEmbed(loc, locKeyBase + "_title", locKeyBase + "_desc");
+	}
+
+	public static MessageEmbed titledEmbed(String title, String desc) {
+		return embedBuilder().setTitle(title).setDescription(desc).build();
+	}
+
+	public static JikaiUser resolveUser(String keyOrId) {
+		long id = 0;
+		try {
+			id = Long.parseLong(keyOrId);
+		} catch (NumberFormatException e) {}
+		if (id == 0) {
+			id = ExportKeyHandler.getInstance().getJikaiUserIdFromKey(keyOrId);
+		}
+		return JikaiUserManager.getInstance().getUser(id);
 	}
 }

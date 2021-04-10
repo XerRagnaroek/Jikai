@@ -11,16 +11,16 @@ import org.slf4j.LoggerFactory;
 /**
  * 
  */
-public class SubscriptionExportHandler {
+public class ExportKeyHandler {
 
 	private BidiMap<Long, String> exportKeys = new TreeBidiMap<>();
-	private final Logger log = LoggerFactory.getLogger(SubscriptionExportHandler.class);
-	private static SubscriptionExportHandler instance;
+	private final Logger log = LoggerFactory.getLogger(ExportKeyHandler.class);
+	private static ExportKeyHandler instance;
 
-	private SubscriptionExportHandler() {}
+	private ExportKeyHandler() {}
 
-	public synchronized static SubscriptionExportHandler getInstance() {
-		return instance == null ? instance = new SubscriptionExportHandler() : instance;
+	public synchronized static ExportKeyHandler getInstance() {
+		return instance == null ? instance = new ExportKeyHandler() : instance;
 	}
 
 	public String generateExportKey(JikaiUser ju, boolean overwrite) {
@@ -34,7 +34,11 @@ public class SubscriptionExportHandler {
 	}
 
 	public long getJikaiUserIdFromKey(String key) {
-		return exportKeys.getKey(key);
+		if (hasIdForKey(key)) {
+			return exportKeys.getKey(key);
+		} else {
+			return 0;
+		}
 	}
 
 	public boolean hasIdForKey(String key) {
