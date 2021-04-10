@@ -5,6 +5,8 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -27,6 +29,7 @@ public class AnimeUpdate {
 	private List<Pair<Anime, Long>> changed = new ArrayList<>();
 	private List<Anime> nextEp = new ArrayList<>();
 	private List<Pair<Anime, Long>> changedPeriod = new ArrayList<>();
+	private List<Anime> removedButStillValid = new ArrayList<>();
 	private final Logger log = LoggerFactory.getLogger(AnimeUpdate.class);
 
 	private AnimeUpdate() {}
@@ -38,16 +41,19 @@ public class AnimeUpdate {
 		handleReleaseChanged(newAnime, oldA);
 		handleNextEp(newAnime, oldA);
 		// handleReleasePeriod(newAnime);
-		String msg = String.format("Updated AnimeDB. removed: %d, new: %d, postponed: %d, next episode: %d, different release period: %d", removed.size(), newA.size(), changed.size(), nextEp.size(), changedPeriod.size());
+		String msg = String.format("Updated AnimeDB.\nRemoved: %d\nNot in new data but still valid: %d\nNew: %d\nPostponed: %d\nNext episode: %d", removed.size(), removedButStillValid.size(), newA.size(), changed.size(), nextEp.size());
 		log.info(msg);
 		BotUtils.sendToAllInfoChannels(msg);
 	}
 
 	private void handleRemoved(List<Anime> newA, List<Anime> old) {
-		List<Anime> removedOldA = old.stream().filter(a -> !newA.contains(a)).collect(Collectors.toCollection(() -> Collections.synchronizedList(new ArrayList<>())));
+		Set<Anime> removedOldA = old.stream().filter(a -> !newA.contains(a)).collect(Collectors.toCollection(() -> new TreeSet<>()));
 		removed = newA.stream().filter(a -> a.getStatus().equals("FINISHED")).collect(Collectors.toList());
 		removedOldA.forEach(a -> {
-			if (!removed.stream().anyMatch(an -> an.getId() == a.getId())) {
+			if (a.hasDataForNextEpisode()) {
+				removedButStillValid.add(a);
+				log.debug("{} isn't in the data but still has a valid next ep on{}!", a.getTitleRomaji(), a.getNextEpisodeDateTime(ZoneId.systemDefault()));
+			} else {
 				removed.add(a);
 			}
 		});
@@ -122,6 +128,14 @@ public class AnimeUpdate {
 
 	public boolean hasRemovedAnime() {
 		return !removed.isEmpty();
+	}
+
+	public List<Anime> getRemovedButStillValid() {
+		return removedButStillValid;
+	}
+
+	public boolean hasRemovedButStillValid() {
+		return !removedButStillValid.isEmpty();
 	}
 
 	public List<Anime> getNewAnime() {

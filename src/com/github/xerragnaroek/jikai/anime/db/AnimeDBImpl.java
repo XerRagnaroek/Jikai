@@ -67,11 +67,11 @@ class AnimeDBImpl implements Initilizable {
 			distinctAnime.addAll(jasa.fetchAllAiringAnime(0, LocalDate.now().getYear() + 1));
 			distinctAnime.addAll(jasa.fetchSeasonalAnime(1));
 			List<Anime> newAnime = distinctAnime.stream().filter(a -> !a.getStatus().equals("FINISHED")).collect(Collectors.toList());
-			loadImages(newAnime);
 			List<Anime> old = new ArrayList<>();
 			CollectionUtils.addAll(old, anime.values());
 			if (old.isEmpty()) {
 				anime = newAnime.stream().collect(Collectors.toConcurrentMap(a -> a.getId(), a -> a));
+				loadImages();
 				// disabled cause it really isn't needed!
 				// AnimeReleaseTracker.getInstance().addAllAnime(newAnime);
 			} else {
@@ -181,15 +181,15 @@ class AnimeDBImpl implements Initilizable {
 		}), 0, 15, TimeUnit.MINUTES);
 	}
 
-	private void loadImages(List<Anime> list) {
-		list.stream().parallel().filter(a -> !coverImages.containsKey(a.getId())).forEach(a -> {
+	private void loadImages() {
+		anime.values().stream().parallel().filter(a -> !coverImages.containsKey(a.getId())).forEach(a -> {
 			for (int tries = 0; tries < 5; tries++) {
 				try {
 					coverImages.put(a.getId(), ImageIO.read(new URL(a.getCoverImageMedium())));
 					log.debug("Loaded medium cover image for {}", a.getTitleRomaji());
 					break;
 				} catch (IOException e) {
-					log.error("Failed loading image for '{}', retrying after 250ms (current try: {})", a.getTitleRomaji(), tries, e);
+					log.error("Failed loading image for '{}', retrying after 250ms (current try: {})", a.getTitleRomaji(), tries);
 					try {
 						Thread.sleep(250);
 					} catch (InterruptedException e1) {
@@ -213,7 +213,11 @@ class AnimeDBImpl implements Initilizable {
 		if (au.hasChange()) {
 			// newA.removeIf(a -> !a.hasDataForNextEpisode());
 			anime = newA.stream().collect(Collectors.toConcurrentMap(a -> a.getId(), a -> a));
+			if (au.hasRemovedButStillValid()) {
+				au.getRemovedButStillValid().forEach(a -> anime.put(a.getId(), a));
+			}
 		}
+		loadImages();
 		dbUpdated(au);
 	}
 

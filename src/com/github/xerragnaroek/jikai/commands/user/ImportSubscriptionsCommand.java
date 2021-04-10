@@ -3,10 +3,10 @@ package com.github.xerragnaroek.jikai.commands.user;
 import java.util.Arrays;
 
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+import com.github.xerragnaroek.jikai.user.ExportKeyHandler;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.user.PrivateList;
-import com.github.xerragnaroek.jikai.user.ExportKeyHandler;
 
 import net.dv8tion.jda.api.entities.User;
 
@@ -46,7 +46,7 @@ public class ImportSubscriptionsCommand implements JUCommand {
 				ju.sendPM(loc.getStringFormatted(getLocaleKey() + "_no_subs", Arrays.asList("user"), dUser == null ? "This user" : dUser.getAsTag()));
 			}
 		} else {
-			ju.sendPM(loc.getString(getLocaleKey()) + "_inv_key");
+			ju.sendPM(loc.getString(getLocaleKey() + "_inv_key"));
 		}
 	}
 
