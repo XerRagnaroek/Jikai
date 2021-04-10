@@ -41,5 +41,4 @@ public class ConfigCommand implements JUCommand {
 	public String getLocaleKey() {
 		return "com_ju_config";
 	}
-
 }
