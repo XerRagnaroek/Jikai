@@ -73,6 +73,7 @@ public class BotUtils {
 	}
 
 	public static CompletableFuture<?> sendToDev(Queue<Message> msgs) {
+		log.debug("sending {} messages to dev", msgs.size());
 		User dev = getDev();
 		if (dev != null) {
 			return sendPMsChecked(dev, msgs);
@@ -92,6 +93,7 @@ public class BotUtils {
 	}
 
 	public static void sendThrowableToDev(String msg, Throwable e) {
+		log.debug("sending throwable to dev");
 		MessageBuilder mb = new MessageBuilder();
 		mb.append(msg + "\n" + Objects.requireNonNullElse(e.getMessage(), "") + "\n" + ExceptionUtils.getStackTrace(e));
 		User dev = getDev();
@@ -108,7 +110,7 @@ public class BotUtils {
 	private static User getDev() {
 		long devId = Core.DEV_ID;
 		if (devId != 0) {
-			log.debug("DevId != null");
+			log.debug("DevId != 0");
 			User dev = Core.JDA.getUserById(devId);
 			if (dev != null) {
 				return dev;
@@ -132,6 +134,7 @@ public class BotUtils {
 	}
 
 	public static CompletableFuture<?> sendFile(User u, String message, byte[] data, String fileName) {
+		Logger log = LoggerFactory.getLogger(BotUtils.class.getCanonicalName() + "#" + u.getId());
 		log.debug("Sending {} bytes to user", data.length);
 		return u.openPrivateChannel().map(pc -> pc.sendFile(data, fileName).append(message)).submit().whenComplete((ma, e) -> {
 			log.debug("sendFile to user completed");
@@ -142,7 +145,16 @@ public class BotUtils {
 	}
 
 	public static CompletableFuture<Message> sendPM(User u, MessageEmbed msg) {
-		return u.openPrivateChannel().flatMap(pc -> pc.sendMessage(msg)).submit();
+		Logger log = LoggerFactory.getLogger(BotUtils.class.getCanonicalName() + "#" + u.getId());
+		log.debug("sending pm");
+		CompletableFuture<Message> cf = u.openPrivateChannel().flatMap(pc -> pc.sendMessage(msg)).submit().whenComplete((m, t) -> {
+			if (t != null) {
+				log.error("Failed sending pm!", t);
+			} else {
+				log.debug("message sent successfully");
+			}
+		});
+		return cf;
 	}
 
 	public static List<CompletableFuture<Message>> sendPM(User u, Message msg) {
@@ -161,16 +173,23 @@ public class BotUtils {
 	}
 
 	public static List<CompletableFuture<Message>> sendPMs(User u, Queue<Message> msgs) {
+		Logger log = LoggerFactory.getLogger(BotUtils.class.getCanonicalName() + "#" + u.getId());
+		log.debug("Sending {} messages", msgs.size());
+		List<CompletableFuture<Message>> futures;
 		try {
-			return u.openPrivateChannel().submit().thenApply(pc -> {
+			futures = u.openPrivateChannel().submit().thenApply(pc -> {
 				List<CompletableFuture<Message>> cfs = new ArrayList<>();
-				msgs.forEach(m -> cfs.add(pc.sendMessage(m).submit()));
+				msgs.forEach(m -> cfs.add(pc.sendMessage(m).submit().thenApply(msg -> {
+					log.debug("message sent");
+					return msg;
+				})));
 				return cfs;
 			}).get();
 		} catch (InterruptedException | ExecutionException e) {
 			Core.logThrowable(e);
-			return Collections.emptyList();
+			futures = Collections.emptyList();
 		}
+		return futures;
 	}
 
 	public static CompletableFuture<Boolean> sendPMChecked(User u, String msg) {
@@ -204,9 +223,14 @@ public class BotUtils {
 	}
 
 	public static CompletableFuture<Boolean> sendPMsEmbed(User u, Queue<MessageEmbed> msgs) {
+		Logger log = LoggerFactory.getLogger(BotUtils.class.getCanonicalName() + "#" + u.getId());
+		log.debug("Sending {} embeds", msgs.size());
 		return u.openPrivateChannel().submit().thenApply(pc -> {
 			List<CompletableFuture<?>> cfs = new ArrayList<>();
-			msgs.forEach(m -> cfs.add(pc.sendMessage(m).submit()));
+			msgs.forEach(m -> cfs.add(pc.sendMessage(m).submit().thenApply(msg -> {
+				log.debug("message sent");
+				return msg;
+			})));
 			try {
 				return CompletableFuture.allOf(cfs.toArray(new CompletableFuture<?>[cfs.size()])).handle((v, e) -> CompletableFuture.completedFuture(evalSent(e))).get().get();
 			} catch (InterruptedException | ExecutionException e) {
@@ -496,6 +520,7 @@ public class BotUtils {
 	}
 
 	public static <T> CompletableFuture<T> retryFuture(int times, Supplier<CompletableFuture<T>> futureSup) {
+		log.debug("running future, retrying {} times max", times);
 		CompletableFuture<T> future = new CompletableFuture<>();
 		futureSup.get().thenAccept(a -> future.complete(a)).exceptionally(e -> {
 			if (times <= 0) {
@@ -566,4 +591,5 @@ public class BotUtils {
 		}
 		return JikaiUserManager.getInstance().getUser(id);
 	}
+
 }
