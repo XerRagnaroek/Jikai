@@ -5,6 +5,9 @@ import java.util.Arrays;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
@@ -37,10 +40,14 @@ public class LinkRequest extends ListenerAdapter {
 	private Message msg;
 	private ScheduledFuture<?> future;
 
+	private final Logger log;
+
 	private LinkRequest(JikaiUser initiator, JikaiUser target, int direction) {
 		this.initiator = initiator;
 		this.target = target;
 		dir = direction;
+		log = LoggerFactory.getLogger(LinkRequest.class.getCanonicalName() + "#" + initiator.getId() + "->" + target.getId());
+		log.debug("new request: {}", dir == -1 ? "UNIDIRECTIONAL" : (dir == -2 ? "BIDIRECTIONAL" : "INVALID"));
 	}
 
 	private void doLink() {
@@ -51,20 +58,26 @@ public class LinkRequest extends ListenerAdapter {
 	}
 
 	private void unidi() {
+		log.debug("performing unidirectional link");
 		target.linkUser(initiator);
 		JikaiLocale loc = initiator.getLocale();
 		initiator.sendPM(BotUtils.embedBuilder().setTitle(loc.getString("ju_link_req_eb_suc_title")).setDescription(loc.getStringFormatted("ju_link_req_unidi_suc", Arrays.asList("name"), target.getUser().getName())).setThumbnail(target.getUser().getEffectiveAvatarUrl()).build());
+		log.debug("linked");
 	}
 
 	private void bidi() {
+		log.debug("performing bidirectional link");
 		JikaiLocale loc = target.getLocale();
 		String initName = initiator.getUser().getName();
 		MessageEmbed me = BotUtils.embedBuilder().setTitle(loc.getStringFormatted("ju_link_req_tgt_eb_title", Arrays.asList("name"), initName)).setDescription(loc.getStringFormatted("ju_link_req_tgt_msg", Arrays.asList("name"), initName)).setThumbnail(initiator.getUser().getEffectiveAvatarUrl()).build();
 		BotUtils.sendPM(target.getUser(), me).thenAccept(m -> {
 			msg = m;
 			m.addReaction(checkMark).and(m.addReaction(crossMark)).submit().thenAccept(v -> {
+				log.debug("reactions added");
+				m.pin().submit().thenAccept(vo -> log.debug("request pinned"));
 				initiator.sendPM(BotUtils.embedBuilder().setDescription(initiator.getLocale().getStringFormatted("ju_link_req_init_msg", Arrays.asList("name"), target.getUser().getName())).setThumbnail(target.getUser().getEffectiveAvatarUrl()).build());
 				Core.JDA.addEventListener(this);
+				log.debug("registered eventListener");
 				future = Core.EXEC.schedule(() -> reqExpired(m), 1, TimeUnit.DAYS);
 			});
 		});
@@ -72,9 +85,16 @@ public class LinkRequest extends ListenerAdapter {
 
 	private void reqExpired(Message m) {
 		Core.JDA.removeEventListener(this);
+		log.debug("request expired, removed eventListener");
+		JikaiLocale loc = target.getLocale();
 		EmbedBuilder eb = BotUtils.embedBuilder();
-		eb.setTitle(target.getLocale().getString("ju_link_req_tgt_exp_eb_title")).setDescription(target.getLocale().getStringFormatted("ju_link_req_tgt_exp", Arrays.asList("name", "date"), initiator.getUser().getName(), BotUtils.formatTime(LocalDateTime.now(), "eeee, dd.MM.yyyy", target.getLocale().getLocale()))).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
-		m.editMessage(eb.build()).submit();
+		eb.setTitle(loc.getString("ju_link_req_tgt_exp_eb_title")).setDescription(loc.getStringFormatted("ju_link_req_tgt_exp", Arrays.asList("name", "date"), initiator.getUser().getName(), BotUtils.formatTime(LocalDateTime.now(), "eeee, dd.MM.yyyy", loc.getLocale()))).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
+		m.editMessage(eb.build()).submit().thenAccept(msg -> log.debug("message edited"));
+		m.unpin().submit().thenAccept(v -> log.debug("message unpinned"));
+		loc = initiator.getLocale();
+		eb = BotUtils.embedBuilder();
+		eb.setTitle(loc.getString("ju_link_req_init_exp_eb_title")).setDescription(loc.getStringFormatted("ju_link_req_init_exp", Arrays.asList("name", "date"), target.getUser().getName(), BotUtils.formatTime(LocalDateTime.now(), "eeee, dd.MM.yyyy", loc.getLocale()))).setThumbnail(target.getUser().getEffectiveAvatarUrl());
+		initiator.sendPM(eb.build());
 	}
 
 	@Override
@@ -88,6 +108,7 @@ public class LinkRequest extends ListenerAdapter {
 	}
 
 	private void reqAccepted() {
+		log.debug("request accepted");
 		Core.JDA.removeEventListener(this);
 		future.cancel(true);
 		target.linkUser(initiator);
@@ -99,10 +120,12 @@ public class LinkRequest extends ListenerAdapter {
 		eb = BotUtils.embedBuilder();
 		loc = target.getLocale();
 		eb.setTitle(loc.getString("ju_link_req_eb_suc_title")).setDescription(loc.getStringFormatted("ju_link_req_bidi_suc", Arrays.asList("name"), initiator.getUser().getName())).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
-		msg.editMessage(eb.build()).submit();
+		msg.editMessage(eb.build()).submit().thenAccept(m -> log.debug("messsage edited"));
+		log.debug("users linked bidrectionally");
 	}
 
 	private void reqDeclined() {
+		log.debug("request declined");
 		Core.JDA.removeEventListener(this);
 		future.cancel(true);
 		EmbedBuilder eb = BotUtils.embedBuilder();
@@ -110,7 +133,7 @@ public class LinkRequest extends ListenerAdapter {
 		initiator.sendPM(eb.build());
 		eb = BotUtils.embedBuilder();
 		eb.setTitle(target.getLocale().getStringFormatted("ju_link_req_bidi_tgt_dec", Arrays.asList("name"), initiator.getUser().getName())).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
-		msg.editMessage(eb.build()).submit();
+		msg.editMessage(eb.build()).submit().thenAccept(m -> log.debug("message edited"));
 	}
 
 	static void handleLinkRequest(JikaiUser src, JikaiUser target, int direction) {
