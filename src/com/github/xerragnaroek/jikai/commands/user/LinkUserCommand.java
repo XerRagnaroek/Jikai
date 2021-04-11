@@ -1,6 +1,7 @@
 package com.github.xerragnaroek.jikai.commands.user;
 
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
@@ -45,8 +46,11 @@ public class LinkUserCommand implements JUCommand {
 			ju.sendPM(BotUtils.localedEmbed(ju.getLocale(), "com_ju_link_eb_selflink"));
 			return;
 		}
-
-		if (!JikaiUserLinkHandler.initiateLink(ju, tgt, dir)) {
+		String msg = null;
+		if (index == 1 && arguments.length >= 3) {
+			msg = Arrays.stream(arguments, 2, arguments.length).collect(Collectors.joining(" "));
+		}
+		if (!JikaiUserLinkHandler.initiateLink(ju, tgt, dir, msg)) {
 			JikaiLocale loc = ju.getLocale();
 			ju.sendPM(BotUtils.embedBuilder().setTitle(loc.getStringFormatted("com_ju_link_fail2", Arrays.asList("name"), tgt.getUser().getName())).build());
 		}

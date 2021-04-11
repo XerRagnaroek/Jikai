@@ -15,7 +15,6 @@ import com.github.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.message.priv.react.PrivateMessageReactionAddEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
@@ -39,15 +38,16 @@ public class LinkRequest extends ListenerAdapter {
 	private int dir;
 	private Message msg;
 	private ScheduledFuture<?> future;
-
+	private String optMsg;
 	private final Logger log;
 
-	private LinkRequest(JikaiUser initiator, JikaiUser target, int direction) {
+	private LinkRequest(JikaiUser initiator, JikaiUser target, int direction, String msg) {
 		this.initiator = initiator;
 		this.target = target;
 		dir = direction;
 		log = LoggerFactory.getLogger(LinkRequest.class.getCanonicalName() + "#" + initiator.getId() + "->" + target.getId());
-		log.debug("new request: {}", dir == -1 ? "UNIDIRECTIONAL" : (dir == -2 ? "BIDIRECTIONAL" : "INVALID"));
+		optMsg = msg;
+		log.debug("new request: {}, has message: {}", dir == -1 ? "UNIDIRECTIONAL" : (dir == -2 ? "BIDIRECTIONAL" : "INVALID"), optMsg == null);
 	}
 
 	private void doLink() {
@@ -69,8 +69,11 @@ public class LinkRequest extends ListenerAdapter {
 		log.debug("performing bidirectional link");
 		JikaiLocale loc = target.getLocale();
 		String initName = initiator.getUser().getName();
-		MessageEmbed me = BotUtils.embedBuilder().setTitle(loc.getStringFormatted("ju_link_req_tgt_eb_title", Arrays.asList("name"), initName)).setDescription(loc.getStringFormatted("ju_link_req_tgt_msg", Arrays.asList("name"), initName)).setThumbnail(initiator.getUser().getEffectiveAvatarUrl()).build();
-		BotUtils.sendPM(target.getUser(), me).thenAccept(m -> {
+		EmbedBuilder eb = BotUtils.embedBuilder().setTitle(loc.getStringFormatted("ju_link_req_tgt_eb_title", Arrays.asList("name"), initName)).setDescription(loc.getStringFormatted("ju_link_req_tgt_msg", Arrays.asList("name"), initName)).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
+		if (optMsg != null) {
+			eb.appendDescription(loc.getStringFormatted("ju_link_req_bidi_opt_msg", Arrays.asList("name", "msg"), initName, optMsg));
+		}
+		BotUtils.sendPM(target.getUser(), eb.build()).thenAccept(m -> {
 			msg = m;
 			m.addReaction(checkMark).and(m.addReaction(crossMark)).submit().thenAccept(v -> {
 				log.debug("reactions added");
@@ -78,7 +81,7 @@ public class LinkRequest extends ListenerAdapter {
 				initiator.sendPM(BotUtils.embedBuilder().setDescription(initiator.getLocale().getStringFormatted("ju_link_req_init_msg", Arrays.asList("name"), target.getUser().getName())).setThumbnail(target.getUser().getEffectiveAvatarUrl()).build());
 				Core.JDA.addEventListener(this);
 				log.debug("registered eventListener");
-				future = Core.EXEC.schedule(() -> reqExpired(m), 1, TimeUnit.DAYS);
+				future = Core.EXEC.schedule(() -> reqExpired(m), 30, TimeUnit.SECONDS);
 			});
 		});
 	}
@@ -113,6 +116,7 @@ public class LinkRequest extends ListenerAdapter {
 		future.cancel(true);
 		target.linkUser(initiator);
 		initiator.linkUser(target);
+		msg.unpin().submit().thenAccept(v -> log.debug("message unpinned"));
 		EmbedBuilder eb = BotUtils.embedBuilder();
 		JikaiLocale loc = initiator.getLocale();
 		eb.setTitle(loc.getString("ju_link_req_eb_suc_title")).setDescription(loc.getStringFormatted("ju_link_req_bidi_suc", Arrays.asList("name"), target.getUser().getName())).setThumbnail(target.getUser().getEffectiveAvatarUrl());
@@ -128,6 +132,7 @@ public class LinkRequest extends ListenerAdapter {
 		log.debug("request declined");
 		Core.JDA.removeEventListener(this);
 		future.cancel(true);
+		msg.unpin().submit().thenAccept(v -> log.debug("message unpinned"));
 		EmbedBuilder eb = BotUtils.embedBuilder();
 		eb.setTitle(initiator.getLocale().getStringFormatted("ju_link_req_bidi_init_dec", Arrays.asList("name"), target.getUser().getName())).setThumbnail(target.getUser().getEffectiveAvatarUrl());
 		initiator.sendPM(eb.build());
@@ -136,7 +141,7 @@ public class LinkRequest extends ListenerAdapter {
 		msg.editMessage(eb.build()).submit().thenAccept(m -> log.debug("message edited"));
 	}
 
-	static void handleLinkRequest(JikaiUser src, JikaiUser target, int direction) {
-		new LinkRequest(src, target, direction).doLink();
+	static void handleLinkRequest(JikaiUser src, JikaiUser target, int direction, String msg) {
+		new LinkRequest(src, target, direction, msg).doLink();
 	}
 }

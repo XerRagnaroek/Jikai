@@ -19,11 +19,11 @@ public class JikaiUserLinkHandler {
 	 * @param direction
 	 * @return
 	 */
-	public static boolean initiateLink(JikaiUser initiator, JikaiUser target, int direction) {
+	public static boolean initiateLink(JikaiUser initiator, JikaiUser target, int direction, String msg) {
 		if (target.getLinkedUsers().contains(initiator.getId())) {
 			return false;
 		} else {
-			LinkRequest.handleLinkRequest(initiator, target, direction);
+			LinkRequest.handleLinkRequest(initiator, target, direction, msg);
 			return true;
 		}
 	}
