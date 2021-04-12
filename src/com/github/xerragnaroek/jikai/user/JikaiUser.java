@@ -144,16 +144,17 @@ public class JikaiUser {
 		sendWeeklySchedule.set(upd);
 	}
 
-	public void subscribeAnime(int id, String cause) {
-		subscribedAnime.add(id, cause);
+	public boolean subscribeAnime(int id, String cause) {
+		boolean subbed = subscribedAnime.add(id, cause);
 		for (long uid : linkedUsers) {
 			JikaiUser ju = JikaiUserManager.getInstance().getUser(uid);
 			if (ju == null) {
 				JikaiUserManager.getInstance().removeUser(uid);
 			} else {
-				ju.subscribeLinked(id, "Synced sub");
+				ju.subscribeLinked(id, ju.getLocale().getStringFormatted("ju_sub_add_cause_linked", Arrays.asList("name"), getUser().getName()));
 			}
 		}
+		return subbed;
 	}
 
 	private void subscribeLinked(int id, String cause) {
@@ -164,12 +165,12 @@ public class JikaiUser {
 		return subscribedAnime;
 	}
 
-	public void unsubscribeAnime(int id, String cause) {
-		subscribedAnime.remove(id, cause);
+	public boolean unsubscribeAnime(int id, String cause) {
+		return subscribedAnime.remove(id, cause);
 	}
 
-	public void unsubscribeAnime(Anime a, String cause) {
-		subscribedAnime.remove(a.getId(), cause);
+	public boolean unsubscribeAnime(Anime a, String cause) {
+		return subscribedAnime.remove(a.getId(), cause);
 	}
 
 	public Set<Integer> getPreReleaseNotifcationSteps() {
