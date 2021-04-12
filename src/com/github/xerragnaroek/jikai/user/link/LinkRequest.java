@@ -22,8 +22,6 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
  * 
  */
 public class LinkRequest extends ListenerAdapter {
-	private static final String checkMark = "U+2714";
-	private static final String crossMark = "U+274c";
 	/**
 	 * Will link the source user to the target user
 	 */
@@ -33,6 +31,10 @@ public class LinkRequest extends ListenerAdapter {
 	 * Will attempt to link both users. Requires confirmation of target user
 	 */
 	public static final int BIDIRECTIONAL = -2;
+
+	private static final String checkMark = "U+2705";
+	private static final String crossMark = "U+274c";
+	private static long bidiRequestDuration = 60 * 24;
 	private JikaiUser initiator;
 	private JikaiUser target;
 	private int dir;
@@ -81,7 +83,7 @@ public class LinkRequest extends ListenerAdapter {
 				initiator.sendPM(BotUtils.embedBuilder().setDescription(initiator.getLocale().getStringFormatted("ju_link_req_init_msg", Arrays.asList("name"), target.getUser().getName())).setThumbnail(target.getUser().getEffectiveAvatarUrl()).build());
 				Core.JDA.addEventListener(this);
 				log.debug("registered eventListener");
-				future = Core.EXEC.schedule(() -> reqExpired(m), 30, TimeUnit.SECONDS);
+				future = Core.EXEC.schedule(() -> reqExpired(m), bidiRequestDuration, TimeUnit.MINUTES);
 			});
 		});
 	}
@@ -91,12 +93,12 @@ public class LinkRequest extends ListenerAdapter {
 		log.debug("request expired, removed eventListener");
 		JikaiLocale loc = target.getLocale();
 		EmbedBuilder eb = BotUtils.embedBuilder();
-		eb.setTitle(loc.getString("ju_link_req_tgt_exp_eb_title")).setDescription(loc.getStringFormatted("ju_link_req_tgt_exp", Arrays.asList("name", "date"), initiator.getUser().getName(), BotUtils.formatTime(LocalDateTime.now(), "eeee, dd.MM.yyyy", loc.getLocale()))).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
+		eb.setTitle(loc.getString("ju_link_req_tgt_exp_eb_title")).setDescription(loc.getStringFormatted("ju_link_req_tgt_exp", Arrays.asList("name", "date"), initiator.getUser().getName(), BotUtils.formatTime(LocalDateTime.now(), "eeee, dd.MM.yyyy, HH:mm", loc.getLocale()))).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
 		m.editMessage(eb.build()).submit().thenAccept(msg -> log.debug("message edited"));
 		m.unpin().submit().thenAccept(v -> log.debug("message unpinned"));
 		loc = initiator.getLocale();
 		eb = BotUtils.embedBuilder();
-		eb.setTitle(loc.getString("ju_link_req_init_exp_eb_title")).setDescription(loc.getStringFormatted("ju_link_req_init_exp", Arrays.asList("name", "date"), target.getUser().getName(), BotUtils.formatTime(LocalDateTime.now(), "eeee, dd.MM.yyyy", loc.getLocale()))).setThumbnail(target.getUser().getEffectiveAvatarUrl());
+		eb.setTitle(loc.getString("ju_link_req_init_exp_eb_title")).setDescription(loc.getStringFormatted("ju_link_req_init_exp", Arrays.asList("name", "date"), target.getUser().getName(), BotUtils.formatTime(LocalDateTime.now(), "eeee, dd.MM.yyyy, HH:mm", loc.getLocale()))).setThumbnail(target.getUser().getEffectiveAvatarUrl());
 		initiator.sendPM(eb.build());
 	}
 
@@ -143,5 +145,9 @@ public class LinkRequest extends ListenerAdapter {
 
 	static void handleLinkRequest(JikaiUser src, JikaiUser target, int direction, String msg) {
 		new LinkRequest(src, target, direction, msg).doLink();
+	}
+
+	public static void setBidiRequestDuration(long dur) {
+		bidiRequestDuration = dur;
 	}
 }

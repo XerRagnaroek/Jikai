@@ -22,6 +22,8 @@ import com.github.xerragnaroek.jikai.anime.ani.AniListSyncer;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.jikai.JikaiManager;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+import com.github.xerragnaroek.jikai.user.PrivateList;
+import com.github.xerragnaroek.jikai.user.link.LinkRequest;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.BooleanProperty;
 import com.github.xerragnaroek.jikai.util.prop.Property;
@@ -40,6 +42,8 @@ public class Core {
 	public static long DEV_ID;
 	private static long saveDelay;
 	private static long aniSyncMinutes;
+	private static long linkRequestDuration;
+	private static long privateListDuration;
 	public final static Logger ERROR_LOG = LoggerFactory.getLogger("ERROR");
 	public static final Path DATA_LOC = Paths.get("./data/");
 	public static final ScheduledExecutorService EXEC = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
@@ -71,6 +75,8 @@ public class Core {
 		INITIAL_LOAD.set(false);
 		AniListSyncer.init();
 		AniListSyncer.startSyncThread(aniSyncMinutes);
+		LinkRequest.setBidiRequestDuration(linkRequestDuration);
+		PrivateList.setListDuration(privateListDuration);
 	}
 
 	private static void sendOnlineMsg(Instant start) {
@@ -118,6 +124,14 @@ public class Core {
 				case "-ani_sync_rate":
 					aniSyncMinutes = Long.parseLong(it.next());
 					log.info("Set AniList sync rate to " + aniSyncMinutes);
+					break;
+				case "-private_list_duration":
+					privateListDuration = Long.parseLong(it.next());
+					log.info("Set import_list_duration to {}", privateListDuration);
+					break;
+				case "-link_request_duration":
+					linkRequestDuration = Long.parseLong(it.next());
+					log.info("Set link_request_duration to {}", linkRequestDuration);
 					break;
 				default:
 					ERROR_LOG.error("Unrecognized option '" + arg + "'");
