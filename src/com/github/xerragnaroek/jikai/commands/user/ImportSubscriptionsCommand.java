@@ -38,7 +38,7 @@ public class ImportSubscriptionsCommand implements JUCommand {
 				String thumb = null;
 				if (dUser != null) {
 					name = dUser.getName();
-					thumb = dUser.getAvatarUrl();
+					thumb = dUser.getEffectiveAvatarUrl();
 				}
 				PrivateList pl = new PrivateList(ju, loc.getStringFormatted(getLocaleKey() + "_eb_title", Arrays.asList("user"), name), thumb);
 				pl.sendList(user.getSubscribedAnime());
