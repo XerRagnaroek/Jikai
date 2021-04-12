@@ -19,12 +19,14 @@ import com.github.xerragnaroek.jikai.commands.user.dev.CodePointTestCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.ForceDBUpdateCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.SendPMCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.SetActivityCommand;
+import com.github.xerragnaroek.jikai.commands.user.dev.SubAllCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.TestDailyUpdateCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.TestNextEpMessageCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.TestNotifyCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.TestPeriodChangeCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.TestPostponeCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.TestReactionCommand;
+import com.github.xerragnaroek.jikai.commands.user.dev.UnsubAllCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.UpdateThreadStatusCommand;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 
@@ -33,7 +35,7 @@ public class JUCommandHandler {
 	private static Set<JUCommand> commands = Collections.synchronizedSet(new TreeSet<>());
 	private static final Logger log = LoggerFactory.getLogger(JUCommandHandler.class);
 	static {
-		JUCommand coms[] = new JUCommand[] { new UnlinkUserCommand(), new LinkUserCommand(), new SetActivityCommand(), new CodePointTestCommand(), new ImportSubscriptionsCommand(), new ExportSubscriptionsCommand(), new SendPMCommand(), new TestNextEpMessageCommand(), new TestPeriodChangeCommand(), new CancelUpdateThreadCommand(), new UpdateThreadStatusCommand(), new TestReactionCommand(), new UnlinkAniAccountCommand(), new LinkAniAccountCommand(), new ReloadLocalesCommand(), new BugCommand(), new UnregisterCommand(), new WeeklyScheduleCommand(), new ForceDBUpdateCommand(), new TestDailyUpdateCommand(), new TestPostponeCommand(), new SubscriptionsCommand(), new ForceDBUpdateCommand(), new TestNotifyCommand(), new StopCommand(), new HelpCommand(), new ConfigCommand(), new DailyUpdateCommand(), new NotifyReleaseCommand(), new NotificationTimeCommand(), new TimeZoneCommand(), new TitleLanguageCommand() };
+		JUCommand coms[] = new JUCommand[] { new SubAllCommand(), new UnsubAllCommand(), new UnlinkUserCommand(), new LinkUserCommand(), new SetActivityCommand(), new CodePointTestCommand(), new ImportSubscriptionsCommand(), new ExportSubscriptionsCommand(), new SendPMCommand(), new TestNextEpMessageCommand(), new TestPeriodChangeCommand(), new CancelUpdateThreadCommand(), new UpdateThreadStatusCommand(), new TestReactionCommand(), new UnlinkAniAccountCommand(), new LinkAniAccountCommand(), new ReloadLocalesCommand(), new BugCommand(), new UnregisterCommand(), new WeeklyScheduleCommand(), new ForceDBUpdateCommand(), new TestDailyUpdateCommand(), new TestPostponeCommand(), new SubscriptionsCommand(), new ForceDBUpdateCommand(), new TestNotifyCommand(), new StopCommand(), new HelpCommand(), new ConfigCommand(), new DailyUpdateCommand(), new NotifyReleaseCommand(), new NotificationTimeCommand(), new TimeZoneCommand(), new TitleLanguageCommand() };
 		commands.addAll(Arrays.asList(coms));
 	}
 
