@@ -38,7 +38,7 @@ public class AniLinker {
 	private final static Logger log = LoggerFactory.getLogger(AniLinker.class);
 	private final static Map<Long, UserChecker> checker = Collections.synchronizedMap(new HashMap<>());
 
-	public static CompletableFuture<Void> linkAniAccount(JikaiUser ju, String nameOrId) {
+	public static CompletableFuture<Boolean> linkAniAccount(JikaiUser ju, String nameOrId) {
 		JikaiLocale loc = ju.getLocale();
 		JASA jasa = new JASA();
 		List<User> user = new ArrayList<>();
@@ -63,10 +63,10 @@ public class AniLinker {
 		log.debug("Found {} user matching input", user.size());
 		log.debug("Starting UserChecker");
 		if (user.size() > 0) {
-			return CompletableFuture.runAsync(() -> startChecker(user, ju), Core.EXEC);
+			return CompletableFuture.runAsync(() -> startChecker(user, ju), Core.EXEC).thenApply(v -> true);
 		} else {
 			ju.sendPM(loc.getString("ju_link_ani_no_user"));
-			return CompletableFuture.completedFuture(null);
+			return CompletableFuture.completedFuture(false);
 		}
 	}
 
