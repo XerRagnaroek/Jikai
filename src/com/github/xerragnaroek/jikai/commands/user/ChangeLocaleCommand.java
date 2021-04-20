@@ -19,7 +19,7 @@ public class ChangeLocaleCommand implements JUCommand {
 
 	@Override
 	public String getDescription(JikaiLocale loc) {
-		return loc.getStringFormatted("com_ju_changeloc_desc", Arrays.asList("langs"), JikaiLocaleManager.getInstance().getAvailableLocales().toString());
+		return loc.getStringFormatted("com_ju_changeloc_desc", Arrays.asList("langs"), JikaiLocaleManager.getInstance().getLocaleIdentifiers().toString());
 	}
 
 	@Override
@@ -29,7 +29,7 @@ public class ChangeLocaleCommand implements JUCommand {
 			ju.setLocale(loc);
 			ju.sendPM(loc.getString("com_ju_changeloc_success"));
 		} else {
-			ju.sendPM(ju.getLocale().getStringFormatted("com_ju_changeloc_fail", Arrays.asList("langs"), JikaiLocaleManager.getInstance().getAvailableLocales().toString()));
+			ju.sendPM(ju.getLocale().getStringFormatted("com_ju_changeloc_fail", Arrays.asList("langs"), JikaiLocaleManager.getInstance().getLocaleIdentifiers().toString()));
 		}
 	}
 

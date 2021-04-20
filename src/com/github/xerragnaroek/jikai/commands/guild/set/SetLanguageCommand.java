@@ -37,7 +37,7 @@ public class SetLanguageCommand implements GuildCommand {
 				} catch (Exception e) {}
 			}
 		} else {
-			event.getChannel().sendMessage(j.getLocale().getStringFormatted("com_g_set_lang_fail", Arrays.asList("langs"), JikaiLocaleManager.getInstance().getAvailableLocales())).queue();
+			event.getChannel().sendMessage(j.getLocale().getStringFormatted("com_g_set_lang_fail", Arrays.asList("langs"), JikaiLocaleManager.getInstance().getLocaleIdentifiers())).queue();
 		}
 	}
 

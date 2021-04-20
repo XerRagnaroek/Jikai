@@ -40,8 +40,12 @@ public class JikaiLocaleManager {
 		return locales.containsKey(identifier.toLowerCase());
 	}
 
-	public Set<String> getAvailableLocales() {
+	public Set<String> getLocaleIdentifiers() {
 		return new HashSet<>(locales.keySet());
+	}
+
+	public Set<JikaiLocale> getLocales() {
+		return new HashSet<>(locales.values());
 	}
 
 	private void loadLocale(Path locale) {

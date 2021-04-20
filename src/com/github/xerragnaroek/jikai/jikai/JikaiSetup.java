@@ -158,7 +158,7 @@ public class JikaiSetup extends ListenerAdapter {
 		log.debug("Language");
 		if (input == null) {
 			JikaiLocale jl = j.getLocale();
-			makeAndSendEmbed(jl.getString("g_setup_lang_title"), jl.getStringFormatted("g_setup_lang_desc", Arrays.asList("langs"), JikaiLocaleManager.getInstance().getAvailableLocales().toString()));
+			makeAndSendEmbed(jl.getString("g_setup_lang_title"), jl.getStringFormatted("g_setup_lang_desc", Arrays.asList("langs"), JikaiLocaleManager.getInstance().getLocaleIdentifiers().toString()));
 			log.debug("Sent first language message");
 		} else {
 			JikaiLocale loc = JikaiLocaleManager.getInstance().getLocale(input);
