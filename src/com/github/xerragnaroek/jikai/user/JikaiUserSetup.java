@@ -6,6 +6,7 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,7 +64,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 					case 4 -> successful = sendWeeklySchedule(input);
 					case 5 -> successful = titleLanguage(input);
 					case 6 -> successful = notifySteps(input);
-					case 7 -> successful = linkAniAccount(input);
+					// case 7 -> successful = linkAniAccount(input);
 				}
 				if (successful) {
 					nextStage();
@@ -86,13 +87,13 @@ public class JikaiUserSetup extends ListenerAdapter {
 		JikaiLocaleManager jlm = JikaiLocaleManager.getInstance();
 		if (input == null) {
 			log.debug("Stage Language: First message");
-			ju.sendPM(JikaiLocaleManager.getEN().getStringFormatted("setup_lang", Arrays.asList("langs"), jlm.getAvailableLocales()));
+			ju.sendPM(JikaiLocaleManager.getEN().getStringFormatted("setup_lang", Arrays.asList("langs"), jlm.getLocales().stream().map(jl -> String.format("%s[%s]", jl.getLanguageName(), jl.getIdentifier())).collect(Collectors.joining(", "))));
 		} else {
 			log.debug("Stage Language: Computing input");
 			if (jlm.hasLocale(input)) {
 				JikaiLocale loc = jlm.getLocale(input);
 				ju.setLocale(loc);
-				ju.sendPM(loc.getStringFormatted("setup_lang_success", Arrays.asList("lang"), loc.getString("u_lang_name"))).get();
+				ju.sendPM(loc.getStringFormatted("setup_lang_success", Arrays.asList("lang"), loc.getLanguageName())).get();
 				log.debug("Stage Language: Lang set to {}", loc.getIdentifier());
 			} else {
 				log.debug("Stage Language: Unrecognized input");
@@ -145,7 +146,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 		JikaiLocale loc = ju.getLocale();
 		if (input == null) {
 			log.debug("Stage YesNo: First Message '{}'", message);
-			ju.sendPM(loc.getString(message) + " (yes|y|n|no)").get();
+			ju.sendPM(loc.getString(message) + " **(yes|y|n|no)**").get();
 		} else {
 			log.debug("Stage YesNo: Handling input");
 			switch (input) {
@@ -232,10 +233,14 @@ public class JikaiUserSetup extends ListenerAdapter {
 				log.debug("Skip link");
 				setupComplete();
 			} else {
-				AniLinker.linkAniAccount(ju, input).whenComplete((v, e) -> setupComplete());
+				AniLinker.linkAniAccount(ju, input).whenComplete((b, e) -> {
+					if (b) {
+						setupComplete();
+					}
+				});
 			}
 		}
-		return true;
+		return false;
 	}
 
 	private void setupComplete() {
@@ -261,7 +266,8 @@ public class JikaiUserSetup extends ListenerAdapter {
 				case 3 -> sendWeeklySchedule(null);
 				case 4 -> titleLanguage(null);
 				case 5 -> notifySteps(null);
-				case 6 -> linkAniAccount(null);
+				// case 6 -> linkAniAccount(null);
+				case 6 -> setupComplete();
 			}
 			stage++;
 		} catch (InterruptedException | ExecutionException e) {
