@@ -7,3 +7,4 @@
 /notes
 /pom.xml.versionsBackup
 /src/*.ttf
+!/data/locales/
