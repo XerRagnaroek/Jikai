@@ -34,4 +34,8 @@ public class TestNextEpMessageCommand implements JUCommand {
 		return "";
 	}
 
+	@Override
+	public boolean isDevOnly() {
+		return true;
+	}
 }
