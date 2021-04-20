@@ -373,6 +373,7 @@ public class JikaiUser {
 		sendDailyUpdate.set(false);
 		sendWeeklySchedule.set(false);
 		zone.set(null);
+		linkedToUsers.stream().map(l -> JikaiUserManager.getInstance().getUser(l)).forEach(ju -> ju.unlinkUser(id));
 	}
 
 	@Override
