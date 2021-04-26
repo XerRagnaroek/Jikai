@@ -20,6 +20,7 @@ import com.github.xerragnaroek.jikai.util.BoundedArrayList;
 /**
  * 
  */
+@Deprecated
 public class AnimeReleaseTracker {
 
 	private static AnimeReleaseTracker instance;

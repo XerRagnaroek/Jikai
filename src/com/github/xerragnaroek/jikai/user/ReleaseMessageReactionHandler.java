@@ -21,6 +21,7 @@ import net.dv8tion.jda.internal.utils.EncodingUtil;
 /**
  * 
  */
+@Deprecated
 public class ReleaseMessageReactionHandler {
 
 	private static ReleaseMessageReactionHandler instance;
