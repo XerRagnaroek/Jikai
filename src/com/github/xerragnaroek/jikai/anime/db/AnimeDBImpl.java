@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jasa.AniException;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.JASA;
+import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
@@ -129,8 +130,8 @@ class AnimeDBImpl implements Initilizable {
 		return anime.get(id);
 	}
 
-	Anime getAnime(String title) {
-		return anime.values().stream().filter(a -> a.getTitleRomaji().equals(title)).findFirst().get();
+	Anime getAnime(String title, TitleLanguage tt) {
+		return anime.values().stream().filter(a -> a.getTitle(tt).equals(title)).findFirst().get();
 	}
 
 	BufferedImage getCoverImage(Anime a) {

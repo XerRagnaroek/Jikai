@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jasa.TitleLanguage;
 
 public class AnimeDB {
 
@@ -47,8 +48,8 @@ public class AnimeDB {
 		return aDB.getAnime(id);
 	}
 
-	public static Anime getAnime(String title) {
-		return aDB.getAnime(title);
+	public static Anime getAnime(String title, TitleLanguage tt) {
+		return aDB.getAnime(title, tt);
 	}
 
 	public static void startUpdateThread(boolean errorCheck) {
