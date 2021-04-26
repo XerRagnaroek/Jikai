@@ -78,11 +78,11 @@ public class ReleaseMessageReactionHandler {
 					EmbedBuilder bob = new EmbedBuilder(me);
 					bob.setDescription(me.getDescription() + "\n" + jLoc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"), BotUtils.getTodayDateForJUserFormatted(ju)));
 					return m.editMessage(bob.build());
-				}).flatMap(m -> {
+				}).submit().thenAccept(m -> {
 					log.debug("Successfully edited msg: {}", m.getId());
 					removeReleaseMessage(msgId);
-					return m.clearReactions();
-				}).queue(v -> log.debug("Removed now obsolete watched reaction"));
+					m.unpin().submit().thenAccept(v -> log.debug("msg unpinned"));
+				});
 			} else {
 				log.debug("Msg isn't a registered release notify message");
 			}
