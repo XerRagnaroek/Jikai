@@ -11,10 +11,10 @@ import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.commands.BugCommand;
 import com.github.xerragnaroek.jikai.commands.ComUtils;
+import com.github.xerragnaroek.jikai.commands.ForceSaveCommand;
 import com.github.xerragnaroek.jikai.commands.HelpCommand;
 import com.github.xerragnaroek.jikai.commands.ReloadLocalesCommand;
 import com.github.xerragnaroek.jikai.commands.StopCommand;
-import com.github.xerragnaroek.jikai.commands.guild.dev.ForceSaveCommand;
 import com.github.xerragnaroek.jikai.commands.guild.set.SetCommand;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiData;

@@ -138,6 +138,7 @@ public class JikaiUserManager {
 		JikaiUser ju = user.remove(id);
 		if (ju != null) {
 			ju.destroy();
+			EpisodeTracker.removeTracker(ju);
 		}
 	}
 

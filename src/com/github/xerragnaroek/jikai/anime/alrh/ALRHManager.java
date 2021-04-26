@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.core.Core;
@@ -144,7 +145,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		int cp = 0x1F1E6;
 		String uni = "";
 		for (String t : titles) {
-			Anime a = AnimeDB.getAnime(t);
+			Anime a = AnimeDB.getAnime(t, TitleLanguage.ROMAJI);
 			uni = new String(Character.toChars(cp));
 			data.add(new ALRHData(EncodingUtil.encodeCodepoints(uni), t));
 			mb.append(uni + " : [**" + t + "**](" + a.getAniUrl() + ")\n");

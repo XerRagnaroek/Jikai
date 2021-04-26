@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
@@ -49,7 +50,7 @@ class ARHandler {
 				if (data != null) {
 					data.setReacted(true);
 					JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getUser().getIdLong());
-					ju.subscribeAnime(AnimeDB.getAnime(data.getTitle()).getId(), ju.getLocale().getString("ju_sub_add_cause_user"));
+					ju.subscribeAnime(AnimeDB.getAnime(data.getTitle(), TitleLanguage.ROMAJI).getId(), ju.getLocale().getString("ju_sub_add_cause_user"));
 				}
 			}
 		}
@@ -65,7 +66,7 @@ class ARHandler {
 				String title = data.getTitle();
 				if (!event.getUser().isBot()) {
 					JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getUser().getIdLong());
-					ju.unsubscribeAnime(AnimeDB.getAnime(data.getTitle()).getId(), ju.getLocale().getString("ju_sub_rem_cause_user"));
+					ju.unsubscribeAnime(AnimeDB.getAnime(data.getTitle(), TitleLanguage.ROMAJI).getId(), ju.getLocale().getString("ju_sub_rem_cause_user"));
 				} else {
 					log.debug("Reaction was removed by a bot");
 				}

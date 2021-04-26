@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -19,17 +18,13 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.type.TypeFactory;
-import com.github.xerragnaroek.jikai.anime.db.AnimeReleaseTracker;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.user.EpisodeTracker;
 import com.github.xerragnaroek.jikai.user.ExportKeyHandler;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
-import com.github.xerragnaroek.jikai.user.ReleaseMessageReactionHandler;
-import com.github.xerragnaroek.jikai.util.BoundedArrayList;
 
 public class JikaiIO {
 	private final static Logger log = LoggerFactory.getLogger(JikaiIO.class);
@@ -39,9 +34,10 @@ public class JikaiIO {
 		try {
 			JikaiUserManager.getInstance().save();
 			ScheduleManager.saveSchedule();
-			saveReleaseMessageIds();
+			// saveReleaseMessageIds();
 			// saveAnimeReleaseTracker();
 			saveExportKeyHandler();
+			saveEpisodeTracker();
 		} catch (IOException e) {
 			Core.ERROR_LOG.error("Failed saving", e);
 		}
@@ -61,12 +57,12 @@ public class JikaiIO {
 						case "user.db" -> JikaiUserManager.getInstance().load(path);
 						case "schedules.json" -> ScheduleManager.loadSchedules(path);
 						case "guilds" -> loadGuilds(path);
-						case "rmids.txt" -> loadReleaseMessages(path);
 						case "keys.json" -> loadExportKeyHandler(path);
 						// case "art.json" -> loadAnimeReleaseTracker(path);
 					}
 				});
-
+				// loadReleaseMessages(Path.of(loc.toString(), "/rmids.txt"));
+				loadEpisodeTracker();
 			} else {
 				log.debug("Creating config directory");
 				log.info("No configurations found, falling back to default settings");
@@ -87,11 +83,36 @@ public class JikaiIO {
 		}
 	}
 
-	private static void loadReleaseMessages(Path path) {
-		try {
-			ReleaseMessageReactionHandler.getRMRH().setReleaseMessageIds(Files.lines(path).map(Long::parseLong).collect(Collectors.toSet()));
-		} catch (IOException e) {
-			Core.ERROR_LOG.error("Failed loading the release message ids!", e);
+	/*
+	 * private static void loadReleaseMessages(Path path) {
+	 * try {
+	 * ReleaseMessageReactionHandler.getRMRH().setReleaseMessageIds(Files.lines(path).map(Long::
+	 * parseLong).collect(Collectors.toSet()));
+	 * } catch (IOException e) {
+	 * Core.ERROR_LOG.error("Failed loading the release message ids!", e);
+	 * }
+	 * }
+	 * private static void saveReleaseMessageIds() throws IOException {
+	 * Set<String> ids =
+	 * ReleaseMessageReactionHandler.getRMRH().getReleaseMessageIds().stream().map(String::valueOf).
+	 * collect(Collectors.toSet());
+	 * Path loc = Paths.get(Core.DATA_LOC.toString(), "/rmids.txt");
+	 * log.debug("Writing {} release message ids to '{}'", ids.size(), loc.toAbsolutePath());
+	 * Files.write(loc, ids, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+	 * }
+	 */
+	private static void loadEpisodeTracker() throws IOException {
+		Path rmids = Path.of(Core.DATA_LOC.toString(), "/rmids.txt");
+		if (Files.exists(rmids)) {
+			EpisodeTracker.loadOld(Files.lines(rmids).map(Long::parseLong).collect(Collectors.toSet()));
+			Files.delete(rmids);
+		} else {
+			Path ets = Path.of(Core.DATA_LOC.toString(), "/et.json");
+			if (Files.exists(ets)) {
+				TypeReference<Map<Long, Map<Integer, Map<Long, Integer>>>> ref = new TypeReference<>() {};
+				Map<Long, Map<Integer, Map<Long, Integer>>> map = new ObjectMapper().readValue(Files.readString(ets), ref);
+				EpisodeTracker.load(map);
+			}
 		}
 	}
 
@@ -99,11 +120,13 @@ public class JikaiIO {
 		Core.EXEC.scheduleAtFixedRate(() -> JikaiIO.save(false), delay, delay, unit);
 	}
 
-	private static void saveReleaseMessageIds() throws IOException {
-		Set<String> ids = ReleaseMessageReactionHandler.getRMRH().getReleaseMessageIds().stream().map(String::valueOf).collect(Collectors.toSet());
-		Path loc = Paths.get(Core.DATA_LOC.toString(), "/rmids.txt");
-		log.debug("Writing {} release message ids to '{}'", ids.size(), loc.toAbsolutePath());
-		Files.write(loc, ids, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+	private static void saveEpisodeTracker() throws JsonProcessingException, IOException {
+		Map<Long, Map<Integer, Map<Long, Integer>>> ets = EpisodeTracker.getSavableMap();
+		Path loc = Paths.get(Core.DATA_LOC.toString(), "/et.json");
+		log.debug("Saving EpisodeTracker, size {}, to {}", ets.size(), loc.toAbsolutePath());
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.enable(SerializationFeature.INDENT_OUTPUT);
+		Files.writeString(loc, mapper.writeValueAsString(ets), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
 	}
 
 	private static void saveExportKeyHandler() throws JsonProcessingException, IOException {
@@ -128,27 +151,35 @@ public class JikaiIO {
 		}
 	}
 
-	private static void saveAnimeReleaseTracker() throws JsonProcessingException, IOException {
-		Map<Integer, BoundedArrayList<Long>> map = AnimeReleaseTracker.getInstance().getMap();
-		Path loc = Path.of(Core.DATA_LOC.toString(), "/art.json");
-		log.debug("Saving Anime Release Tracker, size {}, to {}", map.size(), loc.toAbsolutePath());
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.enable(SerializationFeature.INDENT_OUTPUT);
-		// mapper.activateDefaultTyping(BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(),
-		// DefaultTyping.OBJECT_AND_NON_CONCRETE);
-		Files.writeString(loc, mapper.writeValueAsString(map), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
-	}
-
-	private static void loadAnimeReleaseTracker(Path path) {
-		ObjectMapper mapper = new ObjectMapper();
-		// mapper.activateDefaultTyping(BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(),
-		// DefaultTyping.OBJECT_AND_NON_CONCRETE);
-		TypeFactory def = TypeFactory.defaultInstance();
-		JavaType type = def.constructMapLikeType(TreeMap.class, def.constructFromCanonical("java.lang.Integer"), def.constructParametricType(BoundedArrayList.class, Long.class));
-		try {
-			AnimeReleaseTracker.getInstance().loadMap(mapper.readValue(Files.readString(path), type));
-		} catch (IOException e) {
-			Core.ERROR_LOG.error("Failed loading the anime release tracker!", e);
-		}
-	}
+	/*
+	 * private static void saveAnimeReleaseTracker() throws JsonProcessingException, IOException {
+	 * Map<Integer, BoundedArrayList<Long>> map = AnimeReleaseTracker.getInstance().getMap();
+	 * Path loc = Path.of(Core.DATA_LOC.toString(), "/art.json");
+	 * log.debug("Saving Anime Release Tracker, size {}, to {}", map.size(), loc.toAbsolutePath());
+	 * ObjectMapper mapper = new ObjectMapper();
+	 * mapper.enable(SerializationFeature.INDENT_OUTPUT);
+	 * //
+	 * mapper.activateDefaultTyping(BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class
+	 * ).build(),
+	 * // DefaultTyping.OBJECT_AND_NON_CONCRETE);
+	 * Files.writeString(loc, mapper.writeValueAsString(map), StandardOpenOption.TRUNCATE_EXISTING,
+	 * StandardOpenOption.CREATE);
+	 * }
+	 * private static void loadAnimeReleaseTracker(Path path) {
+	 * ObjectMapper mapper = new ObjectMapper();
+	 * //
+	 * mapper.activateDefaultTyping(BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class
+	 * ).build(),
+	 * // DefaultTyping.OBJECT_AND_NON_CONCRETE);
+	 * TypeFactory def = TypeFactory.defaultInstance();
+	 * JavaType type = def.constructMapLikeType(TreeMap.class,
+	 * def.constructFromCanonical("java.lang.Integer"),
+	 * def.constructParametricType(BoundedArrayList.class, Long.class));
+	 * try {
+	 * AnimeReleaseTracker.getInstance().loadMap(mapper.readValue(Files.readString(path), type));
+	 * } catch (IOException e) {
+	 * Core.ERROR_LOG.error("Failed loading the anime release tracker!", e);
+	 * }
+	 * }
+	 */
 }

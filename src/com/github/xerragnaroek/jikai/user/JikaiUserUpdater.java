@@ -269,9 +269,9 @@ public class JikaiUserUpdater {
 			MessageEmbed me = step == 0 ? makeNotifyRelease(a, ju) : makeNotifyEmbed(a, step, ju);
 			BotUtils.retryFuture(2, () -> BotUtils.sendPM(ju.getUser(), me).thenAccept(m -> {
 				if (step == 0) {
-					m.addReaction(ReleaseMessageReactionHandler.getWatchedEmojiUnicode()).and(m.pin()).submit().thenAccept(v -> {
+					m.addReaction(EpisodeTracker.WATCHED_EMOJI_UNICODE).and(m.pin()).submit().thenAccept(v -> {
 						log.debug("Pinned and added watched emoji to message {}" + m.getIdLong());
-						ReleaseMessageReactionHandler.getRMRH().registerNewReleaseMessage(m.getIdLong());
+						EpisodeTracker.getTracker(ju).registerEpisode(a, m.getIdLong());
 					});
 				}
 			}));
