@@ -6,8 +6,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -28,6 +31,10 @@ import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.MapProperty;
+
+import net.dv8tion.jda.api.entities.PrivateChannel;
+import net.dv8tion.jda.api.requests.RestAction;
+import net.dv8tion.jda.api.utils.Result;
 
 public class JikaiUserManager {
 
@@ -234,4 +241,22 @@ public class JikaiUserManager {
 		return timeZoneMap;
 	}
 
+	public void cachePrivateChannels() {
+		Collection<JikaiUser> jus = user.values();
+		log.debug("Caching {} PrivateChannels", jus.size());
+		List<RestAction<Result<PrivateChannel>>> rests = jus.stream().map(JikaiUser::getUser).map(u -> u.openPrivateChannel()).map(RestAction::mapToResult).collect(Collectors.toList());
+		RestAction.allOf(rests).submit().thenAccept(l -> {
+			int success = 0;
+			List<Result<PrivateChannel>> failures = new ArrayList<>();
+			for (Result<PrivateChannel> r : l) {
+				if (r.isSuccess()) {
+					success++;
+				} else {
+					failures.add(r);
+				}
+			}
+			log.debug("Cached {} of {} PrivateChannels, failed {}", success, l.size(), failures.size());
+			failures.forEach(r -> log.error("Failed openeing PrivateChannel", r.getFailure()));
+		});
+	}
 }

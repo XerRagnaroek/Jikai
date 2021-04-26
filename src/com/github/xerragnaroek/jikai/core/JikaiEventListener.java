@@ -15,7 +15,7 @@ import com.github.xerragnaroek.jikai.user.ReleaseMessageReactionHandler;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.MessageReaction.ReactionEmote;
-import net.dv8tion.jda.api.events.ReadyEvent;
+import net.dv8tion.jda.api.events.ReconnectedEvent;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
@@ -92,14 +92,6 @@ public class JikaiEventListener extends ListenerAdapter {
 	}
 
 	@Override
-	public void onReady(ReadyEvent event) {
-		/*
-		 * log.info("Initializing ALRHs"); //runAsync(() -> ALRHManager.init()); ALRHManager.init();
-		 * GDM.startSaveThread(10, TimeUnit.SECONDS);
-		 */
-	}
-
-	@Override
 	public void onGuildJoin(GuildJoinEvent event) {
 		long gId = event.getGuild().getIdLong();
 		if (!JM.isKnownGuild(gId)) {
@@ -135,5 +127,11 @@ public class JikaiEventListener extends ListenerAdapter {
 			log.info("Member {} has been removed!", id);
 			jum.removeUser(id);
 		}
+	}
+
+	@Override
+	public void onReconnected(ReconnectedEvent event) {
+		log.debug("Reconnected!");
+		JikaiUserManager.getInstance().cachePrivateChannels();
 	}
 }

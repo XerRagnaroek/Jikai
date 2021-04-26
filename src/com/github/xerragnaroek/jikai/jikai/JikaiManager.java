@@ -41,6 +41,7 @@ public class JikaiManager extends Manager<Jikai> {
 		alrhm.init();
 		ScheduleManager.init();
 		Core.CUR_SEASON.onChange((ov, nv) -> updateJikaisSeasonChanged(nv));
+		JikaiUserManager.getInstance().cachePrivateChannels();
 		log.info("Jikai initialized!");
 	}
 
