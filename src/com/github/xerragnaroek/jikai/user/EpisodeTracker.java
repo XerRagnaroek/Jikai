@@ -3,12 +3,10 @@ package com.github.xerragnaroek.jikai.user;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -17,8 +15,10 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.util.BotUtils;
+import com.github.xerragnaroek.jikai.util.Pair;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
@@ -52,10 +52,10 @@ public class EpisodeTracker {
 	}
 
 	public void registerEpisode(Anime a, long id) {
-		registerEpisodeImpl(a.getId(), id, a.getNextEpisodeNumber());
+		registerEpisodeDetailed(a.getId(), id, a.getNextEpisodeNumber());
 	}
 
-	private void registerEpisodeImpl(int animeId, long msgId, int epNum) {
+	public void registerEpisodeDetailed(int animeId, long msgId, int epNum) {
 		log.debug("Registering new episode: anime={},msgId={},epNum={}", animeId, msgId, epNum);
 		episodes.compute(animeId, (l, m) -> {
 			if (m == null) {
@@ -64,7 +64,7 @@ public class EpisodeTracker {
 			m.put(msgId, epNum);
 			return m;
 		});
-
+		idAnime.put(msgId, animeId);
 	}
 
 	public void episodeWatched(long id) {
@@ -105,43 +105,77 @@ public class EpisodeTracker {
 	}
 
 	public List<EmbedBuilder> makeEpisodeList() {
-		JikaiLocale loc = ju.getLocale();
 		String pcId = ju.getUser().openPrivateChannel().complete().getId();
-		Set<String> aniStrings = episodes.keySet().stream().map(id -> formatAnimeEpisodes(pcId, id)).collect(Collectors.toCollection(() -> new TreeSet<>()));
-		List<List<String>> splitMsgs = new ArrayList<>();
-		int charC = 0;
-		List<String> msg = new ArrayList<>();
-		Iterator<String> it = aniStrings.iterator();
-		while (it.hasNext()) {
-			String cur = it.next();
-			charC += cur.length();
-			if (charC > 2048) {
-				splitMsgs.add(msg);
-				msg = new ArrayList<>();
-				charC = 0;
+		List<Pair<Anime, List<String>>> aniStrings = episodes.keySet().stream().map(id -> formatAnimeEpisodes(pcId, id)).sorted((p1, p2) -> Anime.IGNORE_TITLE_CASE.compare(p1.getLeft(), p2.getLeft())).collect(Collectors.toList());
+		List<EmbedBuilder> ebs = new ArrayList<>(aniStrings.size());
+		aniStrings.forEach(p -> {
+			List<String> eps = p.getRight();
+			List<List<String>> chunked = new ArrayList<>(BotUtils.partitionCollection(eps, 25));
+			for (int i = 0; i < chunked.size(); i++) {
+				EmbedBuilder eb = BotUtils.embedBuilder();
+				eb.setTitle("**" + p.getLeft().getTitle(ju.getTitleLanguage()) + (chunked.size() == 1 ? "" : " [" + (i + 1) + "/" + chunked.size() + "]") + "**", p.getLeft().getAniUrl());
+				eb.setThumbnail(p.getLeft().getBiggestAvailableCoverImage());
+				chunked.get(i).forEach(s -> eb.addField("", s, true));
+				ebs.add(eb);
 			}
-			msg.add(cur);
-		}
-		splitMsgs.add(msg);
-		List<EmbedBuilder> ebs = new ArrayList<>();
-		for (int c = 0; c < splitMsgs.size(); c++) {
-			msg = splitMsgs.get(c);
-			EmbedBuilder eb = BotUtils.embedBuilder();
-			eb.setTitle(loc.getString("ju_ep_tracker_title") + (splitMsgs.size() > 1 ? " " + c + "/" + splitMsgs.size() : ""));
-			eb.setDescription(String.join("\n", msg));
-			ebs.add(eb);
-		}
+		});
 		return ebs;
+		/*
+		 * List<List<String>> splitMsgs = new ArrayList<>();
+		 * List<String> msg = new ArrayList<>();
+		 * Iterator<String> it = aniStrings.iterator();
+		 * while (it.hasNext()) {
+		 * String cur = it.next();
+		 * charC += cur.length();
+		 * splitMsgs.add(msg);
+		 * msg = new ArrayList<>();
+		 * charC = 0;
+		 * }
+		 * msg.add(cur);
+		 * }
+		 * splitMsgs.add(msg);
+		 * List<EmbedBuilder> ebs = new ArrayList<>();
+		 * for (int c = 0; c < splitMsgs.size(); c++) {
+		 * msg = splitMsgs.get(c);
+		 * EmbedBuilder eb = BotUtils.embedBuilder();
+		 * eb.setTitle(loc.getString("ju_ep_tracker_title") + (splitMsgs.size() > 1 ? " " + c + "/" +
+		 * splitMsgs.size() : ""));
+		 * String desc = String.join("\n", msg);
+		 * log.debug("Desc length {}", desc.length());
+		 * eb.setDescription(desc);
+		 * ebs.add(eb);
+		 * }
+		 * EmbedBuilder eb = BotUtils.embedBuilder();
+		 * if (!aniStrings.isEmpty()) {
+		 * eb.appendDescription(aniStrings.get(0));
+		 * for (int i = 1; i < aniStrings.size(); i++) {
+		 * String s = aniStrings.get(i);
+		 * if (eb.getDescriptionBuilder().length() + s.length() <= 2048) {
+		 * eb.appendDescription("\n" + s);
+		 * } else {
+		 * ebs.add(eb);
+		 * eb = BotUtils.embedBuilder();
+		 * }
+		 * }
+		 * ebs.add(eb);
+		 * for (int i = 0; i < ebs.size(); i++) {
+		 * ebs.get(i).setTitle(loc.getString("ju_ep_tracker_title") + (ebs.size() > 1 ? " " + (i + 1) + "/"
+		 * + ebs.size() : ""));
+		 * }
+		 * }
+		 * return ebs;
+		 */
 	}
 
-	private String formatAnimeEpisodes(String pcId, int anime) {
+	private Pair<Anime, List<String>> formatAnimeEpisodes(String pcId, int anime) {
 		Anime a = AnimeDB.getAnime(anime);
-		Map<Long, Integer> msgs = episodes.get(anime);
-		Set<String> episodes = new TreeSet<>();
-		msgs.keySet().forEach(l -> {
-			episodes.add(String.format("**[%02d](https://discord.com/channels/@me/%s/%s)**", msgs.get(l), pcId, l));
+		Map<Integer, Long> msgs = new TreeMap<>();
+		episodes.get(anime).forEach((l, i) -> msgs.put(i, l));
+		List<String> episodes = new ArrayList<>();
+		msgs.keySet().forEach(i -> {
+			episodes.add(String.format("**[%02d](https://discord.com/channels/@me/%s/%s)**", i, pcId, msgs.get(i)));
 		});
-		return String.format("__**[%s](%s)**__\n%s", a.getTitle(ju.getTitleLanguage()), a.getAniUrl(), String.join(", ", episodes));
+		return Pair.of(a, episodes);
 	}
 
 	public static EpisodeTracker getTracker(JikaiUser ju) {
@@ -153,29 +187,35 @@ public class EpisodeTracker {
 	}
 
 	public static void loadOld(Set<Long> ids) {
+		Logger log = LoggerFactory.getLogger(EpisodeTracker.class);
+		log.debug("Loading old rmids");
 		ids.forEach(l -> {
-			JikaiUserManager.getInstance().users().forEach(ju -> {
-				try {
-					Message m = ju.getUser().openPrivateChannel().complete().retrieveMessageById(l).complete();
-					// since we're now here that means the message was for this user
-					String title = m.getEmbeds().get(0).getTitle();
-					title = title.substring(2, title.length() - 2);
-					Anime a = AnimeDB.getAnime(title, ju.getTitleLanguage());
-					if (a == null) {
-						for (TitleLanguage tt : TitleLanguage.values()) {
-							if (tt != ju.getTitleLanguage()) {
-								a = AnimeDB.getAnime(title, tt);
+			Core.EXEC.execute(() -> {
+				log.debug("Checking {}", l);
+				JikaiUserManager.getInstance().users().forEach(ju -> {
+					try {
+						Message m = ju.getUser().openPrivateChannel().complete().retrieveMessageById(l).complete();
+						// since we're now here that means the message was for this user
+						String title = m.getEmbeds().get(0).getTitle();
+						title = title.substring(2, title.length() - 2);
+						Anime a = AnimeDB.getAnime(title, ju.getTitleLanguage());
+						if (a == null) {
+							for (TitleLanguage tt : TitleLanguage.values()) {
+								if (tt != ju.getTitleLanguage()) {
+									a = AnimeDB.getAnime(title, tt);
+								}
 							}
 						}
+						log.debug("Found anime: {}", a);
+						if (a != null) {
+							String[] split = ju.getLocale().getString("ju_eb_notify_release_desc").split("%episodes%");
+							int episode = Integer.parseInt(m.getEmbeds().get(0).getDescription().replace(split[0], "").replace(split[1], "").split("/")[0].trim());
+							getTracker(ju).registerEpisodeDetailed(a.getId(), l, episode);
+						}
+					} catch (ErrorResponseException e) {
+						log.debug("Message wasn't for user {}", ju.getId());
 					}
-					if (a != null) {
-						String[] split = ju.getLocale().getString("ju_eb_notify_release_desc").split("%episodes%");
-						int episode = Integer.parseInt(m.getEmbeds().get(0).getDescription().replace(split[0], "").replace(split[1], "").split("/")[0].trim());
-						getTracker(ju).registerEpisodeImpl(a.getId(), l, episode);
-					}
-				} catch (ErrorResponseException e) {
-					// ignore
-				}
+				});
 			});
 		});
 	}
@@ -188,9 +228,12 @@ public class EpisodeTracker {
 
 	public static void load(Map<Long, Map<Integer, Map<Long, Integer>>> map) {
 		map.forEach((l, m) -> {
-			EpisodeTracker et = getTracker(JikaiUserManager.getInstance().getUser(l));
+			JikaiUser ju = JikaiUserManager.getInstance().getUser(l);
+			EpisodeTracker et = getTracker(ju);
 			m.forEach((aniId, idEpMap) -> {
-				idEpMap.forEach((msgId, epNum) -> et.registerEpisodeImpl(aniId, msgId, epNum));
+				if (ju.isSubscribedTo(aniId)) {
+					idEpMap.forEach((msgId, epNum) -> et.registerEpisodeDetailed(aniId, msgId, epNum));
+				}
 			});
 		});
 	}
