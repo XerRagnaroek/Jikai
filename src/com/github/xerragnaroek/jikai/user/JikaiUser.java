@@ -15,6 +15,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.core.Core;
@@ -30,6 +34,7 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
 public class JikaiUser {
 
 	private long id;
@@ -38,21 +43,34 @@ public class JikaiUser {
 	private SubscriptionSet subscribedAnime = new SubscriptionSet();
 	private BooleanProperty sendDailyUpdate = new BooleanProperty();
 	private BooleanProperty sendWeeklySchedule = new BooleanProperty();
+	private BooleanProperty sendNextEpMessage = new BooleanProperty();
 	private SetProperty<Integer> notifBeforeRelease = new SetProperty<>();
 	// set of users that are linked to this user
 	private SetProperty<Long> linkedUsers = new SetProperty<>();
 
 	// set of users this user is linked to
+	@JsonIgnore
 	private Set<Long> linkedToUsers = new TreeSet<Long>();
+	@JsonIgnore
 	private Property<ZoneId> zone = new Property<>();
 	private Property<String> locale = new Property<>("en");
+	@JsonIgnore
 	private boolean setupComplete = false;
+	@JsonIgnore
 	boolean loading = true;
+	@JsonIgnore
 	private final Logger log;
 
 	public JikaiUser(long id) {
 		this.id = id;
 		log = LoggerFactory.getLogger(JikaiUser.class);
+	}
+
+	private JikaiUser() {
+		log = LoggerFactory.getLogger(JikaiUser.class);
+	}
+
+	void init() {
 		subscribedAnime.onAdd((aid, str) -> log("subscribed to {}, cause: {}", aid, str));
 		subscribedAnime.onRemove((aid, str) -> log("unsubscribed from {}, cause: {}", aid, str));
 		notifBeforeRelease.onAdd(l -> log("added step {}", l));
@@ -60,6 +78,7 @@ public class JikaiUser {
 		linkedUsers.onAdd(uid -> log("linked user {}", uid));
 		sendDailyUpdate.onChange((o, n) -> log("change send daily update {}", n));
 		sendWeeklySchedule.onChange((o, n) -> log("change send weekly schedule {}", n));
+		sendNextEpMessage.onChange((o, n) -> log("change send next ep message {}", n));
 		locale.onChange((o, n) -> log("change locale: {}", n));
 		aniId.onChange((o, n) -> log("change aniId: {}", n));
 	}
@@ -90,6 +109,7 @@ public class JikaiUser {
 		return setupComplete;
 	}
 
+	@JsonIgnore
 	public void setSetupCompleted(boolean comp) {
 		setupComplete = comp;
 		loading = false;
@@ -140,8 +160,20 @@ public class JikaiUser {
 		return sendWeeklySchedule.get();
 	}
 
-	public void setSentWeeklySchedule(boolean upd) {
+	public void setSendWeeklySchedule(boolean upd) {
 		sendWeeklySchedule.set(upd);
+	}
+
+	public void setSendNextEpMessage(boolean send) {
+		sendNextEpMessage.set(send);
+	}
+
+	public boolean isSentNextEpMessage() {
+		return sendNextEpMessage.get();
+	}
+
+	public BooleanProperty isSentNextEpMessageProperty() {
+		return sendNextEpMessage;
 	}
 
 	public boolean subscribeAnime(int id, String cause) {
@@ -353,6 +385,7 @@ public class JikaiUser {
 		String no = loc.getString("u_no");
 		String zone = this.zone.get().getId();
 		String daily = sendDailyUpdate.get() ? yes : no;
+		String nextEpMsg = isSentNextEpMessage() ? yes : no;
 		String release = isNotfiedOnRelease() ? yes : no;
 		String schedule = sendWeeklySchedule.get() ? yes : no;
 		String title = tt.toString();
@@ -360,7 +393,7 @@ public class JikaiUser {
 		String aniId = (aniId = this.aniId.toString()).equals("0") ? "/" : aniId;
 		String users = linkedToUsers.stream().map(juId -> JikaiUserManager.getInstance().getUser(juId)).map(ju -> ju.getUser().getName()).sorted().collect(Collectors.joining(", "));
 		users = users.isEmpty() ? "/" : users;
-		return loc.getStringFormatted("ju_config", Arrays.asList("lang", "zone", "daily", "release", "schedule", "title", "steps", "aniId", "users"), loc.getString("u_lang_name"), zone, daily, release, schedule, title, steps, aniId, users);
+		return loc.getStringFormatted("ju_config", Arrays.asList("lang", "zone", "daily", "nextEpMsg", "release", "schedule", "title", "steps", "aniId", "users"), loc.getString("u_lang_name"), zone, daily, nextEpMsg, release, schedule, title, steps, aniId, users);
 	}
 
 	public IntegerProperty aniIdProperty() {
@@ -395,5 +428,15 @@ public class JikaiUser {
 	public String toString() {
 		// id,titletype,zone,localeIdentifier,sendDailyUpdate,notifBeforeRelease,anime,linked user
 		return String.format("\"%d\",\"%d\",\"%d\",\"%s\",\"%s\",\"%d\",\"%d\",\"%s\",\"%s\",\"%s\"", id, aniId.get(), tt.ordinal(), zone.get().getId(), locale.get(), sendDailyUpdate.get() ? 1 : 0, sendWeeklySchedule.get() ? 1 : 0, notifBeforeRelease.toString(), subscribedAnime, linkedUsers.toString());
+	}
+
+	@JsonProperty("zoneId")
+	private String jsonZoneId() {
+		return getTimeZone().getId();
+	}
+
+	@JsonSetter("zoneId")
+	private void setZoneIdJson(String id) {
+		setTimeZone(ZoneId.of(id));
 	}
 }

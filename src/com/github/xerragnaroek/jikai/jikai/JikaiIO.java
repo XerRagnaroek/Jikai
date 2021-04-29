@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -24,6 +25,7 @@ import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.user.EpisodeTracker;
 import com.github.xerragnaroek.jikai.user.ExportKeyHandler;
+import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 
 public class JikaiIO {
@@ -32,6 +34,7 @@ public class JikaiIO {
 	public static void save(boolean now) {
 		JM.getJDM().save(now);
 		try {
+			saveJikaiUsers();
 			JikaiUserManager.getInstance().save();
 			ScheduleManager.saveSchedule();
 			// saveReleaseMessageIds();
@@ -54,7 +57,8 @@ public class JikaiIO {
 
 					switch (fileName) {
 						case "BOT.json" -> JM.getJDM().loadBotData(path);
-						case "user.db" -> JikaiUserManager.getInstance().load(path);
+						// case "user.db" -> JikaiUserManager.getInstance().load(path);
+						case "users.json" -> loadJikaiUsers(path);
 						case "schedules.json" -> ScheduleManager.loadSchedules(path);
 						case "guilds" -> loadGuilds(path);
 						case "keys.json" -> loadExportKeyHandler(path);
@@ -151,6 +155,28 @@ public class JikaiIO {
 		}
 	}
 
+	private static void saveJikaiUsers() throws JsonProcessingException, IOException {
+		Path loc = Path.of(Core.DATA_LOC.toString(), "/users.json");
+		Set<JikaiUser> user = JikaiUserManager.getInstance().users().stream().filter(JikaiUser::isSetupCompleted).collect(Collectors.toSet());
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.enable(SerializationFeature.INDENT_OUTPUT);
+		Files.writeString(loc, mapper.writeValueAsString(user), StandardOpenOption.CREATE);
+		log.debug("Saved {} users to {}", user.size(), loc.toString());
+	}
+
+	private static void loadJikaiUsers(Path loc) {
+		TypeReference<Set<JikaiUser>> ref = new TypeReference<>() {};
+		try {
+			Set<JikaiUser> set = new ObjectMapper().readValue(Files.readString(loc), ref);
+			JikaiUserManager jum = JikaiUserManager.getInstance();
+			set.forEach(j -> {
+				j.setSetupCompleted(true);
+				jum.registerUser(j);
+			});
+		} catch (IOException e) {
+			log.error("Failed reading users", e);
+		}
+	}
 	/*
 	 * private static void saveAnimeReleaseTracker() throws JsonProcessingException, IOException {
 	 * Map<Integer, BoundedArrayList<Long>> map = AnimeReleaseTracker.getInstance().getMap();

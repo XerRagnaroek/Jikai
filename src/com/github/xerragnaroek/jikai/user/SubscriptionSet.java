@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.BiConsumer;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 
@@ -14,8 +15,16 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 
 @SuppressWarnings("serial")
 public class SubscriptionSet extends TreeSet<Integer> {
+	@JsonIgnore
 	private Set<BiConsumer<Integer, String>> onAdd = new HashSet<>();
+	@JsonIgnore
 	private Set<BiConsumer<Integer, String>> onRem = new HashSet<>();
+
+	public SubscriptionSet() {}
+
+	public SubscriptionSet(Set<Integer> set) {
+		super(set);
+	}
 
 	@Override
 	public boolean add(Integer id) {
@@ -63,6 +72,7 @@ public class SubscriptionSet extends TreeSet<Integer> {
 		onRem.add(idCauseCon);
 	}
 
+	@JsonIgnore
 	public MessageEmbed getSubscriptionsFormatted(JikaiUser ju) {
 		if (isEmpty()) {
 			return null;

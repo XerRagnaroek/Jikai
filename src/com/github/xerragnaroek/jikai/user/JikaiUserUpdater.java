@@ -400,7 +400,9 @@ public class JikaiUserUpdater {
 				log.debug("Handling next ep for {}", a.getTitleRomaji());
 				jum.getJUSubscribedToAnime(a).forEach(ju -> {
 					animeAddImpl(a, a.getId(), ju);
-					sendNextEpMsg(ju, a);
+					if (ju.isSentNextEpMessage()) {
+						sendNextEpMsg(ju, a);
+					}
 				});
 			});
 		}

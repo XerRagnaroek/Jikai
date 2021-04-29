@@ -57,10 +57,9 @@ public class JikaiUserManager {
 		return instance;
 	}
 
-	public JikaiUser registerUser(long id, Jikai j) {
+	public JikaiUser registerNewUser(long id, Jikai j) {
 		JikaiUser ju = new JikaiUser(id);
-		registerImpl(ju);
-		AniListSyncer.getInstance().registerUser(ju);
+		registerUser(ju);
 		if (!ju.isSetupCompleted()) {
 			JikaiUserSetup.runSetup(ju, j);
 		}
@@ -76,11 +75,13 @@ public class JikaiUserManager {
 		return user.size();
 	}
 
-	private void registerImpl(JikaiUser ju) {
+	public void registerUser(JikaiUser ju) {
+		ju.init();
 		handleSubscriptions(ju);
 		handleTimeZoneChange(ju);
 		juu.registerUser(ju);
 		user.put(ju.getId(), ju);
+		AniListSyncer.getInstance().registerUser(ju);
 		// AniListSyncer.getInstance().registerUser(ju);
 	}
 
@@ -199,13 +200,13 @@ public class JikaiUserManager {
 			data[i] = StringUtils.substringBetween(data[i], "\"");
 		}
 		JikaiUser ju = new JikaiUser(Long.parseLong(data[0]));
-		registerImpl(ju);
+		registerUser(ju);
 		ju.setAniId(Integer.parseInt(data[1]));
 		ju.setTitleLanguage(TitleLanguage.values()[Integer.parseInt(data[2])]);
 		ju.setTimeZone(ZoneId.of(data[3]));
 		ju.setLocale(JikaiLocaleManager.getInstance().getLocale(data[4]));
 		ju.setUpdateDaily(data[5].equals("1"));
-		ju.setSentWeeklySchedule(data[6].equals("1"));
+		ju.setSendWeeklySchedule(data[6].equals("1"));
 		String tmp = StringUtils.substringBetween(data[7], "[", "]");
 		if (tmp != null && !tmp.isEmpty()) {
 			Stream.of(tmp.split(",")).mapToInt(Integer::parseInt).forEach(ju::addPreReleaseNotificaionStep);

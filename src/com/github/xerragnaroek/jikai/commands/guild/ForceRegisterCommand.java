@@ -16,7 +16,7 @@ public class ForceRegisterCommand implements GuildCommand {
 	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments) {
 		long id = event.getAuthor().getIdLong();
 		if (!JikaiUserManager.getInstance().isKnownJikaiUser(id)) {
-			JikaiUserManager.getInstance().registerUser(id, Core.JM.get(event.getGuild().getIdLong()));
+			JikaiUserManager.getInstance().registerNewUser(id, Core.JM.get(event.getGuild().getIdLong()));
 		}
 	}
 

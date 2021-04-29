@@ -9,7 +9,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
  * A simple Value wrapper that allows for unidirectional binding.<br>
@@ -18,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
  * @author XerRagnaroek
  * @param <T>
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE)
 public class Property<T> {
 	protected T value;
 	protected List<BiConsumer<T, T>> cons = Collections.synchronizedList(new ArrayList<>());
@@ -34,6 +37,7 @@ public class Property<T> {
 		return value != null;
 	}
 
+	@JsonValue
 	public synchronized T get() {
 		return value;
 	}

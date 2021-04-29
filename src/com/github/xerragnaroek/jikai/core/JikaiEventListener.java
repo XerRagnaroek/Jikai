@@ -118,7 +118,7 @@ public class JikaiEventListener extends ListenerAdapter {
 		JikaiUserManager jum = JikaiUserManager.getInstance();
 		if (!jum.isKnownJikaiUser(id)) {
 			log.info("New member joined, regestering new JikaiUser! [{}]", id);
-			jum.registerUser(id, Core.JM.get(event.getGuild().getIdLong()));
+			jum.registerNewUser(id, Core.JM.get(event.getGuild().getIdLong()));
 		}
 	}
 
