@@ -26,7 +26,7 @@ public class WeeklyScheduleCommand implements JUCommand {
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		JikaiLocale loc = ju.getLocale();
 		ComUtils.trueFalseCommand(arguments[0], ju, (b) -> {
-			ju.setSentWeeklySchedule(b);
+			ju.setSendWeeklySchedule(b);
 			ju.sendPM(b ? loc.getString("ju_weekly_sched_true") : loc.getString("ju_weekly_sched_false"));
 		});
 	}
