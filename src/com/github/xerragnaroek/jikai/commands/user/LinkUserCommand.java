@@ -9,6 +9,8 @@ import com.github.xerragnaroek.jikai.user.link.JikaiUserLinkHandler;
 import com.github.xerragnaroek.jikai.user.link.LinkRequest;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 
+import net.dv8tion.jda.api.entities.User;
+
 /**
  * 
  */
@@ -50,8 +52,17 @@ public class LinkUserCommand implements JUCommand {
 		if (index == 1 && arguments.length >= 3) {
 			msg = Arrays.stream(arguments, 2, arguments.length).collect(Collectors.joining(" "));
 		}
-		if (!JikaiUserLinkHandler.initiateLink(ju, tgt, dir, msg)) {
-			JikaiLocale loc = ju.getLocale();
+		int res = JikaiUserLinkHandler.initiateLink(ju, tgt, dir, msg);
+		JikaiLocale loc = ju.getLocale();
+		User u = tgt.getUser();
+		switch (res) {
+			case 0 -> ju.sendPM(BotUtils.embedBuilder().setTitle(loc.getStringFormatted("com_ju_link_fail2", Arrays.asList("name"), tgt.getUser().getName())).build());
+			case 2 -> ju.sendPM(BotUtils.embedBuilder().setDescription(loc.getStringFormatted("ju_link_req_dupe", Arrays.asList("name"), u.getName())).setThumbnail(u.getEffectiveAvatarUrl()).build());
+			case 3 -> ju.sendPM(BotUtils.embedBuilder().setDescription(loc.getStringFormatted("ju_link_req_dupe_tgt", Arrays.asList("name"), u.getName())).setThumbnail(u.getEffectiveAvatarUrl()).build());
+			// 1 means successful link or request
+		}
+		if (res == 0) {
+
 			ju.sendPM(BotUtils.embedBuilder().setTitle(loc.getStringFormatted("com_ju_link_fail2", Arrays.asList("name"), tgt.getUser().getName())).build());
 		}
 	}

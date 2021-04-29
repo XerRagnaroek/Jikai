@@ -15,6 +15,7 @@ import com.github.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.message.priv.react.PrivateMessageReactionAddEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
@@ -69,9 +70,10 @@ public class LinkRequest extends ListenerAdapter {
 
 	private void bidi() {
 		log.debug("performing bidirectional link");
+		JikaiUserLinkHandler.registerRequest(initiator, target);
 		JikaiLocale loc = target.getLocale();
 		String initName = initiator.getUser().getName();
-		EmbedBuilder eb = BotUtils.embedBuilder().setTitle(loc.getStringFormatted("ju_link_req_tgt_eb_title", Arrays.asList("name"), initName)).setDescription(loc.getStringFormatted("ju_link_req_tgt_msg", Arrays.asList("name"), initName)).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
+		EmbedBuilder eb = BotUtils.embedBuilder().setTitle(loc.getStringFormatted("ju_link_req_tgt_eb_title", Arrays.asList("name"), initName)).setDescription(loc.getStringFormatted("ju_link_req_tgt_msg", Arrays.asList("name", "time"), initName, BotUtils.formatMinutes(bidiRequestDuration, target.getLocale()))).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
 		if (optMsg != null) {
 			eb.appendDescription(loc.getStringFormatted("ju_link_req_bidi_opt_msg", Arrays.asList("name", "msg"), initName, optMsg));
 		}
@@ -91,10 +93,13 @@ public class LinkRequest extends ListenerAdapter {
 	private void reqExpired(Message m) {
 		Core.JDA.removeEventListener(this);
 		log.debug("request expired, removed eventListener");
+		JikaiUserLinkHandler.removeRequest(initiator, target);
 		JikaiLocale loc = target.getLocale();
 		EmbedBuilder eb = BotUtils.embedBuilder();
 		eb.setTitle(loc.getString("ju_link_req_tgt_exp_eb_title")).setDescription(loc.getStringFormatted("ju_link_req_tgt_exp", Arrays.asList("name", "date"), initiator.getUser().getName(), BotUtils.formatTime(LocalDateTime.now(), "eeee, dd.MM.yyyy, HH:mm", loc.getLocale()))).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
-		m.editMessage(eb.build()).submit().thenAccept(msg -> log.debug("message edited"));
+		MessageEmbed me = eb.build();
+		log.debug(me.getDescription());
+		m.editMessage(me).submit().thenAccept(msg -> log.debug("message edited"));
 		m.unpin().submit().thenAccept(v -> log.debug("message unpinned"));
 		loc = initiator.getLocale();
 		eb = BotUtils.embedBuilder();
@@ -116,6 +121,7 @@ public class LinkRequest extends ListenerAdapter {
 		log.debug("request accepted");
 		Core.JDA.removeEventListener(this);
 		future.cancel(true);
+		JikaiUserLinkHandler.removeRequest(initiator, target);
 		target.linkUser(initiator);
 		initiator.linkUser(target);
 		msg.unpin().submit().thenAccept(v -> log.debug("message unpinned"));
@@ -134,6 +140,7 @@ public class LinkRequest extends ListenerAdapter {
 		log.debug("request declined");
 		Core.JDA.removeEventListener(this);
 		future.cancel(true);
+		JikaiUserLinkHandler.removeRequest(initiator, target);
 		msg.unpin().submit().thenAccept(v -> log.debug("message unpinned"));
 		EmbedBuilder eb = BotUtils.embedBuilder();
 		eb.setTitle(initiator.getLocale().getStringFormatted("ju_link_req_bidi_init_dec", Arrays.asList("name"), target.getUser().getName())).setThumbnail(target.getUser().getEffectiveAvatarUrl());
