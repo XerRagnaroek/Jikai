@@ -1,15 +1,11 @@
 package com.github.xerragnaroek.jikai.commands.user.dev;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Arrays;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.github.xerragnaroek.jikai.commands.user.JUCommand;
-import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
-import com.github.xerragnaroek.jikai.user.JikaiUserManager;
+import com.github.xerragnaroek.jikai.util.BotUtils;
+import com.github.xerragnaroek.jikai.util.Pair;
 
 /**
  * 
@@ -28,14 +24,7 @@ public class TestCommand implements JUCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		Logger log = LoggerFactory.getLogger(TestCommand.class);
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.enable(SerializationFeature.INDENT_OUTPUT);
-		try {
-			log.debug(mapper.writeValueAsString(JikaiUserManager.getInstance().users()));
-		} catch (JsonProcessingException e) {
-			Core.ERROR_LOG.error("", e);
-		}
+		ju.sendPM(BotUtils.localedEmbed(ju.getLocale(), "setup_greetings_eb", Pair.of(Arrays.asList("name"), new Object[] { ju.getUser().getName() })));
 	}
 
 }

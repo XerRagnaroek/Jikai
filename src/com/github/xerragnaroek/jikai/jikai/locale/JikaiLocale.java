@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 import com.github.xerragnaroek.jikai.util.BotUtils;
 
@@ -63,6 +64,10 @@ public class JikaiLocale {
 
 	public String getLanguageName() {
 		return content.get("u_lang_name");
+	}
+
+	public boolean isFormattedString(String key) {
+		return Pattern.matches(".*%\\S+?%.*", getString(key) == null ? "" : getString(key));
 	}
 
 	void registerKey(String key, String str) {

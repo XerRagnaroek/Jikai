@@ -40,7 +40,7 @@ public class LinkUserCommand implements JUCommand {
 		}
 		JikaiUser tgt = BotUtils.resolveUser(arguments[index]);
 		if (tgt == null) {
-			ju.sendPM(BotUtils.localedEmbed(ju.getLocale(), "com_ju_link_fail", ""));
+			ju.sendPM(BotUtils.localedEmbedTitleDescription(ju.getLocale(), "com_ju_link_fail", ""));
 			return;
 		}
 

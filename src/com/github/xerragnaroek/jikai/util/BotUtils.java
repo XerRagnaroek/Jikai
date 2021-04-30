@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -569,12 +570,26 @@ public class BotUtils {
 		return BotUtils.addJikaiMark(new EmbedBuilder());
 	}
 
-	public static MessageEmbed localedEmbed(JikaiLocale loc, String titleKey, String descKey) {
+	public static MessageEmbed localedEmbedTitleDescription(JikaiLocale loc, String titleKey, String descKey) {
 		return embedBuilder().setTitle(loc.getString(titleKey)).setDescription(loc.getString(descKey)).build();
 	}
 
-	public static MessageEmbed localedEmbed(JikaiLocale loc, String locKeyBase) {
-		return localedEmbed(loc, locKeyBase + "_title", locKeyBase + "_desc");
+	@SafeVarargs
+	public static MessageEmbed localedEmbed(JikaiLocale loc, String locKeyBase, Pair<List<String>, Object[]>... format) {
+		EmbedBuilder eb = embedBuilder();
+		int[] formatIndex = { 0 };
+		Function<String, String> func = key -> loc.isFormattedString(key) ? loc.getStringFormatted(key, format[formatIndex[0]].getLeft(), format[formatIndex[0]++].getRight()) : loc.getString(key);
+		eb.setTitle(func.apply(locKeyBase + "_title")).setDescription(func.apply(locKeyBase + "_desc"));
+		int field = 1;
+		String name = "";
+		String tmpField = "";
+		while ((name = func.apply((tmpField = locKeyBase + "_field" + field) + "_n")) != null) {
+			String tmp = loc.getString(tmpField + "_in");
+			boolean inline = tmp != null && tmp.equalsIgnoreCase("true");
+			eb.addField(name, func.apply(tmpField + "_v"), inline);
+			field++;
+		}
+		return eb.build();
 	}
 
 	public static MessageEmbed titledEmbed(String title, String desc) {
