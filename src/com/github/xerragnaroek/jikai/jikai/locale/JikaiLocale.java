@@ -13,7 +13,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 /**
  * 
  */
-public class JikaiLocale {
+public class JikaiLocale implements Comparable<JikaiLocale> {
 
 	private final String identifier;
 	private Map<String, String> content = new ConcurrentHashMap<>();
@@ -86,5 +86,10 @@ public class JikaiLocale {
 		} else {
 			return false;
 		}
+	}
+
+	@Override
+	public int compareTo(JikaiLocale loc) {
+		return identifier.compareTo(loc.identifier);
 	}
 }
