@@ -1,17 +1,16 @@
 package com.github.xerragnaroek.jikai.user;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
-import com.github.xerragnaroek.jikai.util.BotUtils;
-
-import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 
 @SuppressWarnings("serial")
 public class SubscriptionSet extends TreeSet<Integer> {
@@ -72,10 +71,17 @@ public class SubscriptionSet extends TreeSet<Integer> {
 		onRem.add(idCauseCon);
 	}
 
+	public int removeInvalidAnime() {
+		Set<Integer> copy = new TreeSet<>(this);
+		AtomicInteger count = new AtomicInteger(0);
+		copy.stream().filter(i -> AnimeDB.getAnime(i) == null).peek(i -> count.incrementAndGet()).forEach(this::remove);
+		return count.get();
+	}
+
 	@JsonIgnore
-	public MessageEmbed getSubscriptionsFormatted(JikaiUser ju) {
+	public List<String> getSubscriptionsFormatted(JikaiUser ju) {
 		if (isEmpty()) {
-			return null;
+			Collections.emptyList();
 		}
 		/*
 		 * StringBuilder bob = new StringBuilder();
@@ -85,10 +91,7 @@ public class SubscriptionSet extends TreeSet<Integer> {
 		 * bob.append("```");
 		 */
 
-		StringBuilder bob = new StringBuilder();
-		stream().map(AnimeDB::getAnime).map(a -> "[**" + a.getTitle(ju.getTitleLanguage()) + "**](" + a.getAniUrl() + ")\n").sorted().forEach(bob::append);
-		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
-		eb.setTitle(ju.getLocale().getStringFormatted("com_ju_subs_eb_title", Arrays.asList("anime"), size())).setDescription(bob);
-		return eb.build();
+		return stream().map(AnimeDB::getAnime).map(a -> "[**" + a.getTitle(ju.getTitleLanguage()) + "**](" + a.getAniUrl() + ")\n").sorted().collect(Collectors.toList());
+
 	}
 }
