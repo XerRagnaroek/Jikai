@@ -48,6 +48,15 @@ public class JikaiLocaleManager {
 		return new HashSet<>(locales.values());
 	}
 
+	public JikaiLocale getLocaleViaFlagUnicode(String fu) {
+		for (JikaiLocale loc : locales.values()) {
+			if (loc.getString("u_flag_uni").equalsIgnoreCase(fu)) {
+				return loc;
+			}
+		}
+		return null;
+	}
+
 	private void loadLocale(Path locale) {
 		log.debug("Loading locale from {}", locale);
 		String identifier = StringUtils.substringBefore(locale.getFileName().toString(), ".").toLowerCase();
