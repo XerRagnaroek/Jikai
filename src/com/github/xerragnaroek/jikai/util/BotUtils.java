@@ -607,4 +607,74 @@ public class BotUtils {
 		return JikaiUserManager.getInstance().getUser(id);
 	}
 
+	public static List<MessageEmbed> buildFiedldedEmbeds(String title, List<String> strings, boolean inline) {
+		List<EmbedBuilder> ebs = new ArrayList<>();
+		EmbedBuilder eb = BotUtils.embedBuilder();
+		int cCount = 0;
+		int cField = 0;
+		for (String s : strings) {
+			if (cCount + s.length() < 6000 && cField < 25) {
+				eb.addField("", s, inline);
+				cCount += s.length();
+				cField++;
+			} else {
+				ebs.add(eb);
+				eb = BotUtils.embedBuilder();
+				cCount = 0;
+				cField = 0;
+			}
+		}
+		if (ebs.isEmpty()) {
+			ebs.add(eb);
+		}
+		if (ebs.size() == 1) {
+			eb.setTitle(title);
+		} else {
+			for (int i = 0; i < ebs.size(); i++) {
+				ebs.get(i).setTitle(title + " [" + (i + 1) + "/" + ebs.size() + "]");
+			}
+		}
+		return ebs.stream().map(EmbedBuilder::build).collect(Collectors.toList());
+	}
+
+	public static List<MessageEmbed> buildEmbeds(String title, List<String> strings) {
+		List<EmbedBuilder> ebs = new ArrayList<>();
+		EmbedBuilder eb = BotUtils.embedBuilder();
+		int cCount = 0;
+		String desc = "";
+		if (strings == null || strings.isEmpty()) {
+			return Collections.emptyList();
+		}
+		for (String s : strings) {
+			if (cCount + s.length() < 2048) {
+				/*
+				 * if (desc.isEmpty()) {
+				 * desc += s;
+				 * } else {
+				 * desc += (s= "\n" + s);
+				 * }
+				 */
+				eb.appendDescription(s);
+				cCount += s.length();
+			} else {
+				// eb.setDescription(desc);
+				ebs.add(eb);
+				eb = BotUtils.embedBuilder();
+				cCount = 0;
+				desc = "";
+			}
+		}
+		if (ebs.isEmpty()) {
+			ebs.add(eb);
+		}
+		if (ebs.size() == 1) {
+			eb.setTitle(title);
+		} else {
+			for (int i = 0; i < ebs.size(); i++) {
+				ebs.get(i).setTitle(title + " [" + (i + 1) + "/" + ebs.size() + "]");
+			}
+		}
+		return ebs.stream().map(EmbedBuilder::build).collect(Collectors.toList());
+	}
+
 }
