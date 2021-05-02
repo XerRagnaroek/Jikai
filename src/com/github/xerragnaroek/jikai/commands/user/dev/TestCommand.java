@@ -27,4 +27,8 @@ public class TestCommand implements JUCommand {
 		ju.sendPM(BotUtils.localedEmbed(ju.getLocale(), "setup_greetings_eb", Pair.of(Arrays.asList("name"), new Object[] { ju.getUser().getName() })));
 	}
 
+	@Override
+	public boolean isDevOnly() {
+		return true;
+	}
 }

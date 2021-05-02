@@ -400,6 +400,7 @@ public class JikaiUserUpdater {
 				log.debug("Handling next ep for {}", a.getTitleRomaji());
 				jum.getJUSubscribedToAnime(a).forEach(ju -> {
 					animeAddImpl(a, a.getId(), ju);
+					log.debug("Checking if user is sent next ep msg");
 					if (ju.isSentNextEpMessage()) {
 						sendNextEpMsg(ju, a);
 					}

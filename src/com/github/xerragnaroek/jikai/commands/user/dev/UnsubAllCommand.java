@@ -1,5 +1,7 @@
 package com.github.xerragnaroek.jikai.commands.user.dev;
 
+import java.util.TreeSet;
+
 import com.github.xerragnaroek.jikai.commands.user.JUCommand;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 
@@ -20,7 +22,7 @@ public class UnsubAllCommand implements JUCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		ju.getSubscribedAnime().forEach(id -> ju.unsubscribeAnime(id, "Unsub all command"));
+		new TreeSet<>(ju.getSubscribedAnime()).forEach(id -> ju.unsubscribeAnime(id, "Unsub all command"));
 	}
 
 	@Override
