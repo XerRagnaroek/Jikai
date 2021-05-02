@@ -169,10 +169,8 @@ public class JikaiIO {
 		try {
 			Set<JikaiUser> set = new ObjectMapper().readValue(Files.readString(loc), ref);
 			JikaiUserManager jum = JikaiUserManager.getInstance();
-			set.forEach(j -> {
-				j.setSetupCompleted(true);
-				jum.registerUser(j);
-			});
+			set.forEach(jum::loadUser);
+			jum.setUpLinks();
 		} catch (IOException e) {
 			log.error("Failed reading users", e);
 		}

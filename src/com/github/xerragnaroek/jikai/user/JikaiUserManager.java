@@ -62,6 +62,7 @@ public class JikaiUserManager {
 		registerUser(ju);
 		if (!ju.isSetupCompleted()) {
 			JikaiUserSetup.runSetup(ju, j);
+			// new JikaiUserSetupRewritten(ju, j).startSetup();
 		}
 		log.debug("Registered new JikaiUser");
 		return ju;
@@ -83,6 +84,16 @@ public class JikaiUserManager {
 		user.put(ju.getId(), ju);
 		AniListSyncer.getInstance().registerUser(ju);
 		// AniListSyncer.getInstance().registerUser(ju);
+	}
+
+	public void loadUser(JikaiUser ju) {
+		ju.setSetupCompleted(true);
+		registerUser(ju);
+		if (ju.getUser() == null) {
+			log.info("User was invalid");
+			removeUser(ju.getId());
+		}
+		log.debug("Removed {} invalid anime", ju.getSubscribedAnime().removeInvalidAnime());
 	}
 
 	public JikaiUser getUser(long id) {
@@ -163,7 +174,7 @@ public class JikaiUserManager {
 		}
 	}
 
-	private void setUpLinks() {
+	public void setUpLinks() {
 		log.debug("Setting up links...");
 		user.values().forEach(ju -> {
 			ju.getLinkedUsers().stream().map(this::getUser).forEach(u -> u.linkToUser(ju.getId()));
