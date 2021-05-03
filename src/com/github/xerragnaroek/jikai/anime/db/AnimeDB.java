@@ -91,4 +91,8 @@ public class AnimeDB {
 	public static boolean cancelUpdateFuture() {
 		return aDB.cancelUpdateFuture();
 	}
+
+	public static boolean hasAnime(int id) {
+		return aDB.getAnime(id) != null;
+	}
 }
