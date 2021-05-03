@@ -20,11 +20,11 @@ public interface Command extends Comparable<Command> {
 	 * How to use the command.
 	 */
 	public default String getUsage(JikaiLocale loc) {
-		return (getName() + " " + Objects.requireNonNullElse(loc.getString(getLocaleKey() + "_use"), "")).trim();
+		return Objects.requireNonNullElse(loc.getString(getLocaleKey() + "_use"), "").trim();
 	}
 
 	public default boolean hasUsage() {
-		return getUsage(JikaiLocaleManager.getEN()) != null;
+		return !getUsage(JikaiLocaleManager.getEN()).isEmpty();
 	}
 
 	public default boolean hasAlternativeNames() {

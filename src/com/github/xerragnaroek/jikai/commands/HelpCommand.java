@@ -70,8 +70,10 @@ public class HelpCommand implements GuildCommand, JUCommand {
 		}
 		String prefix = j == null ? Core.JM.getJDM().getBotData().getDefaultPrefix() : j.getJikaiData().getPrefix();
 		JikaiLocale loc = ltmp;
-		String serComs = CommandHandler.getCommands().stream().filter(com -> !com.getName().equals("help") && com.isEnabled() && ComUtils.checkPermissions(com, m)).map(com -> "**__" + prefix + (com.hasUsage() ? com.getUsage(loc) : com.getName()) + (com.hasAlternativeNames() ? com.getAlternativeNames() : "") + "__**" + "\n" + com.getDescription(loc)).collect(Collectors.joining("\n"));
-		String pmComs = JUCommandHandler.getCommands().stream().filter(com -> !com.getName().equals("help") && com.isEnabled() && (!com.isDevOnly() || userIsDev.get())).map(com -> "**__!" + (com.hasUsage() ? com.getUsage(loc) : com.getName()) + (com.hasAlternativeNames() ? com.getAlternativeNames() : "") + "__**" + "\n" + com.getDescription(loc)).collect(Collectors.joining("\n"));
+		String serComs = CommandHandler.getCommands().stream().filter(com -> !com.getName().equals("help") && com.isEnabled() && ComUtils.checkPermissions(com, m)).map(com -> "**__" + prefix + com.getName() + "__**" + (com.hasUsage() ? " *" + com.getUsage(loc) + "*" : "") + (com.hasAlternativeNames() ? com.getAlternativeNames() : "") + "\n" + com.getDescription(loc)).collect(Collectors.joining("\n"));
+		System.out.println(serComs);
+		String pmComs = JUCommandHandler.getCommands().stream().filter(com -> !com.getName().equals("help") && com.isEnabled() && (!com.isDevOnly() || userIsDev.get())).map(com -> "**__" + prefix + com.getName() + "__**" + (com.hasUsage() ? " *" + com.getUsage(loc) + "*" : "") + (com.hasAlternativeNames() ? com.getAlternativeNames() : "") + "\n" + com.getDescription(loc)).collect(Collectors.joining("\n"));
+		System.out.println(pmComs);
 		EmbedBuilder eb = new EmbedBuilder();
 		BotUtils.addJikaiMark(eb);
 		eb.setTitle(loc.getString("com_help_eb_server_title"));
