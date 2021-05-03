@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
+import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
@@ -178,6 +179,9 @@ public class JikaiUser {
 
 	public boolean subscribeAnime(int id, String cause) {
 		boolean subbed = subscribedAnime.add(id, cause);
+		if (subbed) {
+			log.debug("subscribed to '{}', cause: '{}'", id, cause);
+		}
 		for (long uid : linkedUsers) {
 			JikaiUser ju = JikaiUserManager.getInstance().getUser(uid);
 			if (ju == null) {
@@ -190,6 +194,7 @@ public class JikaiUser {
 	}
 
 	private void subscribeLinked(int id, String cause) {
+		log.debug("subscribed linked to '{}', cause '{}'");
 		subscribedAnime.add(id, cause);
 	}
 
@@ -438,5 +443,10 @@ public class JikaiUser {
 	@JsonSetter("zoneId")
 	private void setZoneIdJson(String id) {
 		setTimeZone(ZoneId.of(id));
+	}
+
+	@JsonSetter("subscribedAnime")
+	private void loadSubs(Set<Integer> subs) {
+		subs.stream().filter(AnimeDB::hasAnime).forEach(id -> subscribeAnime(id, "Startup load"));
 	}
 }

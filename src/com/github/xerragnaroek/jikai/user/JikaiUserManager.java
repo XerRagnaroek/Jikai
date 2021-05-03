@@ -93,7 +93,8 @@ public class JikaiUserManager {
 			log.info("User was invalid");
 			removeUser(ju.getId());
 		}
-		log.debug("Removed {} invalid anime", ju.getSubscribedAnime().removeInvalidAnime());
+		log.info("Loaded JUser {}", ju.getId());
+		// log.debug("Removed {} invalid anime", ju.getSubscribedAnime().removeInvalidAnime());
 	}
 
 	public JikaiUser getUser(long id) {
