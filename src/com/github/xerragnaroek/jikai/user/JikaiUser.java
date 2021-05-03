@@ -16,8 +16,9 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
@@ -36,6 +37,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonPropertyOrder({ "id" })
 public class JikaiUser {
 
 	private long id;
@@ -60,16 +62,14 @@ public class JikaiUser {
 	@JsonIgnore
 	boolean loading = true;
 	@JsonIgnore
-	private final Logger log;
+	private Logger log;
 
 	public JikaiUser(long id) {
 		this.id = id;
-		log = LoggerFactory.getLogger(JikaiUser.class);
+		log = LoggerFactory.getLogger(JikaiUser.class + "#" + id);
 	}
 
-	private JikaiUser() {
-		log = LoggerFactory.getLogger(JikaiUser.class);
-	}
+	private JikaiUser() {}
 
 	void init() {
 		subscribedAnime.onAdd((aid, str) -> log("subscribed to {}, cause: {}", aid, str));
@@ -84,10 +84,9 @@ public class JikaiUser {
 		aniId.onChange((o, n) -> log("change aniId: {}", n));
 	}
 
+	@JsonIgnore
 	private void log(String msg, Object... vals) {
-		MDC.put("id", String.valueOf(id));
 		log.debug(msg, vals);
-		MDC.remove("id");
 	}
 
 	public long getId() {
@@ -179,23 +178,23 @@ public class JikaiUser {
 
 	public boolean subscribeAnime(int id, String cause) {
 		boolean subbed = subscribedAnime.add(id, cause);
-		if (subbed) {
-			log.debug("subscribed to '{}', cause: '{}'", id, cause);
-		}
 		for (long uid : linkedUsers) {
 			JikaiUser ju = JikaiUserManager.getInstance().getUser(uid);
 			if (ju == null) {
 				JikaiUserManager.getInstance().removeUser(uid);
 			} else {
-				ju.subscribeLinked(id, ju.getLocale().getStringFormatted("ju_sub_add_cause_linked", Arrays.asList("name"), getUser().getName()));
+				if (subbed) {
+					ju.subscribeLinked(id, ju.getLocale().getStringFormatted("ju_sub_add_cause_linked", Arrays.asList("name"), getUser().getName()));
+				}
 			}
 		}
 		return subbed;
 	}
 
 	private void subscribeLinked(int id, String cause) {
-		log.debug("subscribed linked to '{}', cause '{}'");
-		subscribedAnime.add(id, cause);
+		if (!loading) {
+			subscribedAnime.add(id, cause);
+		}
 	}
 
 	public SubscriptionSet getSubscribedAnime() {
@@ -435,18 +434,35 @@ public class JikaiUser {
 		return String.format("\"%d\",\"%d\",\"%d\",\"%s\",\"%s\",\"%d\",\"%d\",\"%s\",\"%s\",\"%s\"", id, aniId.get(), tt.ordinal(), zone.get().getId(), locale.get(), sendDailyUpdate.get() ? 1 : 0, sendWeeklySchedule.get() ? 1 : 0, notifBeforeRelease.toString(), subscribedAnime, linkedUsers.toString());
 	}
 
-	@JsonProperty("zoneId")
+	@JsonGetter("zoneId")
 	private String jsonZoneId() {
 		return getTimeZone().getId();
 	}
+
+	/*
+	 * @JsonSetter("id")
+	 * private void setId(long id) {
+	 * this.id = id;
+	 * log = LoggerFactory.getLogger(JikaiUser.class + "#" + id);
+	 * }
+	 */
 
 	@JsonSetter("zoneId")
 	private void setZoneIdJson(String id) {
 		setTimeZone(ZoneId.of(id));
 	}
 
-	@JsonSetter("subscribedAnime")
-	private void loadSubs(Set<Integer> subs) {
-		subs.stream().filter(AnimeDB::hasAnime).forEach(id -> subscribeAnime(id, "Startup load"));
+	public void copy(JikaiUser ju) {
+		id = ju.id;
+		setTimeZone(ju.getTimeZone());
+		setAniId(ju.getAniId());
+		setTitleLanguage(ju.getTitleLanguage());
+		setLocale(ju.getLocale());
+		setUpdateDaily(ju.isUpdatedDaily());
+		setSendWeeklySchedule(ju.isSentWeeklySchedule());
+		setSendNextEpMessage(ju.isSentNextEpMessage());
+		ju.notifBeforeRelease.forEach(this::addPreReleaseNotificaionStep);
+		linkedUsers.addAll(ju.linkedUsers);
+		ju.subscribedAnime.stream().filter(AnimeDB::hasAnime).forEach(id -> subscribeAnime(id, "Copy"));
 	}
 }

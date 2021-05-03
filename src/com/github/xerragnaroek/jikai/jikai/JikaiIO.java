@@ -160,7 +160,7 @@ public class JikaiIO {
 		Set<JikaiUser> user = JikaiUserManager.getInstance().users().stream().filter(JikaiUser::isSetupCompleted).collect(Collectors.toSet());
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.enable(SerializationFeature.INDENT_OUTPUT);
-		Files.writeString(loc, mapper.writeValueAsString(user), StandardOpenOption.CREATE);
+		Files.writeString(loc, mapper.writeValueAsString(user), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 		log.debug("Saved {} users to {}", user.size(), loc.toString());
 	}
 

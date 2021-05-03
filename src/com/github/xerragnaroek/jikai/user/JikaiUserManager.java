@@ -83,16 +83,20 @@ public class JikaiUserManager {
 		juu.registerUser(ju);
 		user.put(ju.getId(), ju);
 		AniListSyncer.getInstance().registerUser(ju);
+		log.debug("Registered JUser {}", ju.getId());
 		// AniListSyncer.getInstance().registerUser(ju);
 	}
 
-	public void loadUser(JikaiUser ju) {
-		ju.setSetupCompleted(true);
-		registerUser(ju);
+	public void loadUser(JikaiUser j) {
+		JikaiUser ju = new JikaiUser(j.getId());
 		if (ju.getUser() == null) {
 			log.info("User was invalid");
 			removeUser(ju.getId());
 		}
+		registerUser(ju);
+		ju.copy(j);
+		ju.setSetupCompleted(true);
+		ju.loading = false;
 		log.info("Loaded JUser {}", ju.getId());
 		// log.debug("Removed {} invalid anime", ju.getSubscribedAnime().removeInvalidAnime());
 	}
@@ -101,7 +105,7 @@ public class JikaiUserManager {
 		return user.get(id);
 	}
 
-	private void handleSubscriptions(JikaiUser ju) {
+	public void handleSubscriptions(JikaiUser ju) {
 		ju.getSubscribedAnime().onAdd((id, cause) -> {
 			subscriptionMap.compute(id, (t, s) -> {
 				if (s == null) {
