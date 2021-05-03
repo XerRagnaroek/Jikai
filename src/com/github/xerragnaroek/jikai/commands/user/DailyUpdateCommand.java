@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jikai.commands.ComUtils;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 
 /**
  * @author XerRagnaroek
@@ -30,10 +31,14 @@ public class DailyUpdateCommand implements JUCommand {
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		JikaiLocale en = ju.getLocale();
-		ComUtils.trueFalseCommand(arguments[0], ju, (b) -> {
-			ju.setUpdateDaily(b);
-			ju.sendPM(b ? en.getString("ju_daily_ov_true") : en.getString("ju_daily_ov_false"));
-		});
+		if (arguments.length == 0) {
+			JikaiUserManager.getInstance().getUserUpdater().testDailyUpdate(ju);
+		} else {
+			ComUtils.trueFalseCommand(arguments[0], ju, (b) -> {
+				ju.setUpdateDaily(b);
+				ju.sendPM(b ? en.getString("ju_daily_ov_true") : en.getString("ju_daily_ov_false"));
+			});
+		}
 	}
 
 	@Override

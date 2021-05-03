@@ -3,6 +3,7 @@ package com.github.xerragnaroek.jikai.commands.user;
 import java.util.Arrays;
 import java.util.List;
 
+import com.github.xerragnaroek.jikai.commands.ComUtils;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 
 /**
@@ -27,10 +28,11 @@ public class NextEpisodeMsgCommand implements JUCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		boolean bool = false;
-		if (arguments.length >= 1 && ((bool = arguments[0].equalsIgnoreCase("true")) || arguments[0].equalsIgnoreCase("false"))) {
-			ju.setSendNextEpMessage(bool);
-			ju.sendPM(ju.getLocale().getString("com_ju_next_ep_msg_" + bool));
+		if (arguments.length >= 1) {
+			ComUtils.trueFalseCommand(arguments[0], ju, b -> {
+				ju.setSendNextEpMessage(b);
+				ju.sendPM(ju.getLocale().getString("com_ju_next_ep_msg_" + b));
+			});
 		} else {
 			ju.sendPM(getUsage(ju.getLocale()));
 		}
