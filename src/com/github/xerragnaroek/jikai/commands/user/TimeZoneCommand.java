@@ -23,7 +23,7 @@ public class TimeZoneCommand implements JUCommand {
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		if (arguments.length > 0) {
-			String id = arguments[0];
+			String id = arguments[0].trim();
 			JikaiLocale loc = ju.getLocale();
 			try {
 				ZoneId z = ZoneId.of(id);
