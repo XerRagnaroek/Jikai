@@ -2,6 +2,8 @@ package com.github.xerragnaroek.jikai.user;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,6 +44,8 @@ public class PrivateList extends ListenerAdapter {
 	private String listThumb;
 	private final Logger log;
 	private boolean flip;
+	private long firstMsgId;
+	private Set<Runnable> runOnExpire = Collections.synchronizedSet(new HashSet<>());
 
 	public PrivateList(JikaiUser ju, String title, String listThumb) {
 		this.ju = ju;
@@ -69,10 +73,14 @@ public class PrivateList extends ListenerAdapter {
 		ju.getUser().openPrivateChannel().submit().thenAccept(pc -> {
 			List<CompletableFuture<?>> sync = new ArrayList<>(cpToAnime.size());
 			for (int i = 0; i < cpToAnime.size(); i++) {
+				boolean first = i == 0;
 				Map<String, Anime> map = cpToAnime.get(i);
 				EmbedBuilder eb = buildEmbed(map);
 				eb.setTitle(title + (cpToAnime.size() > 1 ? " " + (i + 1) + "/" + cpToAnime.size() : ""));
 				sync.add(pc.sendMessage(eb.build()).submit().thenAccept(m -> {
+					if (first) {
+						firstMsgId = m.getIdLong();
+					}
 					List<CompletableFuture<?>> cfs = new ArrayList<>(map.size());
 					log.debug("adding {} reactions", map.size());
 					map.keySet().forEach(s -> cfs.add(m.addReaction(s).submit()));
@@ -94,6 +102,14 @@ public class PrivateList extends ListenerAdapter {
 		});
 	}
 
+	public long getFirstMessageId() {
+		return firstMsgId;
+	}
+
+	public void runOnExpire(Runnable run) {
+		runOnExpire.add(run);
+	}
+
 	private EmbedBuilder buildEmbed(Map<String, Anime> m) {
 		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		StringBuilder bob = new StringBuilder();
@@ -108,7 +124,7 @@ public class PrivateList extends ListenerAdapter {
 	private void registerListener() {
 		log.debug("Registering listener");
 		Core.JDA.addEventListener(this);
-		Core.EXEC.schedule(() -> expired(), listDuration, TimeUnit.MINUTES);
+		Core.EXEC.schedule(() -> expire(true), listDuration, TimeUnit.MINUTES);
 	}
 
 	private void addTimeLimitMsg(PrivateChannel pc) {
@@ -119,7 +135,7 @@ public class PrivateList extends ListenerAdapter {
 		}).submit();
 	}
 
-	private void expired() {
+	public void expire(boolean runOnExpireRunnables) {
 		Core.JDA.removeEventListener(this);
 		log.debug("PrivateList expired, removed listener after {} minutes", listDuration);
 		ju.getUser().openPrivateChannel().flatMap(pc -> pc.retrieveMessageById(msgReactionMap.lastKey())).flatMap(m -> {
@@ -128,6 +144,10 @@ public class PrivateList extends ListenerAdapter {
 			content[content.length - 1] = ju.getLocale().getString("ju_eb_private_list_exp");
 			return m.editMessage(new EmbedBuilder(me).setDescription(String.join("\n", content)).build());
 		}).submit().thenAccept(m -> log.debug("last list message edited"));
+		log.debug("Running {} runOnExpire runnables", runOnExpire.size());
+		if (runOnExpireRunnables) {
+			runOnExpire.forEach(Runnable::run);
+		}
 	}
 
 	@Override

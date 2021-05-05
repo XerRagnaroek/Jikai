@@ -6,7 +6,7 @@ import java.util.List;
 
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
-import com.github.xerragnaroek.jikai.user.PrivateList;
+import com.github.xerragnaroek.jikai.user.SubListHandler;
 import com.github.xerragnaroek.jikai.user.SubscriptionSet;
 
 /**
@@ -40,7 +40,7 @@ public class SubscriptionsCommand implements JUCommand {
 		JikaiLocale loc = ju.getLocale();
 		SubscriptionSet set = ju.getSubscribedAnime();
 		if (!set.isEmpty()) {
-			new PrivateList(ju, loc.getStringFormatted("com_ju_subs_eb_title", Arrays.asList("anime"), set.size()), null, true).sendList(set);
+			SubListHandler.sendSubList(ju);
 		} else {
 			ju.sendPM(loc.getString("com_ju_subs_none"));
 		}

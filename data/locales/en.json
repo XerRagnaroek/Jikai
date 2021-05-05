@@ -190,6 +190,8 @@
 	"ju_link_req_unidi_suc": "You are now linked to **%name%**!\nWhenever they subscribe to an anime you will also be subscribed to it.",
 	"ju_link_req_dupe": "You already have a pending link request to **%name%!**",
 	"ju_link_req_dupe_tgt": "**%name%** has already requested a bidirectional link with you and it's still waiting for your answer!",
+	"ju_sub_list_dupe_eb_title": "You already have an active sub list!",
+	"ju_sub_list_dupe_eb_desc": "It's **[here!](%link%)**",
 	"ju_notify_release_false": "I won't notify you when a subscribed anime airs.",
 	"ju_notify_release_true": "I'll send you a message when one of your subscriptions airs!",
 	"ju_private_list_sub_cause": "Subscribed using a private list!",

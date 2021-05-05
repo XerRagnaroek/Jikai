@@ -105,7 +105,7 @@ public class EpisodeTracker {
 	}
 
 	public List<EmbedBuilder> makeEpisodeList() {
-		String pcId = ju.getUser().openPrivateChannel().complete().getId();
+		long pcId = ju.getUser().openPrivateChannel().complete().getIdLong();
 		List<Pair<Anime, List<String>>> aniStrings = episodes.keySet().stream().map(id -> formatAnimeEpisodes(pcId, id)).sorted((p1, p2) -> Anime.IGNORE_TITLE_CASE.compare(p1.getLeft(), p2.getLeft())).collect(Collectors.toList());
 		List<EmbedBuilder> ebs = new ArrayList<>(aniStrings.size());
 		aniStrings.forEach(p -> {
@@ -167,13 +167,13 @@ public class EpisodeTracker {
 		 */
 	}
 
-	private Pair<Anime, List<String>> formatAnimeEpisodes(String pcId, int anime) {
+	private Pair<Anime, List<String>> formatAnimeEpisodes(long pcId, int anime) {
 		Anime a = AnimeDB.getAnime(anime);
 		Map<Integer, Long> msgs = new TreeMap<>();
 		episodes.get(anime).forEach((l, i) -> msgs.put(i, l));
 		List<String> episodes = new ArrayList<>();
 		msgs.keySet().forEach(i -> {
-			episodes.add(String.format("**[%02d](https://discord.com/channels/@me/%s/%s)**", i, pcId, msgs.get(i)));
+			episodes.add(String.format("**[%02d](%s)**", i, BotUtils.makePrivateMessageLink(pcId, msgs.get(i))));
 		});
 		return Pair.of(a, episodes);
 	}

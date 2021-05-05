@@ -183,7 +183,7 @@ public class JikaiUser {
 			if (ju == null) {
 				JikaiUserManager.getInstance().removeUser(uid);
 			} else {
-				if (subbed) {
+				if (subbed && !Core.INITIAL_LOAD.get()) {
 					ju.subscribeLinked(id, ju.getLocale().getStringFormatted("ju_sub_add_cause_linked", Arrays.asList("name"), getUser().getName()));
 				}
 			}
@@ -192,9 +192,7 @@ public class JikaiUser {
 	}
 
 	private void subscribeLinked(int id, String cause) {
-		if (!loading) {
-			subscribedAnime.add(id, cause);
-		}
+		subscribedAnime.add(id, cause);
 	}
 
 	public SubscriptionSet getSubscribedAnime() {

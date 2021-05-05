@@ -677,4 +677,7 @@ public class BotUtils {
 		return ebs.stream().map(EmbedBuilder::build).collect(Collectors.toList());
 	}
 
+	public static String makePrivateMessageLink(long pcId, long msgId) {
+		return String.format("https://discord.com/channels/@me/%s/%s", pcId, msgId);
+	}
 }
