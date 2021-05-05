@@ -86,4 +86,8 @@ public abstract class Manager<T> implements Initilizable, Iterable<T> {
 	public Iterator<T> iterator() {
 		return impls.values().iterator();
 	}
+
+	public T getAny() {
+		return impls.values().iterator().next();
+	}
 }

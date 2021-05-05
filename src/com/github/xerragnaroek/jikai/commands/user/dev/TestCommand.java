@@ -1,11 +1,9 @@
 package com.github.xerragnaroek.jikai.commands.user.dev;
 
-import java.time.ZoneId;
-import java.util.stream.Collectors;
-
 import com.github.xerragnaroek.jikai.commands.user.JUCommand;
+import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
-import com.github.xerragnaroek.jikai.util.BotUtils;
+import com.github.xerragnaroek.jikai.user.JikaiUserSetupRewritten;
 
 /**
  * 
@@ -24,7 +22,7 @@ public class TestCommand implements JUCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		BotUtils.sendPM(ju.getUser(), ZoneId.getAvailableZoneIds().stream().sorted().collect(Collectors.joining("\n")));
+		new JikaiUserSetupRewritten(ju, Core.JM.getAny()).startSetup();
 	}
 
 	@Override

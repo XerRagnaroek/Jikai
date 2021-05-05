@@ -62,7 +62,6 @@ public class JikaiUserManager {
 		registerUser(ju);
 		if (!ju.isSetupCompleted()) {
 			JikaiUserSetup.runSetup(ju, j);
-			// new JikaiUserSetupRewritten(ju, j).startSetup();
 		}
 		log.debug("Registered new JikaiUser");
 		return ju;
