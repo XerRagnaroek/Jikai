@@ -24,6 +24,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.PrivateChannel;
+import net.dv8tion.jda.api.events.message.priv.react.GenericPrivateMessageReactionEvent;
 import net.dv8tion.jda.api.events.message.priv.react.PrivateMessageReactionAddEvent;
 import net.dv8tion.jda.api.events.message.priv.react.PrivateMessageReactionRemoveEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -40,6 +41,7 @@ public class PrivateList extends ListenerAdapter {
 	private String title;
 	private String listThumb;
 	private final Logger log;
+	private boolean flip;
 
 	public PrivateList(JikaiUser ju, String title, String listThumb) {
 		this.ju = ju;
@@ -47,6 +49,11 @@ public class PrivateList extends ListenerAdapter {
 		this.listThumb = listThumb;
 		msgReactionMap = new TreeMap<>();
 		log = LoggerFactory.getLogger(PrivateList.class.getCanonicalName() + "#" + ju.getId());
+	}
+
+	public PrivateList(JikaiUser ju, String title, String listThumb, boolean flipped) {
+		this(ju, title, listThumb);
+		flip = flipped;
 	}
 
 	public void sendList(Set<Integer> anime) {
@@ -91,7 +98,10 @@ public class PrivateList extends ListenerAdapter {
 		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		StringBuilder bob = new StringBuilder();
 		m.forEach((s, a) -> bob.append(String.format("%s: %s: [**%s**](%s)\n", BotUtils.processUnicode(s), ju.isSubscribedTo(a) ? subbed : notSubbed, a.getTitle(ju.getTitleLanguage()), a.getAniUrl())));
-		eb.setDescription(bob).setThumbnail(listThumb);
+		eb.setDescription(bob);
+		if (listThumb != null && !listThumb.isBlank()) {
+			eb.setThumbnail(listThumb);
+		}
 		return eb;
 	}
 
@@ -122,11 +132,30 @@ public class PrivateList extends ListenerAdapter {
 
 	@Override
 	public void onPrivateMessageReactionAdd(PrivateMessageReactionAddEvent event) {
+		handleReactionEvent(event, true);
+	}
+
+	@Override
+	public void onPrivateMessageReactionRemove(PrivateMessageReactionRemoveEvent event) {
+		handleReactionEvent(event, false);
+	}
+
+	private void handleReactionEvent(GenericPrivateMessageReactionEvent event, boolean add) {
 		if (event.getUserIdLong() == ju.getId()) {
 			msgReactionMap.computeIfPresent(event.getMessageIdLong(), (l, m) -> {
 				m.computeIfPresent(event.getReactionEmote().getAsCodepoints(), (s, i) -> {
-					if (ju.subscribeAnime(i, ju.getLocale().getString("ju_private_list_sub_cause"))) {
-						event.getChannel().retrieveMessageById(event.getMessageIdLong()).submit().thenAccept(msg -> editListMsg(i, msg, true));
+					if (!flip) {
+						if (add) {
+							sub(i, event);
+						} else {
+							unsub(i, event);
+						}
+					} else {
+						if (add) {
+							unsub(i, event);
+						} else {
+							sub(i, event);
+						}
 					}
 					return i;
 				});
@@ -135,18 +164,15 @@ public class PrivateList extends ListenerAdapter {
 		}
 	}
 
-	@Override
-	public void onPrivateMessageReactionRemove(PrivateMessageReactionRemoveEvent event) {
-		if (event.getUserIdLong() == ju.getId()) {
-			msgReactionMap.computeIfPresent(event.getMessageIdLong(), (l, m) -> {
-				m.computeIfPresent(event.getReactionEmote().getAsCodepoints(), (s, i) -> {
-					if (ju.unsubscribeAnime(i, ju.getLocale().getString("ju_private_list_unsub_cause"))) {
-						event.getChannel().retrieveMessageById(event.getMessageIdLong()).submit().thenAccept(msg -> editListMsg(i, msg, false));
-					}
-					return i;
-				});
-				return m;
-			});
+	private void sub(int id, GenericPrivateMessageReactionEvent event) {
+		if (ju.subscribeAnime(id, ju.getLocale().getString("ju_private_list_sub_cause"))) {
+			event.getChannel().retrieveMessageById(event.getMessageIdLong()).submit().thenAccept(msg -> editListMsg(id, msg, true));
+		}
+	}
+
+	private void unsub(int id, GenericPrivateMessageReactionEvent event) {
+		if (ju.unsubscribeAnime(id, ju.getLocale().getString("ju_private_list_unsub_cause"))) {
+			event.getChannel().retrieveMessageById(event.getMessageIdLong()).submit().thenAccept(msg -> editListMsg(id, msg, false));
 		}
 	}
 
