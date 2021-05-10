@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 import com.github.xerragnaroek.jasa.AniException;
 import com.github.xerragnaroek.jasa.JASA;
@@ -34,54 +33,63 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 /**
  * 
  */
+
 public class AniLinker {
 	private final static Logger log = LoggerFactory.getLogger(AniLinker.class);
-	private final static Map<Long, UserChecker> checker = Collections.synchronizedMap(new HashMap<>());
+	private final static Map<Long, AniLinker> linkerMap = Collections.synchronizedMap(new HashMap<>());
+	private UserChecker checker;
+	private CompletableFuture<Boolean> future;
 
-	public static CompletableFuture<Boolean> linkAniAccount(JikaiUser ju, String nameOrId) {
-		JikaiLocale loc = ju.getLocale();
-		JASA jasa = new JASA();
-		List<User> user = new ArrayList<>();
-		try {
-			int id = Integer.parseInt(nameOrId);
+	private AniLinker() {}
+
+	// TODO linkAniAccount should return an AniLinker that's cancellable to actually stop the process!!
+	public static AniLinker linkAniAccount(JikaiUser ju, String nameOrId) {
+		AniLinker linker = new AniLinker();
+		if (!linkerMap.containsKey(ju.getId())) {
+			JikaiLocale loc = ju.getLocale();
+			JASA jasa = new JASA();
+			List<User> user = new ArrayList<>();
 			try {
-				user.add(jasa.fetchUserWithId(id));
-			} catch (IOException | AniException e) {
-				BotUtils.logAndSendToDev(Core.ERROR_LOG, "Error ", e);
-				ju.sendPM(loc.getString("ju_link_ani_error"));
+				int id = Integer.parseInt(nameOrId);
+				try {
+					user.add(jasa.fetchUserWithId(id));
+				} catch (IOException | AniException e) {
+					BotUtils.logAndSendToDev(Core.ERROR_LOG, "Error ", e);
+					ju.sendPM(loc.getString("ju_link_ani_error"));
+				}
+			} catch (NumberFormatException e) {
+				nameOrId = nameOrId.endsWith("/") ? nameOrId.substring(0, nameOrId.length() - 1) : nameOrId;
+				String name = nameOrId.startsWith("http") ? nameOrId.substring(nameOrId.lastIndexOf('/') + 1) : nameOrId;
+				try {
+					user.addAll(jasa.fetchUsersWithName(name));
+				} catch (IOException | AniException ex) {
+					BotUtils.logAndSendToDev(Core.ERROR_LOG, "Error ", ex);
+					ju.sendPM(loc.getString("ju_link_ani_error"));
+				}
 			}
-		} catch (NumberFormatException e) {
-			nameOrId = nameOrId.endsWith("/") ? nameOrId.substring(0, nameOrId.length() - 1) : nameOrId;
-			String name = nameOrId.startsWith("http") ? nameOrId.substring(nameOrId.lastIndexOf('/') + 1) : nameOrId;
-			try {
-				user.addAll(jasa.fetchUsersWithName(name));
-			} catch (IOException | AniException ex) {
-				BotUtils.logAndSendToDev(Core.ERROR_LOG, "Error ", ex);
-				ju.sendPM(loc.getString("ju_link_ani_error"));
+			log.debug("Found {} user matching input", user.size());
+			log.debug("Starting UserChecker");
+			linkerMap.put(ju.getId(), linker);
+			if (user.size() > 0) {
+				linker.future = CompletableFuture.runAsync(() -> linker.startChecker(user, ju), Core.EXEC).thenApply(v -> true);
+			} else {
+				ju.sendPM(loc.getString("ju_link_ani_no_user"));
+				linker.future = CompletableFuture.completedFuture(false);
 			}
-		}
-		log.debug("Found {} user matching input", user.size());
-		log.debug("Starting UserChecker");
-		if (user.size() > 0) {
-			return CompletableFuture.runAsync(() -> startChecker(user, ju), Core.EXEC).thenApply(v -> true);
 		} else {
-			ju.sendPM(loc.getString("ju_link_ani_no_user"));
-			return CompletableFuture.completedFuture(false);
+			linker.future = CompletableFuture.completedFuture(false);
 		}
+		return linker;
 	}
 
-	private static void startChecker(List<User> user, JikaiUser ju) {
+	private void startChecker(List<User> user, JikaiUser ju) {
 		long id = ju.getId();
-		if (checker.containsKey(id)) {
-			checker.get(id).stop(false);
-		}
-		UserChecker uc = new UserChecker(user, ju);
-		checker.put(id, uc);
-		uc.start();
+		checker = new UserChecker(user, ju);
+		checker.start();
 		try {
-			while (!uc.isDone()) {
-				synchronized (uc) {
-					uc.wait();
+			while (!checker.isDone()) {
+				synchronized (checker) {
+					checker.wait();
 				}
 			}
 		} catch (InterruptedException e) {
@@ -89,8 +97,16 @@ public class AniLinker {
 		}
 	}
 
-	static void removeChecker(long id) {
-		checker.remove(id);
+	static void removeLinker(long id) {
+		linkerMap.remove(id);
+	}
+
+	public CompletableFuture<Boolean> getFuture() {
+		return future;
+	}
+
+	public void stop(boolean userStopped) {
+		checker.stop(userStopped);
 	}
 }
 
@@ -101,25 +117,23 @@ class UserChecker extends ListenerAdapter {
 	private static final String STOP_UCP = "U+1f6d1";
 	private List<User> user;
 	private JikaiUser ju;
-	private String userId;
 	private Map<Long, User> msgIdUser = new HashMap<>();
 	private AtomicLong sureMsgId = new AtomicLong(0);
 	private Queue<Long> sentMsgs = new LinkedList<>();
-	private final Logger log = LoggerFactory.getLogger(UserChecker.class);
+	private final Logger log;
 	private boolean done = false;
 
 	UserChecker(List<User> user, JikaiUser ju) {
 		this.user = user;
 		this.ju = ju;
 		Core.JDA.addEventListener(this);
+		log = LoggerFactory.getLogger(UserChecker.class + "#" + ju.getId());
 	}
 
 	void start() {
-		MDC.put("id", userId);
 		log.debug("Starting check");
 		BotUtils.sendPM(ju.getUser(), ju.getLocale().getStringFormatted("ju_link_ani_list", Arrays.asList("amount"), user.size())).get(0).thenAccept(m -> sentMsgs.add(m.getIdLong()));
 		user.forEach(u -> sendUserEmbed(u, YES_UCP, STOP_UCP));
-		MDC.remove("id");
 	}
 
 	private MessageEmbed makeUserEmbed(User u) {
@@ -129,18 +143,14 @@ class UserChecker extends ListenerAdapter {
 	}
 
 	private CompletableFuture<Message> sendUserEmbed(User u, String... reactions) {
-		MDC.put("id", userId);
 		log.debug("Sending user pm");
-		MDC.remove("id");
 		return BotUtils.sendPM(ju.getUser(), makeUserEmbed(u)).thenApply(m -> {
-			MDC.put("id", userId);
 			for (String react : reactions) {
 				m.addReaction(react).submit();
 			}
 			msgIdUser.put(m.getIdLong(), u);
 			sentMsgs.add(m.getIdLong());
 			log.debug("Successfully sent and added reactions");
-			MDC.remove("id");
 			return m;
 		});
 	}
@@ -169,56 +179,46 @@ class UserChecker extends ListenerAdapter {
 	}
 
 	private void correctUser(User u) {
-		MDC.put("id", userId);
 		log.debug("Correct user!");
 		ju.setAniId(u.getId());
 		ju.sendPM(ju.getLocale().getString("ju_link_ani_done"));
 		ju.sendPM(makeUserEmbed(u));
 		stop(false);
-		MDC.remove("id");
 	}
 
 	private void wrongUser() {
-		MDC.put("id", userId);
 		log.debug("Wrong user!");
 		deleteMsgs();
 		start();
-		MDC.remove("id");
 	}
 
 	private void deleteMsgs() {
-		MDC.put("id", userId);
 		log.debug("Deleting msgs");
 		List<String> msgIds = sentMsgs.stream().map(String::valueOf).collect(Collectors.toList());
 		sentMsgs.clear();
 		ju.getUser().openPrivateChannel().submit().thenAccept(pc -> pc.purgeMessagesById(msgIds));
 		msgIdUser.clear();
 		sureMsgId.set(0);
-		MDC.remove("id");
 	}
 
 	private void askIfCorrectUser(User u) {
-		MDC.put("id", userId);
 		log.debug("Asking if correct user");
 		BotUtils.sendPM(ju.getUser(), ju.getLocale().getString("ju_link_ani_make_sure")).get(0).thenAccept(m -> sentMsgs.add(m.getIdLong()));
 		sendUserEmbed(u, YES_UCP, NO_UCP, STOP_UCP).thenAccept(m -> sureMsgId.set(m.getIdLong()));
-		MDC.remove("id");
 	}
 
 	void stop(boolean user) {
-		MDC.put("id", userId);
 		log.debug("Stopping check, user stopped: {}", user);
 		if (user) {
 			ju.sendPM(BotUtils.makeSimpleEmbed(ju.getLocale().getString("ju_link_ani_stopped")));
 		}
 		Core.JDA.removeEventListener(this);
 		deleteMsgs();
-		AniLinker.removeChecker(ju.getId());
+		AniLinker.removeLinker(ju.getId());
 		done = true;
 		synchronized (this) {
 			this.notify();
 		}
-		MDC.remove("id");
 	}
 
 	boolean isDone() {

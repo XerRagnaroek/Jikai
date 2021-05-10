@@ -23,7 +23,7 @@ public class LinkAniAccountCommand implements JUCommand {
 		JikaiLocale loc = ju.getLocale();
 		if (arguments.length < 1) {
 			log.debug("No arguments!");
-			ju.sendPM(loc.getString("com_ju_link_ani_invalid"));
+			ju.sendPM(getUsage(loc));
 			return;
 		}
 		AniLinker.linkAniAccount(ju, arguments[0]);

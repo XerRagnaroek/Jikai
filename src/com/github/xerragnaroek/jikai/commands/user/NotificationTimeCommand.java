@@ -24,13 +24,12 @@ public class NotificationTimeCommand implements JUCommand {
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		String tmp = arguments[1];
-		if (!tmp.contains("d") && !tmp.contains("h") && !tmp.contains("m") && !tmp.contains(",")) {
+		if (!tmp.contains("d") && !tmp.contains("h") && !tmp.contains("m")) {
 			ju.sendPMFormat(ju.getLocale().getStringFormatted("com_ju_notif_time_invalid", Arrays.asList("input"), tmp));
 			return;
 		}
 		if (arguments[0].equals("add")) {
 			ju.addReleaseSteps(tmp);
-
 		} else if (arguments[0].equals("remove") || arguments[0].equals("rem")) {
 			ju.removeReleaseSteps(tmp);
 		}

@@ -34,6 +34,7 @@ import org.slf4j.MDC;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
+import com.github.xerragnaroek.jikai.anime.link.EpisodeLinker;
 import com.github.xerragnaroek.jikai.anime.schedule.AnimeTable;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
@@ -468,6 +469,7 @@ public class JikaiUserUpdater {
 		int eps = a.getEpisodes();
 		String episodes = eps == 0 ? "" : String.format("/%2d", eps);
 		eb.setDescription(loc.getStringFormatted("ju_eb_notify_release_desc", Arrays.asList("episodes"), String.format("%2d%s", a.getNextEpisodeNumber(), episodes)));
+		eb.appendDescription("\n" + EpisodeLinker.getStreamLinksFormatted(a));
 		return eb.build();
 	}
 
@@ -523,34 +525,18 @@ public class JikaiUserUpdater {
 		return q;
 	}
 
-	private Queue<MessageEmbed> createWeeklySchedule(JikaiUser ju, AnimeTable at) {
-		JikaiLocale loc = ju.getLocale();
-		StringBuilder bob = new StringBuilder();
-		at.toFormatedWeekString(ju.getTitleLanguage(), true, loc.getLocale()).values().forEach(s -> bob.append("\n" + s));
-		MessageBuilder mb = new MessageBuilder();
-		mb.setContent(bob.toString());
-		Queue<MessageEmbed> q = new LinkedList<>();
-		Queue<Message> msgs = mb.buildAll(SplitPolicy.NEWLINE);
-		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
-		eb.setTitle(loc.getString("ju_weekly_sched_msg"));
-		Consumer<Message> setAndAdd = m -> {
-			eb.setDescription("```asciidoc\n" + m.getContentRaw() + "\n```");
-			q.add(eb.build());
-		};
-		setAndAdd.accept(msgs.poll());
-		eb.setTitle(null);
-		msgs.forEach(setAndAdd);
-		return q;
-	}
-
 	private void sendDailyUpdate(JikaiUser ju) {
 		log.debug("Sending daily update to JUser '{}'", ju.getId());
 		ZoneId zone = ju.getTimeZone();
 		LocalDate ld = ZonedDateTime.now(zone).toLocalDate();
 		DayOfWeek today = ld.getDayOfWeek();
 		AnimeTable at = ScheduleManager.getSchedule(zone).makeUserTable(ju);
-		if (today == DayOfWeek.MONDAY && ju.isSentWeeklySchedule()) {
-			BotUtils.sendPMsEmbed(ju.getUser(), createWeeklySchedule(ju, at));
+		if (today == DayOfWeek.MONDAY) {
+			if (ju.isSentWeeklySchedule()) {
+				BotUtils.sendPMsEmbed(ju.getUser(), BotUtils.createWeeklySchedule(ju, at));
+			} else if (ju.isUpdatedDaily()) {
+				BotUtils.sendPMsEmbed(ju.getUser(), createDailyMessage(ju, at, today));
+			}
 		} else if (ju.isUpdatedDaily()) {
 			BotUtils.sendPMsEmbed(ju.getUser(), createDailyMessage(ju, at, today));
 		}

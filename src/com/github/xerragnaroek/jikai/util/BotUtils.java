@@ -20,19 +20,27 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jikai.anime.schedule.AnimeTable;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.BotData;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
@@ -56,6 +64,10 @@ import net.dv8tion.jda.api.requests.restaction.MessageAction;
 
 public class BotUtils {
 	private static final Logger log = LoggerFactory.getLogger(BotUtils.class);
+
+	private static Pattern day = Pattern.compile("(\\d+)(?=d)");
+	private static Pattern hour = Pattern.compile("(\\d+)(?=h)");
+	private static Pattern min = Pattern.compile("(\\d+)(?=m)");
 
 	public static TextChannel getChannelOrDefault(String channel, String gId) {
 		TextChannel tc = null;
@@ -679,5 +691,67 @@ public class BotUtils {
 
 	public static String makePrivateMessageLink(long pcId, long msgId) {
 		return String.format("https://discord.com/channels/@me/%s/%s", pcId, msgId);
+	}
+
+	public static EmbedBuilder makeConfigEmbed(JikaiUser ju) {
+		String config = ju.getConfigFormatted();
+		String[] tmp = config.split("\n");
+		// codeblock, codeblock end
+		String[] nonFormat = { "", "" };
+		if (tmp[0].contains("```") && tmp[tmp.length - 1].contains("```")) {
+			// all data fields
+			nonFormat[0] = tmp[0];
+			nonFormat[1] = tmp[tmp.length - 1];
+			tmp = ArrayUtils.subarray(tmp, 1, tmp.length - 1);
+		}
+		String formatted = BotUtils.padEquallyAndJoin(ju.getLocale().getString("ju_config_sep"), "\n", null, tmp);
+		formatted = nonFormat[0] + "\n" + formatted + "\n" + nonFormat[1];
+		EmbedBuilder eb = BotUtils.embedBuilder();
+		return eb.setTitle(ju.getLocale().getString("com_ju_config_eb_title")).setDescription(formatted);
+	}
+
+	public static int stepStringToMins(String str) {
+		AtomicLong mins = new AtomicLong(0);
+		Matcher d = day.matcher(str);
+		Matcher h = hour.matcher(str);
+		Matcher m = min.matcher(str);
+		AtomicBoolean noMatch = new AtomicBoolean(true);
+
+		d.results().map(MatchResult::group).findFirst().ifPresent(s -> {
+			mins.addAndGet(TimeUnit.DAYS.toMinutes(Long.parseLong(s)));
+			noMatch.set(false);
+		});
+		h.results().map(MatchResult::group).findFirst().ifPresent(s -> {
+			mins.addAndGet(TimeUnit.HOURS.toMinutes(Long.parseLong(s)));
+			noMatch.set(false);
+		});
+		m.results().map(MatchResult::group).findFirst().ifPresent(s -> {
+			mins.addAndGet(Long.parseLong(s));
+			noMatch.set(false);
+		});
+		if (noMatch.get()) {
+			throw new IllegalArgumentException("Invalid step string!");
+		}
+		return (int) mins.get();
+	}
+
+	public static Queue<MessageEmbed> createWeeklySchedule(JikaiUser ju, AnimeTable at) {
+		JikaiLocale loc = ju.getLocale();
+		StringBuilder bob = new StringBuilder();
+		at.toFormatedWeekString(ju.getTitleLanguage(), true, loc.getLocale()).values().forEach(s -> bob.append("\n" + s));
+		MessageBuilder mb = new MessageBuilder();
+		mb.setContent(bob.toString());
+		Queue<MessageEmbed> q = new LinkedList<>();
+		Queue<Message> msgs = mb.buildAll(SplitPolicy.NEWLINE);
+		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
+		eb.setTitle(loc.getString("ju_weekly_sched_msg"));
+		Consumer<Message> setAndAdd = m -> {
+			eb.setDescription("```asciidoc\n" + m.getContentRaw() + "\n```");
+			q.add(eb.build());
+		};
+		setAndAdd.accept(msgs.poll());
+		eb.setTitle(null);
+		msgs.forEach(setAndAdd);
+		return q;
 	}
 }

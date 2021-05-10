@@ -10,7 +10,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -231,6 +230,14 @@ public class JikaiUser {
 		}
 	}
 
+	public boolean addReleaseStepNoMsg(int seconds) {
+		return notifBeforeRelease.add(seconds);
+	}
+
+	public boolean remReleaseStepNoMsg(int seconds) {
+		return notifBeforeRelease.remove(seconds);
+	}
+
 	public BooleanProperty isUpdatedDailyProperty() {
 		return sendDailyUpdate;
 	}
@@ -337,47 +344,59 @@ public class JikaiUser {
 	}
 
 	private boolean stepImpl(String input, boolean add) {
-		int nfe = 0;
-		String[] tmp = input.split(",");
-		for (String s : tmp) {
-			try {
-				char end = s.charAt(s.length() - 1);
-				s = StringUtils.chop(s);
-				long l = Long.parseLong(s);
-				boolean right = false;
-				switch (end) {
-					case 'd':
-						if ((right = l <= 7)) {
-							l = TimeUnit.DAYS.toMinutes(l);
-						}
-						break;
-					case 'h':
-						if ((right = l <= 168)) {
-							l = l * 60;
-						}
-						break;
-					case 'm':
-						right = l <= 10080;
-				}
-				if (right) {
-					if (add) {
-						addPreReleaseNotificaionStep((int) l * 60);
-					} else {
-						removePreReleaseNotificationStep((int) l * 60);
-					}
-				}
-			} catch (NumberFormatException e) {
-				nfe++;
-			}
+		/*
+		 * int nfe = 0;
+		 * String[] tmp = input.split(",");
+		 * for (String s : tmp) {
+		 * try {
+		 * char end = s.charAt(s.length() - 1);
+		 * s = StringUtils.chop(s);
+		 * long l = Long.parseLong(s);
+		 * boolean right = false;
+		 * switch (end) {
+		 * case 'd':
+		 * if ((right = l <= 7)) {
+		 * l = TimeUnit.DAYS.toMinutes(l);
+		 * }
+		 * break;
+		 * case 'h':
+		 * if ((right = l <= 168)) {
+		 * l = l * 60;
+		 * }
+		 * break;
+		 * case 'm':
+		 * right = l <= 10080;
+		 * }
+		 * if (right) {
+		 * if (add) {
+		 * addPreReleaseNotificaionStep((int) l * 60);
+		 * } else {
+		 * removePreReleaseNotificationStep((int) l * 60);
+		 * }
+		 * }
+		 * } catch (NumberFormatException e) {
+		 * nfe++;
+		 * }
+		 * }
+		 * return nfe < tmp.length;
+		 */
+		int mins = BotUtils.stepStringToMins(input);
+		if (mins > TimeUnit.DAYS.toMinutes(7)) {
+			return false;
 		}
-		return nfe < tmp.length;
+		if (add) {
+			addPreReleaseNotificaionStep(mins * 60);
+		} else {
+			removePreReleaseNotificationStep(mins * 60);
+		}
+		return true;
 	}
 
 	public boolean removeReleaseSteps(String input) {
 		return stepImpl(input, false);
 	}
 
-	public boolean addReleaseSteps(String input) throws NumberFormatException {
+	public boolean addReleaseSteps(String input) throws IllegalArgumentException {
 		return stepImpl(input, true);
 	}
 

@@ -171,7 +171,7 @@ class ALHandler {
 			}
 		}
 		MDC.remove("id");
-		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).orTimeout(5, TimeUnit.MINUTES).whenComplete((v, e) -> {
+		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).orTimeout(10, TimeUnit.MINUTES).whenComplete((v, e) -> {
 			if (e == null) {
 				log.debug("List sent successfully!");
 				alrh.dataChanged();
