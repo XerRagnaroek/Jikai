@@ -227,4 +227,7 @@ class AnimeDBImpl implements Initilizable {
 		return initialized.get();
 	}
 
+	public JASA getJASA() {
+		return jasa;
+	}
 }

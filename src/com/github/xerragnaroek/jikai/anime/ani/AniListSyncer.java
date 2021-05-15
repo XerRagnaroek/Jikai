@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import com.github.xerragnaroek.jasa.JASA;
 import com.github.xerragnaroek.jasa.UserListEntry;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
@@ -86,10 +85,9 @@ public class AniListSyncer {
 	}
 
 	private void syncLists() {
-		JASA jasa = new JASA();
 		if (!userMap.isEmpty()) {
 			log.debug("Syncing {} lists", userMap.size());
-			jasa.fetchUserListEntries(new ArrayList<Integer>(userMap.keySet())).filter(ule -> ule.getMediaStatus() != null && !ule.getMediaStatus().equals("FINISHED")).forEach(this::handleUserListEntry);
+			AnimeDB.getJASA().fetchUserListEntries(new ArrayList<Integer>(userMap.keySet())).filter(ule -> ule.getMediaStatus() != null && !ule.getMediaStatus().equals("FINISHED")).forEach(this::handleUserListEntry);
 		}
 	}
 

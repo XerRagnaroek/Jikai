@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jasa.JASA;
 import com.github.xerragnaroek.jasa.TitleLanguage;
 
 public class AnimeDB {
@@ -94,5 +95,9 @@ public class AnimeDB {
 
 	public static boolean hasAnime(int id) {
 		return aDB.getAnime(id) != null;
+	}
+
+	public static JASA getJASA() {
+		return aDB.getJASA();
 	}
 }
