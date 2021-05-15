@@ -34,7 +34,6 @@ import org.slf4j.MDC;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
-import com.github.xerragnaroek.jikai.anime.link.EpisodeLinker;
 import com.github.xerragnaroek.jikai.anime.schedule.AnimeTable;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
@@ -469,7 +468,7 @@ public class JikaiUserUpdater {
 		int eps = a.getEpisodes();
 		String episodes = eps == 0 ? "" : String.format("/%2d", eps);
 		eb.setDescription(loc.getStringFormatted("ju_eb_notify_release_desc", Arrays.asList("episodes"), String.format("%2d%s", a.getNextEpisodeNumber(), episodes)));
-		eb.appendDescription("\n" + EpisodeLinker.getStreamLinksFormatted(a));
+		eb.appendDescription("\n" + a.getEpisodeLinks().stream().sorted().map(el -> String.format("**[[%s]](%s)**", el.siteName(), el.url())).collect(Collectors.joining(", ")));
 		return eb.build();
 	}
 
