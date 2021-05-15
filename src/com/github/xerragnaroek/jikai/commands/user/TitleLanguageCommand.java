@@ -42,7 +42,7 @@ public class TitleLanguageCommand implements JUCommand {
 				case "native":
 					ju.setTitleLanguage(TitleLanguage.NATIVE);
 					break;
-				case "romanji":
+				case "romaji":
 					ju.setTitleLanguage(TitleLanguage.ROMAJI);
 					break;
 				default:
