@@ -67,18 +67,42 @@ public class JikaiUserSetup extends ListenerAdapter {
 		stageDone();
 	}
 
+	private void editCurStage(int i) {
+		MessageEmbed meb = null;
+		switch (i) {
+			case 1 -> meb = langMeb().getLeft();
+			case 2 -> meb = consentMeb();
+			case 3 -> meb = skipMeb();
+			case 4 -> meb = makeTimeZoneEmbed();
+			case 5 -> meb = titleLangMeb();
+			case 6 -> meb = dailyMeb();
+			case 7 -> meb = weeklyMeb();
+			case 8 -> meb = notifyReleaseMeb();
+			case 9 -> meb = nextEpMeb();
+			case 10 -> meb = makeReleaseStepsEmbed();
+			case 11 -> meb = linkAniMeb();
+			case 12 -> meb = doneMeb();
+		}
+		setup.editStage(i, meb);
+	}
+
 	private void stageLang() {
+		Pair<MessageEmbed, List<String>> pair = langMeb();
+		setup.addStage(pair.getLeft(), pair.getRight(), this::langSelect, null, true, false, this::editCurStage);
+	}
+
+	private Pair<MessageEmbed, List<String>> langMeb() {
 		EmbedBuilder eb = BotUtils.embedBuilder();
 		eb.setTitle(ju.getLocale().getString("setup_lang_eb_title"));
 		List<JikaiLocale> locs = new LinkedList<>(JikaiLocaleManager.getInstance().getLocales());
 		Collections.sort(locs);
 		List<String> flags = new ArrayList<>(locs.size());
 		locs.forEach(jl -> {
-			String flag = BotUtils.processUnicode(ju.getLocale().getString("u_flag_uni"));
+			String flag = BotUtils.processUnicode(jl.getString("u_flag_uni"));
 			flags.add(flag);
 			eb.addField(flag, jl.getLanguageName(), true);
 		});
-		setup.addStage(eb.build(), flags, this::langSelect, null, true);
+		return Pair.of(eb.build(), flags);
 	}
 
 	private void langSelect(String cp) {
@@ -86,12 +110,17 @@ public class JikaiUserSetup extends ListenerAdapter {
 		JikaiLocale loc = JikaiLocaleManager.getInstance().getLocaleViaFlagUnicode(cp);
 		if (loc != null) {
 			log.debug(loc.getIdentifier());
+			ju.setLocale(loc);
 			setup.nextStage();
 		}
 	}
 
 	private void stageConsent() {
-		setup.addStage(BotUtils.localedEmbed(ju.getLocale(), "setup_consent_eb", null), Arrays.asList(yesUni, noUni), cp -> yesNoOption(cp, () -> setup.nextStage(), this::noConsent), null, true);
+		setup.addStage(consentMeb(), Arrays.asList(yesUni, noUni), cp -> yesNoOption(cp, () -> setup.nextStage(), this::noConsent), null, true, false, this::editCurStage);
+	}
+
+	private MessageEmbed consentMeb() {
+		return BotUtils.localedEmbed(ju.getLocale(), "setup_consent_eb", null);
 	}
 
 	private void noConsent() {
@@ -101,7 +130,14 @@ public class JikaiUserSetup extends ListenerAdapter {
 	}
 
 	private void stageSkipSetup() {
-		setup.addStage(BotUtils.localedEmbed(ju.getLocale(), "setup_skip_eb", null), Arrays.asList("U+2699", "U+23ed"), this::skipCheck, null, true, false, i -> ignoreMsgs.set(true));
+		setup.addStage(skipMeb(), Arrays.asList("U+2699", "U+23ed"), this::skipCheck, null, true, false, i -> {
+			ignoreMsgs.set(true);
+			editCurStage(i);
+		});
+	}
+
+	private MessageEmbed skipMeb() {
+		return BotUtils.localedEmbed(ju.getLocale(), "setup_skip_eb", null);
 	}
 
 	private void skipCheck(String cp) {
@@ -128,6 +164,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 	private void stageTimeZone() {
 		setup.addStage(makeTimeZoneEmbed(), Collections.emptyList(), null, null, false, false, i -> {
 			ignoreMsgs.set(false);
+			editCurStage(i);
 		});
 	}
 
@@ -136,9 +173,14 @@ public class JikaiUserSetup extends ListenerAdapter {
 	}
 
 	private void stageTitleLanguage() {
-		EmbedBuilder eb = BotUtils.embedBuilder();
-		eb.setTitle(ju.getLocale().getString("setup_title_lang_eb_title")).setDescription(ju.getLocale().getStringFormatted("setup_title_lang_eb_desc", Arrays.asList("tz"), ju.getTimeZone().getId()));
-		setup.addStage(eb.build(), Arrays.asList("U+0031U+fe0fU+20e3", "U+0032U+fe0fU+20e3", "U+0033U+fe0fU+20e3"), this::checkTitleLanguage, null, true, false, i -> ignoreMsgs.set(true));
+		setup.addStage(BotUtils.makeSimpleEmbed("Should never be seen!"), Arrays.asList("U+0031U+fe0fU+20e3", "U+0032U+fe0fU+20e3", "U+0033U+fe0fU+20e3"), this::checkTitleLanguage, null, true, false, i -> {
+			ignoreMsgs.set(true);
+			editCurStage(i);
+		});
+	}
+
+	private MessageEmbed titleLangMeb() {
+		return BotUtils.embedBuilder().setTitle(ju.getLocale().getString("setup_title_lang_eb_title")).setDescription(ju.getLocale().getString("setup_title_lang_eb_desc")).build();
 	}
 
 	private void checkTitleLanguage(String cp) {
@@ -179,48 +221,68 @@ public class JikaiUserSetup extends ListenerAdapter {
 	}
 
 	private void stageDaily() {
+
+		setup.addStage(dailyMeb(), Arrays.asList(yesUni, noUni), str -> yesNoOption(str, (b) -> {
+			ju.setUpdateDaily(b);
+			setup.nextStage();
+		}), null, true, false, i -> {
+			ignoreMsgs.set(true);
+			editCurStage(i);
+		});
+	}
+
+	private MessageEmbed dailyMeb() {
 		EmbedBuilder eb = BotUtils.embedBuilder();
 		eb.setTitle(ju.getLocale().getString("setup_daily_eb_title")).setDescription(ju.getLocale().getString("setup_daily_eb_desc"));
 		eb.setThumbnail("https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/dailyExample.jpg");
-		setup.addStage(eb.build(), Arrays.asList(yesUni, noUni), str -> yesNoOption(str, (b) -> {
-			ju.setUpdateDaily(b);
-			setup.nextStage();
-		}), null, true, false, i -> ignoreMsgs.set(true));
+		return eb.build();
 	}
 
 	private void stageWeekly() {
+		setup.addStage(weeklyMeb(), Arrays.asList(yesUni, noUni), str -> yesNoOption(str, (b) -> {
+			ju.setSendWeeklySchedule(b);
+			setup.nextStage();
+		}), null, true, false, this::editCurStage);
+	}
+
+	private MessageEmbed weeklyMeb() {
 		EmbedBuilder eb = BotUtils.embedBuilder();
 		eb.setTitle(ju.getLocale().getString("setup_weekly_eb_title")).setDescription(ju.getLocale().getString("setup_weekly_eb_desc"));
 		eb.setThumbnail("https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/weeklyExample.jpg");
-		setup.addStage(eb.build(), Arrays.asList(yesUni, noUni), str -> yesNoOption(str, (b) -> {
-			ju.setSendWeeklySchedule(b);
-			setup.nextStage();
-		}), null, true);
+		return eb.build();
 	}
 
 	private void stageNotifyOnRelease() {
+		setup.addStage(notifyReleaseMeb(), Arrays.asList(yesUni, noUni), str -> yesNoOption(str, (b) -> {
+			ju.setNotifyToRelease(b);
+			setup.nextStage();
+		}), null, true, false, this::editCurStage);
+	}
+
+	private MessageEmbed notifyReleaseMeb() {
 		EmbedBuilder eb = BotUtils.embedBuilder();
 		eb.setTitle(ju.getLocale().getString("setup_notify_eb_title")).setDescription(ju.getLocale().getString("setup_notify_eb_desc"));
 		eb.setThumbnail("https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/releaseExample.jpg");
-		setup.addStage(eb.build(), Arrays.asList(yesUni, noUni), str -> yesNoOption(str, (b) -> {
-			ju.setNotifyToRelease(b);
-			setup.nextStage();
-		}), null, true);
+		return eb.build();
 	}
 
 	private void stageNextEpMessage() {
+		setup.addStage(nextEpMeb(), Arrays.asList(yesUni, noUni), str -> yesNoOption(str, (b) -> {
+			ju.setSendNextEpMessage(b);
+			setup.nextStage();
+		}), null, true, false, this::editCurStage);
+	}
+
+	private MessageEmbed nextEpMeb() {
 		EmbedBuilder eb = BotUtils.embedBuilder();
 		eb.setTitle(ju.getLocale().getString("setup_next_ep_msg_eb_title")).setDescription(ju.getLocale().getString("setup_next_ep_msg_eb_desc"));
 		eb.setThumbnail("https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/nextEpMsgExample.jpg");
-		setup.addStage(eb.build(), Arrays.asList(yesUni, noUni), str -> yesNoOption(str, (b) -> {
-			ju.setSendNextEpMessage(b);
-			setup.nextStage();
-		}), null, true);
+		return eb.build();
 	}
 
 	private void stageReleaseSteps() {
 		setup.addStage(BotUtils.makeSimpleEmbed("You shouldn't see this :)"), Collections.emptyList(), null, null, false, false, i -> {
-			setup.editStage(i, makeReleaseStepsEmbed());
+			editCurStage(i);
 			ignoreMsgs.set(false);
 			if (aniLinker != null && !aniLinker.getFuture().isDone()) {
 				aniLinker.stop(false);
@@ -245,9 +307,14 @@ public class JikaiUserSetup extends ListenerAdapter {
 	}
 
 	private void stageLinkAni() {
-		EmbedBuilder eb = BotUtils.embedBuilder();
-		eb.setTitle(ju.getLocale().getString("setup_link_ani_eb_title")).setDescription(ju.getLocale().getString("setup_link_ani_eb_desc"));
-		setup.addStage(eb.build(), Collections.emptyList(), null, null, false, false, i -> ignoreMsgs.set(false));
+		setup.addStage(linkAniMeb(), Collections.emptyList(), null, null, false, false, i -> {
+			ignoreMsgs.set(false);
+			editCurStage(i);
+		});
+	}
+
+	private MessageEmbed linkAniMeb() {
+		return BotUtils.embedBuilder().setTitle(ju.getLocale().getString("setup_link_ani_eb_title")).setDescription(ju.getLocale().getString("setup_link_ani_eb_desc")).build();
 	}
 
 	private void stageDone() {
@@ -256,11 +323,15 @@ public class JikaiUserSetup extends ListenerAdapter {
 			if (aniLinker != null && !aniLinker.getFuture().isDone()) {
 				aniLinker.stop(false);
 			}
-			EmbedBuilder eb = BotUtils.makeConfigEmbed(ju);
-			eb.appendDescription(ju.getLocale().getString("setup_finished"));
-			setup.editStage(i, eb.build());
+			editCurStage(i);
 			endSetup(false);
 		});
+	}
+
+	private MessageEmbed doneMeb() {
+		EmbedBuilder eb = BotUtils.makeConfigEmbed(ju);
+		eb.appendDescription(ju.getLocale().getString("setup_finished"));
+		return eb.build();
 	}
 
 	public void startSetup() {
