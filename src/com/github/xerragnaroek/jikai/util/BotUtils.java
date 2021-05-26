@@ -121,7 +121,7 @@ public class BotUtils {
 	}
 
 	private static User getDev() {
-		long devId = Core.DEV_ID;
+		long devId = Core.DEV_IDS.get(0);
 		if (devId != 0) {
 			log.debug("DevId != 0");
 			User dev = Core.JDA.getUserById(devId);
@@ -134,7 +134,7 @@ public class BotUtils {
 
 	private static CompletableFuture<?> sendEmbedToDev(MessageEmbed me) {
 		log.debug("Attempting to send a message to the dev");
-		long devId = Core.DEV_ID;
+		long devId = Core.DEV_IDS.get(0);
 		if (devId != 0) {
 			log.debug("DevId != null");
 			User dev = Core.JDA.getUserById(devId);

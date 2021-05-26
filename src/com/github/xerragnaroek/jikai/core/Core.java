@@ -8,9 +8,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.stream.Stream;
 
 import javax.security.auth.login.LoginException;
 
@@ -39,7 +42,7 @@ public class Core {
 	private final static Logger log = LoggerFactory.getLogger(Core.class);
 	public static JDA JDA;
 	private static String token;
-	public static long DEV_ID;
+	public static List<Long> DEV_IDS = new LinkedList<>();
 	private static long saveDelay;
 	private static long aniSyncMinutes;
 	private static long linkRequestDuration;
@@ -109,8 +112,9 @@ public class Core {
 					log.info("Set token to '{}'", token);
 					break;
 				case "-dev_id":
-					DEV_ID = Long.parseLong(it.next());
-					log.info("Set devId to '{}'", DEV_ID);
+					String[] split = it.next().split(",");
+					Stream.of(split).map(Long::parseLong).forEach(l -> DEV_IDS.add(l));
+					log.info("Set devId to '{}'", DEV_IDS);
 					break;
 				case "-save_delay":
 					saveDelay = Long.parseLong(it.next());

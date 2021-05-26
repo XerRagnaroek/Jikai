@@ -41,7 +41,7 @@ public class ComUtils {
 			}
 		}
 		if (c.isDevOnly()) {
-			tmp = m.getIdLong() == Core.DEV_ID;
+			tmp = Core.DEV_IDS.contains(m.getIdLong());
 		}
 		log.debug("Member has {}sufficient permission for command {}", (tmp ? "" : "in"), c.getName());
 		return tmp;
@@ -50,7 +50,7 @@ public class ComUtils {
 	public static boolean checkPermissions(JUCommand c, JikaiUser ju) {
 		boolean tmp = true;
 		if (c.isDevOnly()) {
-			tmp = ju.getId() == Core.DEV_ID;
+			tmp = Core.DEV_IDS.contains(ju.getId());
 		}
 		log.debug("JikaiUser has {}sufficient permission for command {}", (tmp ? "" : "in"), c.getName());
 		return tmp;

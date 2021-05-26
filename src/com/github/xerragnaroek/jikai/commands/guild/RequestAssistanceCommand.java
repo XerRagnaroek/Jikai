@@ -21,7 +21,7 @@ public class RequestAssistanceCommand implements GuildCommand {
 	@Override
 	public void executeCommand(GuildMessageReceivedEvent event, String[] arguments) {
 		TextChannel tc = event.getChannel();
-		long devId = Core.DEV_ID;
+		long devId = Core.DEV_IDS.get(0);
 		User author = event.getAuthor();
 		if (devId == 0) {
 			tc.sendMessage("I'm sorry " + author.getAsMention() + " but whoever is hosting this bot didn't supply a developer id.").queue();
