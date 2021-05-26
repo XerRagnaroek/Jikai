@@ -2,15 +2,19 @@
 package com.github.xerragnaroek.jikai.jikai;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.alrh.ALRHandler;
 import com.github.xerragnaroek.jikai.commands.guild.CommandHandler;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.MessageBuilder;
@@ -22,7 +26,7 @@ import net.dv8tion.jda.api.entities.User;
 public class Jikai {
 	private JikaiData jd;
 	private BotData bd;
-	private ALRHandler alrh;
+	private Map<TitleLanguage, ALRHandler> alrhs = new HashMap<>();
 	private CommandHandler ch;
 	private final Logger log;
 	private final static Logger sLog = LoggerFactory.getLogger(Jikai.class);
@@ -76,12 +80,12 @@ public class Jikai {
 		}
 	}
 
-	public TextChannel getListChannel() throws Exception {
+	public TextChannel getListChannel(TitleLanguage lang) throws Exception {
 		MDC.put("id", String.valueOf(jd.getGuildId()));
 		log.debug("Getting List channel");
 		try {
 			MDC.remove("id");
-			return BotUtils.getTextChannelChecked(jd.getGuildId(), jd.getListChannelId());
+			return BotUtils.getTextChannelChecked(jd.getGuildId(), jd.getListChannelId(lang));
 		} catch (Exception e) {
 			// noListCh();
 			log.debug("List channel either hasn't been set or doesn't exist");
@@ -137,16 +141,25 @@ public class Jikai {
 		return jd;
 	}
 
-	public ALRHandler getALRHandler() {
-		return alrh;
+	public ALRHandler getALRHandler(TitleLanguage lang) {
+		return alrhs.get(lang);
+	}
+
+	public ALRHandler getALRHandler(long channelId) {
+		for (TitleLanguage lang : TitleLanguage.values()) {
+			if (jd.getListChannelId(lang) == channelId) {
+				return getALRHandler(channelId);
+			}
+		}
+		return null;
 	}
 
 	public CommandHandler getCommandHandler() {
 		return ch;
 	}
 
-	public void setALRHandler(ALRHandler alrh) {
-		this.alrh = alrh;
+	public void setALRHandler(ALRHandler alrh, TitleLanguage lang) {
+		alrhs.put(lang, alrh);
 	}
 
 	public JikaiLocale getLocale() {
@@ -181,12 +194,8 @@ public class Jikai {
 		return jd != null && jd.hasCompletedSetup();
 	}
 
-	public void setALRH(ALRHandler alrh) {
-		this.alrh = alrh;
-	}
-
-	public boolean hasListChannelSet() {
-		return jd.getListChannelId() != 0;
+	public boolean hasListChannelSet(TitleLanguage lang) {
+		return jd.getListChannelId(lang) != 0;
 	}
 
 	public boolean hasAnimeChannelSet() {
@@ -199,6 +208,16 @@ public class Jikai {
 
 	public boolean hasInfoChannelSet() {
 		return jd.getInfoChannelId() != 0;
+	}
+
+	public void validateMemberRoles() {
+		log.debug("Validating user roles");
+		JikaiUserManager jum = JikaiUserManager.getInstance();
+		try {
+			getGuild().getMembers().stream().map(Member::getIdLong).filter(jum::isKnownJikaiUser).map(jum::getUser).forEach(ju -> BotUtils.validateRoles(this, ju));
+		} catch (Exception e) {
+			log.error("Couldn't get guild!", e);
+		}
 	}
 
 }

@@ -29,7 +29,7 @@
 	"com_g_set_list_desc": "Set the channel for the anime list.",
 	"com_g_set_list_fail": "'%channel%' isn't a channel!",
 	"com_g_set_list_success": "%channel% has been set as the new list channel!",
-	"com_g_set_list_use": "<textchannel>",
+	"com_g_set_list_use": "<titleLang> <textchannel>",
 	"com_g_set_pre_desc": "The string of characters that will trigger a command. Default is \"!\". Can be as long as you want and include spaces.",
 	"com_g_set_pre_msg": "Prefix was changed to \"%pre%\"",
 	"com_g_set_pre_use": "<new prefix>",

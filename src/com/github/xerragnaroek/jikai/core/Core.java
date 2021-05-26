@@ -75,6 +75,7 @@ public class Core {
 		CUR_SEASON.dontRunConsumerIf(() -> INITIAL_LOAD.get());
 		JM.init();
 		JM.startSaveThread(saveDelay);
+		JM.forEach(j -> j.validateMemberRoles());
 		INITIAL_LOAD.set(false);
 		AniListSyncer.init();
 		AniListSyncer.startSyncThread(aniSyncMinutes);

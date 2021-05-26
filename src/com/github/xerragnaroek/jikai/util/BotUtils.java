@@ -30,6 +30,7 @@ import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
@@ -40,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.schedule.AnimeTable;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.BotData;
@@ -58,6 +60,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
@@ -362,14 +365,21 @@ public class BotUtils {
 		for (Jikai j : Core.JM) {
 			try {
 				TextChannel tc = null;
-				switch (channel) {
-					case 0 -> tc = j.getListChannel();
-					case 1 -> tc = j.getScheduleChannel();
-					case 2 -> tc = j.getAnimeChannel();
-					case 3 -> tc = j.getInfoChannel();
+				if (channel == 0) {
+					for (TitleLanguage lang : TitleLanguage.values()) {
+						tc = j.getListChannel(lang);
+						MessageAction mA = (msg == null) ? tc.sendMessage(me) : tc.sendMessage(msg);
+						cf.add(mA.submit());
+					}
+				} else {
+					switch (channel) {
+						case 1 -> tc = j.getScheduleChannel();
+						case 2 -> tc = j.getAnimeChannel();
+						case 3 -> tc = j.getInfoChannel();
+					}
+					MessageAction mA = (msg == null) ? tc.sendMessage(me) : tc.sendMessage(msg);
+					cf.add(mA.submit());
 				}
-				MessageAction mA = (msg == null) ? tc.sendMessage(me) : tc.sendMessage(msg);
-				cf.add(mA.submit());
 			} catch (Exception e) {
 				// info channel doesn't exist, already being handled
 			}
@@ -753,5 +763,33 @@ public class BotUtils {
 		eb.setTitle(null);
 		msgs.forEach(setAndAdd);
 		return q;
+	}
+
+	public static void validateRoles(Jikai j, JikaiUser ju) {
+		try {
+			Guild g = j.getGuild();
+			Member m = g.getMember(ju.getUser());
+			TitleLanguage[] langs = TitleLanguage.values();
+			langs = ArrayUtils.remove(langs, ArrayUtils.indexOf(langs, ju.getTitleLanguage(), 0));
+			List<String> unwantedLangs = Stream.of(langs).map(tl -> tl.name().toLowerCase()).collect(Collectors.toList());
+			String titleLang = ju.getTitleLanguage().name().toLowerCase();
+			boolean roleFound = false;
+			for (Role r : m.getRoles()) {
+				if (unwantedLangs.contains(r.getName())) {
+					g.removeRoleFromMember(m, r).queue();
+				}
+
+				if (r.getName().equals(titleLang)) {
+					roleFound = true;
+					break;
+				}
+			}
+			if (!roleFound) {
+				Role r = g.getRolesByName(titleLang, false).get(0);
+				g.addRoleToMember(m, r).queue(v -> log.debug("successfully added role {} to user {}", r.getName(), ju.getId()));
+			}
+		} catch (Exception e) {
+			Core.ERROR_LOG.error("couldn't get guild!", e);
+		}
 	}
 }

@@ -17,15 +17,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.core.Core;
-import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Pair;
 
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -42,11 +39,13 @@ class ALHandler {
 	private final Logger log;
 	private ALRHDataBase alrhDB;
 	private AtomicBoolean sending = new AtomicBoolean(false);
+	private TitleLanguage lang;
 
-	ALHandler(ALRHandler alrh) {
+	ALHandler(ALRHandler alrh, TitleLanguage lang) {
 		this.alrh = alrh;
-		log = LoggerFactory.getLogger(ALHandler.class.getName());
+		log = LoggerFactory.getLogger(ALHandler.class + "#" + alrh.gId + "#" + lang);
 		alrhDB = alrh.alrhDB;
+		this.lang = lang;
 	}
 
 	/**
@@ -73,14 +72,14 @@ class ALHandler {
 	CompletableFuture<Void> sendList() throws Exception {
 		MDC.put("id", String.valueOf(alrh.gId));
 		sending.set(true);
-		Set<DTO> dtos = Core.JM.getALHRM().getListMessages();
+		Set<DTO> dtos = Core.JM.getALHRM().getListMessages(lang);
 		log.info("Deleting old messages and data");
 		TextChannel tc = alrh.j.getGuild().getTextChannelById(alrhDB.getSentTextChannelId());
 		if (tc != null) {
 			BotUtils.clearChannel(tc);
 		}
 		alrhDB.clearUcMsgMap();
-		TextChannel lc = alrh.j.getListChannel();
+		TextChannel lc = alrh.j.getListChannel(lang);
 		log.info("Sending list messages to channel {}", lc.getName() + "#" + alrh.tcId);
 		CompletableFuture<?> seasonMsg = lc.sendMessage(alrh.j.getLocale().getStringFormatted("g_list_season", Arrays.asList("season"), Core.CUR_SEASON.get())).submit();
 		List<CompletableFuture<?>> cfs = dtos.stream().map(dto -> handleDTO(lc, dto)).collect(Collectors.toList());
@@ -98,7 +97,7 @@ class ALHandler {
 		log.debug("Sending list...");
 		sending.set(true);
 		List<DTO> dtos = new ArrayList<>();
-		dtos.addAll(Core.JM.getALHRM().getListMessages());
+		dtos.addAll(Core.JM.getALHRM().getListMessages(lang));
 		Collections.sort(dtos);
 		TextChannel tc = handleListChannelChanged();
 		List<CompletableFuture<?>> cfs = new ArrayList<>();
@@ -272,65 +271,10 @@ class ALHandler {
 	}
 
 	void update(AnimeUpdate au) {
-		MDC.put("id", String.valueOf(alrh.gId));
 		if (au.hasNewAnime() || au.hasRemovedAnime()) {
 			log.debug("Updating list");
 			try {
-				alrh.sendList().thenAccept(v -> sendUpdate(au));
-			} catch (Exception e) {
-				log.error("", e);
-			}
-		}
-		MDC.remove("id");
-	}
-
-	private void sendUpdate(AnimeUpdate au) {
-		MDC.put("id", String.valueOf(alrh.gId));
-		sendNewAnime(au);
-		sendRemovedAnime(au);
-		MDC.remove("id");
-	}
-
-	private void sendNewAnime(AnimeUpdate au) {
-		List<Anime> newA = au.getNewAnime();
-		if (!newA.isEmpty()) {
-			log.debug("Sending {} new anime embeds to anime channel", newA.size());
-			for (Anime a : newA) {
-				EmbedBuilder eb = new EmbedBuilder();
-				BotUtils.addJikaiMark(eb);
-				eb.setThumbnail(a.getBiggestAvailableCoverImage());
-				try {
-					String title = a.getTitle(TitleLanguage.ROMAJI);
-					JikaiLocale loc = alrh.j.getLocale();
-					eb.setTitle(loc.getStringFormatted("g_eb_new_anime_title", Arrays.asList("title"), title), a.getAniUrl()).setDescription(loc.getStringFormatted("g_eb_new_anime_desc", Arrays.asList("listch", "links"), alrh.j.getListChannel().getAsMention(), BotUtils.formatExternalSites(a)));
-					alrh.j.getAnimeChannel().sendMessage(eb.build()).submit().thenAccept(m -> log.debug("Sent embed for {}", title));
-				} catch (Exception e) {
-					log.error("", e);
-				}
-			}
-		}
-
-	}
-
-	private void sendRemovedAnime(AnimeUpdate au) {
-		List<Anime> removedA = au.getRemovedAnime();
-		log.debug("Sending {} removed anime embeds to anime channel", removedA.size());
-		for (Anime a : removedA) {
-			log.debug("{} status: {}", a.getTitleRomaji(), a.getStatus());
-			EmbedBuilder eb = new EmbedBuilder();
-			BotUtils.addJikaiMark(eb);
-			eb.setThumbnail(a.getBiggestAvailableCoverImage());
-			try {
-				String title = a.getTitle(TitleLanguage.ROMAJI);
-				JikaiLocale loc = alrh.j.getLocale();
-				eb.setTitle(loc.getStringFormatted("g_eb_rem_anime_title", Arrays.asList("title"), title), a.getAniUrl());
-				if (a.isFinished()) {
-					eb.setDescription(loc.getString("g_eb_rem_anime_desc_finished"));
-				} else {
-					log.debug("{} has been removed but isn't finished. NextEpNum={},Episodes={}", a.getTitleRomaji(), a.getNextEpisodeNumber(), a.getEpisodes());
-					eb.setDescription(loc.getString("g_eb_rem_anime_desc_unknown"));
-				}
-				alrh.j.getAnimeChannel().sendMessage(eb.build()).submit().thenAccept(m -> log.debug("Sent embed for {}", title));
+				alrh.sendList();
 			} catch (Exception e) {
 				log.error("", e);
 			}
@@ -340,7 +284,7 @@ class ALHandler {
 	private TextChannel handleListChannelChanged() throws Exception {
 		log.debug("Checking if the list channel changed...");
 		long sentChannelId = alrhDB.getSentTextChannelId();
-		TextChannel listChannel = alrh.j.getListChannel();
+		TextChannel listChannel = alrh.j.getListChannel(lang);
 		Guild g = alrh.j.getGuild();
 		if (sentChannelId > 0 && sentChannelId != listChannel.getIdLong()) {
 			log.debug("List channel has changed, deleting the old list...");

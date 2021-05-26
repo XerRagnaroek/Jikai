@@ -11,25 +11,25 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 public class ALRHData implements Comparable<ALRHData> {
 	private long tcId;
 	private long msgId;
-	private String title;
+	private int aniId;
 	private String codepoint;
 	private boolean reacted;
 	private final Logger log;
 
 	@JsonCreator
-	public ALRHData(@JsonProperty("message_id") long mId, @JsonProperty("title") String title, @JsonProperty("uni_codepoint") String cp, @JsonProperty("sent_textchannel_id") long tcId, @JsonProperty("reacted") boolean reactedTo) {
+	public ALRHData(@JsonProperty("message_id") long mId, @JsonProperty("anime_id") int aniId, @JsonProperty("uni_codepoint") String cp, @JsonProperty("sent_textchannel_id") long tcId, @JsonProperty("reacted") boolean reactedTo) {
 		msgId = mId;
-		this.title = title;
+		this.aniId = aniId;
 		codepoint = cp;
 		this.tcId = tcId;
 		reacted = reactedTo;
-		log = LoggerFactory.getLogger(ALRHData.class + "#" + title);
+		log = LoggerFactory.getLogger(ALRHData.class + "#" + aniId);
 	}
 
-	ALRHData(String uniCP, String title) {
+	ALRHData(String uniCP, int aniId) {
 		codepoint = uniCP;
-		this.title = title;
-		log = LoggerFactory.getLogger(ALRHData.class + "#" + title);
+		this.aniId = aniId;
+		log = LoggerFactory.getLogger(ALRHData.class + "#" + aniId);
 	}
 
 	@JsonProperty("message_id")
@@ -37,9 +37,9 @@ public class ALRHData implements Comparable<ALRHData> {
 		return msgId;
 	}
 
-	@JsonProperty("title")
-	public String getTitle() {
-		return title;
+	@JsonProperty("anime_id")
+	public int getAnimeId() {
+		return aniId;
 	}
 
 	@JsonProperty("uni_codepoint")
@@ -62,9 +62,9 @@ public class ALRHData implements Comparable<ALRHData> {
 		msgId = mId;
 	}
 
-	@JsonProperty("title")
-	public void setTitle(String title) {
-		this.title = title;
+	@JsonProperty("anime_id")
+	public void setAnimeId(int aniId) {
+		this.aniId = aniId;
 	}
 
 	@JsonProperty("uni_codepoint")
@@ -85,25 +85,20 @@ public class ALRHData implements Comparable<ALRHData> {
 
 	@Override
 	public int compareTo(ALRHData o) {
-		return String.CASE_INSENSITIVE_ORDER.compare(title, o.title);
-	}
-
-	@Override
-	public int hashCode() {
-		return title.hashCode();
+		return Integer.compare(aniId, o.aniId);
 	}
 
 	@Override
 	public boolean equals(Object obj) {
 		if (obj instanceof ALRHData) {
 			ALRHData d = (ALRHData) obj;
-			return title.equals(d.title) && msgId == d.msgId;
+			return aniId == d.aniId && msgId == d.msgId;
 		}
 		return false;
 	}
 
 	@Override
 	public String toString() {
-		return String.format("ALRHData[tcId=%d,msgId=%d,title='%s',codepoint=%s,reacted=%b]", tcId, msgId, title, codepoint, reacted);
+		return String.format("ALRHData[tcId=%d,msgId=%d,aniId='%s',codepoint=%s,reacted=%b]", tcId, msgId, aniId, codepoint, reacted);
 	}
 }

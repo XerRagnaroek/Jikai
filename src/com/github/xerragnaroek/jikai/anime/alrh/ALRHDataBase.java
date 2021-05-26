@@ -20,7 +20,7 @@ import com.github.xerragnaroek.jikai.util.Pair;
 
 public class ALRHDataBase {
 	private Map<Long, Set<ALRHData>> msgMap = Collections.synchronizedMap(new HashMap<>());
-	private Map<String, ALRHData> titleMap = Collections.synchronizedMap(new TreeMap<>());
+	private Map<Integer, ALRHData> aniIdMap = Collections.synchronizedMap(new TreeMap<>());
 	// title of the Embed mapped to its msgid
 	private BidiMap<Long, String> msgIdEmbedTitleMap = new TreeBidiMap<Long, String>();
 	@SuppressWarnings("rawtypes")
@@ -50,7 +50,7 @@ public class ALRHDataBase {
 
 	@SuppressWarnings("unchecked")
 	void addALRHData(ALRHData d) {
-		titleMap.put(d.getTitle(), d);
+		aniIdMap.put(d.getAnimeId(), d);
 		ucMsgMap.put(d.getMessageId(), d.getUnicodeCodePoint(), d);
 	}
 
@@ -77,8 +77,8 @@ public class ALRHDataBase {
 		return msgMap.get(msgId);
 	}
 
-	ALRHData getDataForTitle(String title) {
-		return titleMap.get(title);
+	ALRHData getDataForId(int id) {
+		return aniIdMap.get(id);
 	}
 
 	ALRHData getDataForUnicodeCodePoint(long msgId, String uccp) {
@@ -86,7 +86,7 @@ public class ALRHDataBase {
 	}
 
 	Set<ALRHData> getData() {
-		return new TreeSet<>(titleMap.values());
+		return new TreeSet<>(aniIdMap.values());
 	}
 
 	BidiMap<Long, String> getMsgIdTitleMap() {
@@ -102,7 +102,7 @@ public class ALRHDataBase {
 	}
 
 	Set<ALRHData> getReactedAnimes() {
-		return titleMap.values().stream().filter(ALRHData::isReacted).collect(Collectors.toSet());
+		return aniIdMap.values().stream().filter(ALRHData::isReacted).collect(Collectors.toSet());
 	}
 
 	void forEachMessage(BiConsumer<Long, Set<ALRHData>> con) {
@@ -111,18 +111,18 @@ public class ALRHDataBase {
 
 	void clearData() {
 		msgMap.clear();
-		titleMap.clear();
+		aniIdMap.clear();
 		ucMsgMap.clear();
 		msgIdEmbedTitleMap.clear();
 	}
 
-	boolean hasDataForTitle(String title) {
-		return titleMap.containsKey(title);
+	boolean hasDataForId(int id) {
+		return aniIdMap.containsKey(id);
 	}
 
 	void deleteEntry(ALRHData data) {
-		titleMap.remove(data.getTitle());
-		log.debug("Deleted entry for {}", data.getTitle());
+		aniIdMap.remove(data.getAnimeId());
+		log.debug("Deleted entry for {}", data.getAnimeId());
 	}
 
 	void clearUcMsgMap() {

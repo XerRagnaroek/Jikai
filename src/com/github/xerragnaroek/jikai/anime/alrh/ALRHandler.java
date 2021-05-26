@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.core.Core;
@@ -49,24 +50,26 @@ public class ALRHandler implements Initilizable {
 	private AtomicBoolean changed;
 	private AtomicBoolean initialized;
 	Jikai j;
+	TitleLanguage lang;
 
 	/**
 	 * A new AnimeListReactionHandler
 	 * 
 	 * @param gId
 	 */
-	ALRHandler(long gId) {
+	ALRHandler(long gId, TitleLanguage lang) {
 		this.gId = gId;
+		this.lang = lang;
 		j = Core.JM.get(gId);
 		log = LoggerFactory.getLogger(ALRHandler.class.getName() + "#" + gId);
 		alrhDB = new ALRHDataBase();
 		changed = new AtomicBoolean(false);
-		alh = new ALHandler(this);
+		alh = new ALHandler(this, lang);
 		arh = new ARHandler(this);
 		jData = j.getJikaiData();
 		jData.listChannelIdProperty().bindAndSet(tcId);
 		initialized = new AtomicBoolean(false);
-		j.setALRH(this);
+		j.setALRHandler(this, lang);
 	}
 
 	/**
@@ -112,7 +115,7 @@ public class ALRHandler implements Initilizable {
 	 * Send the anime list.
 	 */
 	public CompletableFuture<Void> sendList() {
-		if (j.hasListChannelSet()) {
+		if (j.hasListChannelSet(lang)) {
 			try {
 				CompletableFuture<Void> send = BotUtils.retryFuture(2, () -> {
 					try {
@@ -215,7 +218,7 @@ public class ALRHandler implements Initilizable {
 	}
 
 	private boolean haveMessagesChanged(TextChannel oldTc, List<String> ids) {
-		Set<DTO> amsgs = Core.JM.getALHRM().getListMessages();
+		Set<DTO> amsgs = Core.JM.getALHRM().getListMessages(lang);
 		AtomicBoolean noMsg = new AtomicBoolean(false);
 		if (oldTc == null) {
 			return true;

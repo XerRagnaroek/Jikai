@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.alrh.ALRHData;
 import com.github.xerragnaroek.jikai.anime.alrh.ALRHandler;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
@@ -37,7 +38,7 @@ import com.github.xerragnaroek.jikai.util.prop.LongProperty;
 import com.github.xerragnaroek.jikai.util.prop.Property;
 
 @JsonInclude(Include.NON_EMPTY)
-@JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "prefix", "timezone", "language", "exec_command_count", "list_channel_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "command_channel_id", "last_mentioned", "msg_id_title", "alrh_data", "season_msg" })
+@JsonPropertyOrder({ "guild_id", "completed_setup", "commands_enabled", "prefix", "timezone", "language", "exec_command_count", "list_channel_romaji_id", "list_channel_native_id", "list_channel_english_id", "schedule_channel_id", "anime_channel_id", "info_channel_id", "command_channel_id", "last_mentioned", "msg_id_title_romaji", "alrh_data_romaji", "season_msg_romaji", "msg_id_title_english", "alrh_data_english", "season_msg_english", "msg_id_title_native", "alrh_data_native", "season_msg_native" })
 public class JikaiData {
 	private LongProperty aniChId = new LongProperty(0l);
 	private AtomicBoolean changed = new AtomicBoolean(false);
@@ -46,7 +47,9 @@ public class JikaiData {
 	private Path fileLoc;
 	private long gId;
 	private LongProperty infoChId = new LongProperty(0l);
-	private LongProperty listChId = new LongProperty(0l);
+	private LongProperty listChRomajiId = new LongProperty(0l);
+	private LongProperty listChNativeId = new LongProperty(0l);
+	private LongProperty listChEnglishId = new LongProperty(0l);
 	private LongProperty commandChId = new LongProperty(0l);
 	private final Logger log;
 	private LongProperty schedChId = new LongProperty(0l);
@@ -85,20 +88,34 @@ public class JikaiData {
 		return comsEnabled;
 	}
 
-	@JsonProperty("alrh_data")
-	public Set<ALRHData> getALRHData() {
-		ALRHandler alrh = JM.get(gId).getALRHandler();
+	@JsonIgnore
+	public Set<ALRHData> getALRHData(TitleLanguage lang) {
+		ALRHandler alrh = JM.get(gId).getALRHandler(lang);
 		if (alrh != null) {
 			return alrh.getData();
 		} else {
 			return Collections.emptySet();
 		}
-
 	}
 
-	@JsonProperty("msg_id_title")
-	public Map<Long, String> getMessageIdTitleMap() {
-		ALRHandler alrh = JM.get(gId).getALRHandler();
+	@JsonProperty("alrh_data_romaji")
+	public Set<ALRHData> getALRHDataRomaji() {
+		return getALRHData(TitleLanguage.ROMAJI);
+	}
+
+	@JsonProperty("alrh_data_english")
+	public Set<ALRHData> getALRHDataEnglish() {
+		return getALRHData(TitleLanguage.ENGLISH);
+	}
+
+	@JsonProperty("alrh_data_native")
+	public Set<ALRHData> getALRHDataNative() {
+		return getALRHData(TitleLanguage.NATIVE);
+	}
+
+	@JsonIgnore
+	public Map<Long, String> getMessageIdTitleMap(TitleLanguage lang) {
+		ALRHandler alrh = JM.get(gId).getALRHandler(lang);
 		if (alrh != null) {
 			return alrh.getMessageIdTitleMap();
 		} else {
@@ -106,14 +123,44 @@ public class JikaiData {
 		}
 	}
 
-	@JsonProperty("season_msg")
-	public Pair<String, Long> getSeasonMsg() {
-		ALRHandler alrh = JM.get(gId).getALRHandler();
+	@JsonProperty("msg_id_title_romaji")
+	public Map<Long, String> getMessageIdTitleMapRomaji() {
+		return getMessageIdTitleMap(TitleLanguage.ROMAJI);
+	}
+
+	@JsonProperty("msg_id_title_english")
+	public Map<Long, String> getMessageIdTitleMapEnglish() {
+		return getMessageIdTitleMap(TitleLanguage.ENGLISH);
+	}
+
+	@JsonProperty("msg_id_title_native")
+	public Map<Long, String> getMessageIdTitleMapNative() {
+		return getMessageIdTitleMap(TitleLanguage.NATIVE);
+	}
+
+	@JsonIgnore
+	public Pair<String, Long> getSeasonMsg(TitleLanguage lang) {
+		ALRHandler alrh = JM.get(gId).getALRHandler(lang);
 		if (alrh != null) {
 			return alrh.getSeasonMsg();
 		} else {
 			return null;
 		}
+	}
+
+	@JsonProperty("season_msg_romaji")
+	public Pair<String, Long> getSeasonMsgRomaji() {
+		return getSeasonMsg(TitleLanguage.ROMAJI);
+	}
+
+	@JsonProperty("season_msg_english")
+	public Pair<String, Long> getSeasonMsgEnglish() {
+		return getSeasonMsg(TitleLanguage.ENGLISH);
+	}
+
+	@JsonProperty("season_msg_native")
+	public Pair<String, Long> getSeasonMsgNative() {
+		return getSeasonMsg(TitleLanguage.NATIVE);
 	}
 
 	@JsonProperty("anime_channel_id")
@@ -131,9 +178,30 @@ public class JikaiData {
 		return infoChId.get();
 	}
 
-	@JsonProperty("list_channel_id")
-	public long getListChannelId() {
-		return listChId.get();
+	@JsonIgnore
+	public long getListChannelId(TitleLanguage lang) {
+		long id = 0;
+		switch (lang) {
+			case ROMAJI -> id = getListChannelRomajiId();
+			case ENGLISH -> id = getListChannelEnglishId();
+			case NATIVE -> id = getListChannelNativeId();
+		}
+		return id;
+	}
+
+	@JsonProperty("info_channel_romaji_id")
+	public long getListChannelRomajiId() {
+		return listChRomajiId.get();
+	}
+
+	@JsonProperty("info_channel_native_id")
+	public long getListChannelNativeId() {
+		return listChNativeId.get();
+	}
+
+	@JsonProperty("info_channel_english_id")
+	public long getListChannelEnglishId() {
+		return listChEnglishId.get();
 	}
 
 	@JsonProperty("schedule_channel_id")
@@ -186,7 +254,7 @@ public class JikaiData {
 	}
 
 	public boolean hasListChannelId() {
-		return listChId.get() > 0;
+		return listChRomajiId.get() > 0;
 	}
 
 	public boolean hasInfoChannelId() {
@@ -206,7 +274,7 @@ public class JikaiData {
 	}
 
 	public LongProperty listChannelIdProperty() {
-		return listChId;
+		return listChRomajiId;
 	}
 
 	public LongProperty scheduleChannelIdProperty() {
@@ -229,8 +297,14 @@ public class JikaiData {
 		return setData(execComs, c, "exec_command_count");
 	}
 
-	public long setListChannelId(long id) {
-		return setData(listChId, id, "list_channel_id");
+	public long setListChannelId(long id, TitleLanguage lang) {
+		long oldId = 0;
+		switch (lang) {
+			case ROMAJI -> oldId = setData(listChRomajiId, id, "list_channel_romaji_id");
+			case ENGLISH -> oldId = setData(listChEnglishId, id, "list_channel_english_id");
+			case NATIVE -> oldId = setData(listChNativeId, id, "list_channel_native_id");
+		}
+		return oldId;
 	}
 
 	public long setScheduleChannelId(long id) {
@@ -281,10 +355,12 @@ public class JikaiData {
 			log.debug("JikaiData changed");
 			tmp = true;
 		}
-		ALRHandler h = JM.get(gId).getALRHandler();
-		if (h != null && h.isInitialized() && h.hasUpdateFlagAndReset()) {
-			log.debug("ALHRData changed");
-			tmp = true;
+		for (TitleLanguage lang : TitleLanguage.values()) {
+			ALRHandler h = JM.get(gId).getALRHandler(lang);
+			if (h != null && h.isInitialized() && h.hasUpdateFlagAndReset()) {
+				log.debug("ALHRData {} changed", lang);
+				tmp = true;
+			}
 		}
 		return tmp;
 	}
@@ -298,11 +374,13 @@ public class JikaiData {
 	}
 
 	@JsonCreator
-	public static JikaiData of(@JsonProperty("language") String lang, @JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") long gId, @JsonProperty("prefix") Property<String> pre, @JsonProperty("anime_channel_id") LongProperty aniChId, @JsonProperty("list_channel_id") LongProperty listChId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data") Set<ALRHData> data, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") LongProperty icId, @JsonProperty("schedule_channel_id") LongProperty schId, @JsonProperty("command_channel_id") LongProperty comChId, @JsonProperty("msg_id_title") Map<Long, String> msgIdTitleMap, @JsonProperty("season_msg") Pair<String, Long> seasonMsg) {
+	public static JikaiData of(@JsonProperty("language") String lang, @JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") long gId, @JsonProperty("prefix") Property<String> pre, @JsonProperty("anime_channel_id") LongProperty aniChId, @JsonProperty("list_channel_romaji_id") LongProperty listChRomajiId, @JsonProperty("list_channel_english_id") LongProperty listChEnglishId, @JsonProperty("list_channel_native_id") LongProperty listChNativeId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data_romaji") Set<ALRHData> dataRomaji, @JsonProperty("alrh_data_english") Set<ALRHData> dataEnglish, @JsonProperty("alrh_data_native") Set<ALRHData> dataNative, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") LongProperty icId, @JsonProperty("schedule_channel_id") LongProperty schId, @JsonProperty("command_channel_id") LongProperty comChId, @JsonProperty("msg_id_title_romaji") Map<Long, String> msgIdTitleMapRomaji, @JsonProperty("msg_id_title_english") Map<Long, String> msgIdTitleMapEnglish, @JsonProperty("msg_id_title_native") Map<Long, String> msgIdTitleMapNative, @JsonProperty("season_msg_romaji") Pair<String, Long> seasonMsgRomaji, @JsonProperty("season_msg_english") Pair<String, Long> seasonMsgEnglish, @JsonProperty("season_msg_native") Pair<String, Long> seasonMsgNative) {
 		JikaiData jd = new JikaiData(gId, false);
 		setIfNonNull(jd.prefix, pre);
 		setIfNonNull(jd.aniChId, aniChId);
-		setIfNonNull(jd.listChId, listChId);
+		setIfNonNull(jd.listChRomajiId, listChRomajiId);
+		setIfNonNull(jd.listChEnglishId, listChEnglishId);
+		setIfNonNull(jd.listChNativeId, listChNativeId);
 		if (zone != null) {
 			jd.zone = Property.of(ZoneId.of(zone));
 		}
@@ -313,7 +391,9 @@ public class JikaiData {
 		setIfNonNull(jd.commandChId, comChId);
 		setIfNonNull(jd.execComs, execComs);
 		setIfNonNull(jd.locale, new Property<>(JikaiLocaleManager.getInstance().getLocale(lang)));
-		JM.getALHRM().addToInitMap(gId, data, msgIdTitleMap, seasonMsg);
+		JM.getALHRM().addToInitMap(gId, dataRomaji, msgIdTitleMapRomaji, seasonMsgRomaji, TitleLanguage.ROMAJI);
+		JM.getALHRM().addToInitMap(gId, dataEnglish, msgIdTitleMapEnglish, seasonMsgEnglish, TitleLanguage.ENGLISH);
+		JM.getALHRM().addToInitMap(gId, dataNative, msgIdTitleMapNative, seasonMsgNative, TitleLanguage.NATIVE);
 		return jd;
 	}
 

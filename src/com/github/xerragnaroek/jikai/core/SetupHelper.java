@@ -6,6 +6,7 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiData;
@@ -90,7 +91,7 @@ public class SetupHelper extends ListenerAdapter {
 		Category cat = g.createCategory("jikai").addPermissionOverride(g.getPublicRole(), Arrays.asList(Permission.VIEW_CHANNEL, Permission.MESSAGE_ADD_REACTION), Arrays.asList(Permission.MESSAGE_WRITE)).addPermissionOverride(g.getSelfMember(), Permission.ALL_CHANNEL_PERMISSIONS, 0l).complete();
 		TextChannel tc = cat.createTextChannel("jikai_list").complete();
 		log.debug("Made jikai_list channel");
-		jd.setListChannelId(tc.getIdLong());
+		jd.setListChannelId(tc.getIdLong(), TitleLanguage.ROMAJI);
 		tc = cat.createTextChannel("jikai_schedule").complete();
 		log.debug("Made jikai_schedule channel");
 		jd.setScheduleChannelId(tc.getIdLong());
@@ -102,12 +103,12 @@ public class SetupHelper extends ListenerAdapter {
 		jd.setInfoChannelId(tc.getIdLong());
 		jd.setSetupCompleted(true);
 		jd.save(true);
-		j.setALRH(Core.JM.getALHRM().registerNew(g));
+		// j.setALRH(Core.JM.getALHRM().registerNew(g));
 		log.info("Setup completed");
 		setTc.sendMessage("The setup is complete. Commands are by default " + (jd.areCommandsEnabled() ? "enabled" : "disabled") + ".\nYou can change that by calling !enable/disable_commands").complete();
 		setTc.sendMessage("Send `!help` for a list of all commands you have permissions to run (which are all because you're the owner).").complete();
 		setTc.sendMessage("Also I ask you to set the bot role ('Jikai') color to #12e5a8 or R18 G229 B168. Thank you!").complete();
-		Core.executeLogException(() -> j.getALRHandler().sendList());
+		// Core.executeLogException(() -> j.getALRHandler().sendList());
 		Core.executeLogException(() -> ScheduleManager.sendScheduleToJikai(j));
 	}
 }

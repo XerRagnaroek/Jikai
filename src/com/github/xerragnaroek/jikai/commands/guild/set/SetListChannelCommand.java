@@ -3,6 +3,7 @@ package com.github.xerragnaroek.jikai.commands.guild.set;
 import java.util.Arrays;
 import java.util.List;
 
+import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
@@ -30,24 +31,29 @@ public class SetListChannelCommand implements GuildCommand {
 		Guild g = event.getGuild();
 		Jikai j = Core.JM.get(g);
 		TextChannel textC = event.getChannel();
-		if (arguments.length >= 1) {
-			List<TextChannel> tcs = g.getTextChannelsByName(arguments[0], false);
+		if (arguments.length >= 2) {
+			TitleLanguage lang = TitleLanguage.ROMAJI;
+			switch (arguments[0].toLowerCase()) {
+				case "romaji" -> lang = TitleLanguage.ROMAJI;
+				case "native" -> lang = TitleLanguage.NATIVE;
+				case "english" -> lang = TitleLanguage.ENGLISH;
+			}
+			List<TextChannel> tcs = g.getTextChannelsByName(arguments[1], false);
 			if (!tcs.isEmpty()) {
 				textC = tcs.get(0);
 			} else {
 				textC.sendMessage(j.getLocale().getStringFormatted("com_g_set_list_fail", Arrays.asList("channel"), arguments[0])).queue();
 				return;
 			}
+			boolean firstTimeSet = !j.hasListChannelSet(lang);
+			j.getJikaiData().setListChannelId(textC.getIdLong(), lang);
+			if (firstTimeSet) {
+				j.getALRHandler(lang).sendList();
+			}
+			try {
+				j.getInfoChannel().sendMessage(j.getLocale().getStringFormatted("com_g_set_list_success", Arrays.asList("channel"), textC.getAsMention())).queue();
+			} catch (Exception e) {}
 		}
-		boolean firstTimeSet = !j.hasListChannelSet();
-		j.getJikaiData().setListChannelId(textC.getIdLong());
-		if (firstTimeSet) {
-			j.getALRHandler().sendList();
-		}
-
-		try {
-			j.getInfoChannel().sendMessage(j.getLocale().getStringFormatted("com_g_set_list_success", Arrays.asList("channel"), textC.getAsMention())).queue();
-		} catch (Exception e) {}
 	}
 
 	@Override

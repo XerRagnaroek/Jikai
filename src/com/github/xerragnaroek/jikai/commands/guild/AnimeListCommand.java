@@ -3,6 +3,7 @@ package com.github.xerragnaroek.jikai.commands.guild;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.alrh.ALRHandler;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
@@ -28,11 +29,15 @@ public class AnimeListCommand implements GuildCommand {
 		Jikai j = Core.JM.get(event.getGuild());
 		JikaiLocale loc = j.getLocale();
 		AnimeDB.waitUntilLoaded();
-		ALRHandler h = j.getALRHandler();
 		MessageChannel mc = event.getChannel();
-		if (!h.isSendingList()) {
-			h.sendList();
-		} else {
+		boolean isSending = false;
+		for (TitleLanguage lang : TitleLanguage.values()) {
+			ALRHandler h = j.getALRHandler(lang);
+			if (!(isSending = h.isSendingList())) {
+				h.sendList();
+			}
+		}
+		if (isSending) {
 			log.debug("List is already being sent");
 			mc.sendMessage(loc.getString("com_g_list_wait")).queue();
 		}

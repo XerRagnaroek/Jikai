@@ -1,12 +1,15 @@
 package com.github.xerragnaroek.jikai.anime.alrh;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,11 +20,10 @@ import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
-import com.github.xerragnaroek.jikai.util.Initilizable;
-import com.github.xerragnaroek.jikai.util.Manager;
 import com.github.xerragnaroek.jikai.util.Pair;
-import com.github.xerragnaroek.jikai.util.prop.Property;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -33,40 +35,100 @@ import net.dv8tion.jda.internal.utils.EncodingUtil;
  * 
  * @author XerRagnaroek
  */
-public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
+public class ALRHManager {
 
-	public ALRHManager() {
-		super(ALRHandler.class);
-	}
+	public ALRHManager() {}
 
-	private Map<String, List<String>> aniAlph = new TreeMap<>();
-	private Property<Set<DTO>> listMsgs = new Property<>();
+	private Map<TitleLanguage, Map<String, List<String>>> aniAlph = new TreeMap<>();
+	private Map<TitleLanguage, Set<DTO>> listMsgs = new TreeMap<>();
 	private final Logger log = LoggerFactory.getLogger(ALRHManager.class);
 	private Map<Long, InitData> initMap = new TreeMap<>();
+	private Map<Long, Map<TitleLanguage, ALRHandler>> impls = Collections.synchronizedMap(new HashMap<>());
 
-	@Override
 	public void init() {
-		if (!isInitialized()) {
-			mapAnimesToStartingLetter();
-			makeListMessages();
-			initImpls();
-			init.set(true);
-			AnimeDB.runOnDBUpdate(au -> {
-				if (isInitialized()) {
-					log.debug("Updating ALRHs");
-					update(au);
-				}
-			});
-		} else {
-			throw new IllegalStateException("Already initialized!");
-		}
+		mapAnimesToStartingLetter();
+		makeListMessages();
+		initImpls();
+		AnimeDB.runOnDBUpdate(au -> {
+			log.debug("Updating ALRHs");
+			update(au);
+		});
+
+	}
+
+	public ALRHandler makeNew(Jikai j, TitleLanguage lang) {
+		long id = j.getJikaiData().getGuildId();
+		ALRHandler impl = new ALRHandler(id, lang);
+		putInMap(impl, id, lang);
+		return impl;
+	}
+
+	private void putInMap(ALRHandler impl, long id, TitleLanguage lang) {
+		impls.compute(id, (i, m) -> {
+			m = m == null ? new HashMap<>() : m;
+			m.put(lang, impl);
+			return m;
+		});
 	}
 
 	private void update(AnimeUpdate au) {
 		if (au.hasChange()) {
 			mapAnimesToStartingLetter();
 			makeListMessages();
-			Core.executeLogException(() -> impls.values().forEach(impl -> impl.update(au)));
+			sendNewAnime(au);
+			sendRemovedAnime(au);
+			Core.executeLogException(() -> impls.values().forEach(impl -> impl.values().forEach(imp -> imp.update(au))));
+		}
+	}
+
+	private void sendNewAnime(AnimeUpdate au) {
+		List<Anime> newA = au.getNewAnime();
+		if (!newA.isEmpty()) {
+			log.debug("Sending {} new anime embeds to anime channel", newA.size());
+			for (Anime a : newA) {
+				EmbedBuilder eb = new EmbedBuilder();
+				BotUtils.addJikaiMark(eb);
+				eb.setThumbnail(a.getBiggestAvailableCoverImage());
+				try {
+					eb.setTitle("New addition to the list!");
+					String titles = Stream.of(TitleLanguage.values()).map(a::getTitle).collect(Collectors.joining("\n"));
+					titles = String.format("**[%s](%s)**", titles, a.getAniUrl());
+					eb.appendDescription(titles);
+					BotUtils.sendToAllAnimeChannels(eb.build());
+					// alrh.j.getAnimeChannel().sendMessage(eb.build()).submit().thenAccept(m -> log.debug("Sent embed
+					// for {}", title));
+				} catch (Exception e) {
+					log.error("", e);
+				}
+			}
+		}
+
+	}
+
+	private void sendRemovedAnime(AnimeUpdate au) {
+		List<Anime> removedA = au.getRemovedAnime();
+		log.debug("Sending {} removed anime embeds to anime channel", removedA.size());
+		for (Anime a : removedA) {
+			log.debug("{} status: {}", a.getTitleRomaji(), a.getStatus());
+			EmbedBuilder eb = new EmbedBuilder();
+			BotUtils.addJikaiMark(eb);
+			eb.setThumbnail(a.getBiggestAvailableCoverImage());
+			try {
+				JikaiLocale loc = JikaiLocaleManager.getEN();
+				eb.setTitle("Anime has been removed from the list!");
+				String titles = Stream.of(TitleLanguage.values()).map(a::getTitle).collect(Collectors.joining("\n"));
+				titles = String.format("**[%s](%s)**\n", titles, a.getAniUrl());
+				eb.appendDescription(titles);
+				if (a.isFinished()) {
+					eb.appendDescription(loc.getString("g_eb_rem_anime_desc_finished"));
+				} else {
+					log.debug("{} has been removed but isn't finished. NextEpNum={},Episodes={}", a.getTitleRomaji(), a.getNextEpisodeNumber(), a.getEpisodes());
+					eb.setDescription(loc.getString("g_eb_rem_anime_desc_unknown"));
+				}
+				BotUtils.sendToAllAnimeChannels(eb.build());
+			} catch (Exception e) {
+				log.error("", e);
+			}
 		}
 	}
 
@@ -76,10 +138,11 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 			Jikai j = Core.JM.get(l);
 			// j would be null if the bot's loading data for a guild that it isn't connected to
 			if (j != null) {
-				Set<ALRHData> data = id.getData();
-				Map<Long, String> msgIdTitleMap = id.getMsgIdEmbedTitlesMap();
-				Pair<String, Long> seasonMsg = id.getSeasonMsg();
-				ALRHandler impl = new ALRHandler(l);
+				Set<ALRHData> data = id.data();
+				Map<Long, String> msgIdTitleMap = id.msgIdEmbedTitles();
+				Pair<String, Long> seasonMsg = id.seasonMsg();
+				TitleLanguage lang = id.titleLang();
+				ALRHandler impl = new ALRHandler(l, lang);
 				if (data != null && !data.isEmpty()) {
 					removeOldEntries(data);
 					impl.setData(data);
@@ -88,9 +151,9 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 					impl.setMsgIdTitleMap(msgIdTitleMap);
 				}
 				impl.setSeasonMsg(seasonMsg);
-				j.setALRH(impl);
+				j.setALRHandler(impl, lang);
 				impl.init();
-				impls.put(l, impl);
+				putInMap(impl, j.getJikaiData().getGuildId(), lang);
 			}
 		});
 		// not needed anymore
@@ -99,26 +162,26 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 	}
 
 	private void removeOldEntries(Set<ALRHData> data) {
-		Set<String> anime = AnimeDB.getLoadedAnime().stream().map(Anime::getTitleRomaji).collect(Collectors.toSet());
-		new TreeSet<>(data).stream().filter(t -> !anime.contains(t.getTitle())).forEach(t -> {
+		Set<Integer> anime = AnimeDB.getLoadedAnime().stream().map(Anime::getId).collect(Collectors.toSet());
+		new TreeSet<>(data).stream().filter(t -> !anime.contains(t.getAnimeId())).forEach(t -> {
 			data.remove(t);
 			log.debug("Removed old ALRHData for '{}'", t);
 		});
 	}
 
-	Set<DTO> getListMessages() {
-		if (!listMsgs.hasNonNullValue()) {
+	Set<DTO> getListMessages(TitleLanguage lang) {
+		if (listMsgs.isEmpty() || !listMsgs.containsKey(lang)) {
 			makeListMessages();
 		}
-		return listMsgs.get();
+		return listMsgs.get(lang);
 	}
 
 	private void makeListMessages() {
-		Set<DTO> tmp = new TreeSet<>((d1, d2) -> d1.getMessage().getDescription().compareTo(d2.getMessage().getDescription()));
-		aniAlph.forEach((l, list) -> {
-			tmp.add(getLetterListMessage(l, list));
+		aniAlph.forEach((tl, m) -> {
+			Set<DTO> tmp = new TreeSet<>((d1, d2) -> d1.getMessage().getDescription().compareTo(d2.getMessage().getDescription()));
+			m.forEach((l, list) -> tmp.add(getLetterListMessage(l, list)));
+			listMsgs.put(tl, tmp);
 		});
-		listMsgs.set(tmp);
 		log.info("Made {} list massages", aniAlph.size());
 	}
 
@@ -127,8 +190,8 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 	 * 
 	 * @return - a map where a letter is mapped to a list of titles.
 	 */
-	Map<String, List<String>> getMappedAnimes() {
-		return aniAlph;
+	Map<String, List<String>> getMappedAnimes(TitleLanguage lang) {
+		return aniAlph.get(lang);
 	}
 
 	/**
@@ -147,7 +210,7 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		for (String t : titles) {
 			Anime a = AnimeDB.getAnime(t, TitleLanguage.ROMAJI);
 			uni = new String(Character.toChars(cp));
-			data.add(new ALRHData(EncodingUtil.encodeCodepoints(uni), t));
+			data.add(new ALRHData(EncodingUtil.encodeCodepoints(uni), a.getId()));
 			mb.append(uni + " : [**" + t + "**](" + a.getAniUrl() + ")\n");
 			cp++;
 		}
@@ -158,17 +221,15 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		return new DTO(eb.build(), data);
 	}
 
-	Property<Set<DTO>> listMessagesProperty() {
-		return listMsgs;
-	}
-
 	/**
 	 * groups all animes by the first letter in their title
 	 */
 	private void mapAnimesToStartingLetter() {
 		log.debug("Mapping animes to starting letter");
 		Set<Anime> data = AnimeDB.getLoadedAnime();
-		aniAlph = checkReactionLimit(data.stream().map(Anime::getTitleRomaji).sorted(String.CASE_INSENSITIVE_ORDER).collect(Collectors.groupingBy(a -> "" + a.toUpperCase().charAt(0))));
+		for (TitleLanguage lang : TitleLanguage.values()) {
+			aniAlph.put(lang, checkReactionLimit(data.stream().map(a -> a.getTitle(lang)).sorted(String.CASE_INSENSITIVE_ORDER).collect(Collectors.groupingBy(a -> "" + a.toUpperCase().charAt(0)))));
+		}
 		log.info("Mapped {} anime to {} letters", data.size(), aniAlph.size());
 	}
 
@@ -194,15 +255,13 @@ public class ALRHManager extends Manager<ALRHandler> implements Initilizable {
 		return checked;
 	}
 
-	public void addToInitMap(long id, Set<ALRHData> data, Map<Long, String> map, Pair<String, Long> seasonMsg) {
-		initMap.put(id, new InitData(data, map, seasonMsg));
+	public void addToInitMap(long id, Set<ALRHData> data, Map<Long, String> map, Pair<String, Long> seasonMsg, TitleLanguage lang) {
+		initMap.put(id, new InitData(data, map, seasonMsg, lang));
 	}
 
-	@Override
-	protected ALRHandler makeNew(long gId) {
-		return new ALRHandler(gId);
+	public void remove(long id) {
+		impls.remove(id).clear();
 	}
-
 }
 
 /**

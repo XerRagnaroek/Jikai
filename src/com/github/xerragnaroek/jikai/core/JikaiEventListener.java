@@ -60,7 +60,7 @@ public class JikaiEventListener extends ListenerAdapter {
 		if (!event.getUser().isBot()) {
 			Jikai j = JM.get(event.getGuild());
 			if (j.hasCompletedSetup() && JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
-				j.getALRHandler().handleReactionAdded(event);
+				j.getALRHandler(event.getChannel().getIdLong()).handleReactionAdded(event);
 			}
 		}
 	}
@@ -69,7 +69,7 @@ public class JikaiEventListener extends ListenerAdapter {
 	public void onGuildMessageReactionRemove(GuildMessageReactionRemoveEvent event) {
 		Jikai j = JM.get(event.getGuild());
 		if (j.hasCompletedSetup() && JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
-			j.getALRHandler().handleReactionRemoved(event);
+			j.getALRHandler(event.getChannel().getIdLong()).handleReactionRemoved(event);
 		}
 	}
 
@@ -77,7 +77,7 @@ public class JikaiEventListener extends ListenerAdapter {
 	public void onGuildMessageReactionRemoveAll(GuildMessageReactionRemoveAllEvent event) {
 		Jikai j = JM.get(event.getGuild());
 		if (j.hasCompletedSetup()) {
-			j.getALRHandler().handleReactionRemovedAll(event);
+			j.getALRHandler(event.getChannel().getIdLong()).handleReactionRemovedAll(event);
 		}
 	}
 

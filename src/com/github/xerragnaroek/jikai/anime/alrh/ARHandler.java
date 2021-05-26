@@ -7,8 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
-import com.github.xerragnaroek.jasa.TitleLanguage;
-import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
@@ -50,7 +48,7 @@ class ARHandler {
 				if (data != null) {
 					data.setReacted(true);
 					JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getUser().getIdLong());
-					ju.subscribeAnime(AnimeDB.getAnime(data.getTitle(), TitleLanguage.ROMAJI).getId(), ju.getLocale().getString("ju_sub_add_cause_user"));
+					ju.subscribeAnime(data.getAnimeId(), ju.getLocale().getString("ju_sub_add_cause_user"));
 				}
 			}
 		}
@@ -63,14 +61,13 @@ class ARHandler {
 			Guild g = event.getGuild();
 			if (re.isEmoji()) {
 				ALRHData data = alrhDB.getDataForUnicodeCodePoint(msgId, re.getAsCodepoints());
-				String title = data.getTitle();
 				if (!event.getUser().isBot()) {
 					JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getUser().getIdLong());
-					ju.unsubscribeAnime(AnimeDB.getAnime(data.getTitle(), TitleLanguage.ROMAJI).getId(), ju.getLocale().getString("ju_sub_rem_cause_user"));
+					ju.unsubscribeAnime(data.getAnimeId(), ju.getLocale().getString("ju_sub_rem_cause_user"));
 				} else {
 					log.debug("Reaction was removed by a bot");
 				}
-				validateReaction(g, event.getChannel(), event.getMessageId(), re.getAsCodepoints(), title);
+				validateReaction(g, event.getChannel(), event.getMessageId(), re.getAsCodepoints(), data.getAnimeId());
 			}
 
 		}
@@ -93,22 +90,22 @@ class ARHandler {
 		tc.addReactionById(msgId, uniCode).queue(v -> log.info("Added Reaction {} to Message#{}", uniCode, msgId), e -> BotUtils.logAndSendToDev(log, "Failed adding Reaction to Message#{}" + msgId, e));
 	}
 
-	private void validateReaction(Guild g, TextChannel tc, String msgId, String uni, String title) {
+	private void validateReaction(Guild g, TextChannel tc, String msgId, String uni, int aniId) {
 		tc.retrieveMessageById(msgId).queue(m -> {
-			validateReaction(m, uni, title);
+			validateReaction(m, uni, aniId);
 		});
 	}
 
-	private void validateReaction(Message m, String uni, String title) {
+	private void validateReaction(Message m, String uni, int id) {
 		boolean found = false;
 		for (MessageReaction mr : m.getReactions()) {
 			ReactionEmote re = mr.getReactionEmote();
 			if (re.isEmoji()) {
 				if (re.getAsCodepoints().equals(uni)) {
 					if (mr.getCount() == 1) {
-						ALRHData data = alrhDB.getDataForTitle(title);
+						ALRHData data = alrhDB.getDataForId(id);
 						if (data.isReacted()) {
-							log.debug("No user reaction left for {}", title);
+							log.debug("No user reaction left for {}", id);
 							data.setReacted(false);
 						}
 					}
@@ -124,7 +121,7 @@ class ARHandler {
 
 	boolean validateReactions(Message m, Set<ALRHData> data) {
 		if (m != null) {
-			data.forEach(d -> validateReaction(m, d.getUnicodeCodePoint(), d.getTitle()));
+			data.forEach(d -> validateReaction(m, d.getUnicodeCodePoint(), d.getAnimeId()));
 			return true;
 		} else {
 			log.error("Saved message id is invalid!");
@@ -135,12 +132,11 @@ class ARHandler {
 	void update(AnimeUpdate au) {
 		if (au.hasRemovedAnime()) {
 			Set<ALRHData> reacted = alrhDB.getReactedAnimes();
-			Set<String> titles = au.getRemovedAnime().stream().map(Anime::getTitleRomaji).collect(Collectors.toSet());
+			Set<Integer> titles = au.getRemovedAnime().stream().map(Anime::getId).collect(Collectors.toSet());
 			reacted.forEach(data -> {
-				String title = data.getTitle();
-				if (!titles.contains(title)) {
+				if (!titles.contains(data.getAnimeId())) {
 					alrhDB.deleteEntry(data);
-					log.info("Deleted obsolete data for {}", title);
+					log.info("Deleted obsolete data for {}", data.getAnimeId());
 				}
 			});
 		}

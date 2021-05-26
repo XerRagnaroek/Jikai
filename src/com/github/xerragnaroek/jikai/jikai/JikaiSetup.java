@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
@@ -241,7 +242,7 @@ public class JikaiSetup extends ListenerAdapter {
 		JikaiData jd = j.getJikaiData();
 		TextChannel tc = cat.createTextChannel("jikai_list").submit().get();
 		log.debug("Made jikai_list channel");
-		jd.setListChannelId(tc.getIdLong());
+		jd.setListChannelId(tc.getIdLong(), TitleLanguage.ROMAJI);
 		tc = cat.createTextChannel("jikai_schedule").submit().get();
 		log.debug("Made jikai_schedule channel");
 		jd.setScheduleChannelId(tc.getIdLong());
@@ -295,12 +296,16 @@ public class JikaiSetup extends ListenerAdapter {
 		JikaiData jd = j.getJikaiData();
 		jd.setSetupCompleted(true);
 		jd.save(true);
-		j.setALRH(Core.JM.getALHRM().registerNew(g));
-		log.info("Setup completed");
-		if (j.hasListChannelSet()) {
-			log.debug("Sending list...");
-			j.getALRHandler().sendList();
+		for (TitleLanguage lang : TitleLanguage.values()) {
+			j.setALRHandler(Core.JM.getALHRM().makeNew(j, lang), lang);
 		}
+		log.info("Setup completed");
+		/*
+		 * if (j.hasListChannelSet()) {
+		 * log.debug("Sending list...");
+		 * j.getALRHandler().sendList();
+		 * }
+		 */
 		if (j.hasScheduleChannelSet()) {
 			log.debug("Sending schedule...");
 			ScheduleManager.sendScheduleToJikai(j);
