@@ -65,15 +65,13 @@ public class HelpCommand implements GuildCommand, JUCommand {
 		JikaiUser ju;
 		JikaiLocale ltmp = j == null ? null : j.getLocale();
 		if ((ju = JikaiUserManager.getInstance().getUser(u.getIdLong())) != null) {
-			userIsDev.set(ju.getId() == Core.DEV_ID);
+			userIsDev.set(Core.DEV_IDS.contains(ju.getId()));
 			ltmp = ju.getLocale();
 		}
 		String prefix = j == null ? Core.JM.getJDM().getBotData().getDefaultPrefix() : j.getJikaiData().getPrefix();
 		JikaiLocale loc = ltmp;
 		String serComs = CommandHandler.getCommands().stream().filter(com -> !com.getName().equals("help") && com.isEnabled() && ComUtils.checkPermissions(com, m)).map(com -> "**__" + prefix + com.getName() + "__**" + (com.hasUsage() ? " *" + com.getUsage(loc) + "*" : "") + (com.hasAlternativeNames() ? com.getAlternativeNames() : "") + "\n" + com.getDescription(loc)).collect(Collectors.joining("\n"));
-		System.out.println(serComs);
 		String pmComs = JUCommandHandler.getCommands().stream().filter(com -> !com.getName().equals("help") && com.isEnabled() && (!com.isDevOnly() || userIsDev.get())).map(com -> "**__" + prefix + com.getName() + "__**" + (com.hasUsage() ? " *" + com.getUsage(loc) + "*" : "") + (com.hasAlternativeNames() ? com.getAlternativeNames() : "") + "\n" + com.getDescription(loc)).collect(Collectors.joining("\n"));
-		System.out.println(pmComs);
 		EmbedBuilder eb = new EmbedBuilder();
 		BotUtils.addJikaiMark(eb);
 		eb.setTitle(loc.getString("com_help_eb_server_title"));
