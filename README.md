@@ -7,10 +7,10 @@ Its main purpose is to allow users to subscribe to currently airing anime and be
 You can change you subscriptions here, simply by reacting with the respective emoji!
 **Romaji**
 ![List example Romaji](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/listRomajiExample.jpg)
----
+___
 **English**
 ![List example English](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/listEnglishExample.jpg)
----
+___
 **Native**
 ![List example Native](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/listNativeExample.jpg)
 
