@@ -41,7 +41,7 @@ public class JikaiUser {
 
 	private long id;
 	private IntegerProperty aniId = new IntegerProperty(0);
-	private TitleLanguage tt;
+	private Property<TitleLanguage> titleLanguage = new Property<>();
 	private SubscriptionSet subscribedAnime = new SubscriptionSet();
 	private BooleanProperty sendDailyUpdate = new BooleanProperty();
 	private BooleanProperty sendWeeklySchedule = new BooleanProperty();
@@ -81,6 +81,7 @@ public class JikaiUser {
 		sendNextEpMessage.onChange((o, n) -> log("change send next ep message {}", n));
 		locale.onChange((o, n) -> log("change locale: {}", n));
 		aniId.onChange((o, n) -> log("change aniId: {}", n));
+		titleLanguage.onChange((o, n) -> log("change titleLang: {}", n));
 	}
 
 	@JsonIgnore
@@ -127,12 +128,15 @@ public class JikaiUser {
 	}
 
 	public TitleLanguage getTitleLanguage() {
-		return tt;
+		return titleLanguage.get();
 	}
 
 	public void setTitleLanguage(TitleLanguage tt) {
-		this.tt = tt;
-		log("TitleLanguage set to {}", tt);
+		this.titleLanguage.set(tt);
+	}
+
+	public Property<TitleLanguage> titleLanguageProperty() {
+		return titleLanguage;
 	}
 
 	public boolean isNotfiedOnRelease() {
@@ -409,7 +413,7 @@ public class JikaiUser {
 		String nextEpMsg = isSentNextEpMessage() ? yes : no;
 		String release = isNotfiedOnRelease() ? yes : no;
 		String schedule = sendWeeklySchedule.get() ? yes : no;
-		String title = tt.toString();
+		String title = titleLanguage.toString();
 		String steps = getPreReleaseNotifcationSteps().stream().map(i -> i / 60).sorted().map(String::valueOf).collect(Collectors.joining(", "));
 		String aniId = (aniId = this.aniId.toString()).equals("0") ? "/" : aniId;
 		String users = linkedToUsers.stream().map(juId -> JikaiUserManager.getInstance().getUser(juId)).map(ju -> ju.getUser().getName()).sorted().collect(Collectors.joining(", "));
@@ -448,7 +452,7 @@ public class JikaiUser {
 	@Override
 	public String toString() {
 		// id,titletype,zone,localeIdentifier,sendDailyUpdate,notifBeforeRelease,anime,linked user
-		return String.format("\"%d\",\"%d\",\"%d\",\"%s\",\"%s\",\"%d\",\"%d\",\"%s\",\"%s\",\"%s\"", id, aniId.get(), tt.ordinal(), zone.get().getId(), locale.get(), sendDailyUpdate.get() ? 1 : 0, sendWeeklySchedule.get() ? 1 : 0, notifBeforeRelease.toString(), subscribedAnime, linkedUsers.toString());
+		return String.format("\"%d\",\"%d\",\"%d\",\"%s\",\"%s\",\"%d\",\"%d\",\"%s\",\"%s\",\"%s\"", id, aniId.get(), titleLanguage.get().ordinal(), zone.get().getId(), locale.get(), sendDailyUpdate.get() ? 1 : 0, sendWeeklySchedule.get() ? 1 : 0, notifBeforeRelease.toString(), subscribedAnime, linkedUsers.toString());
 	}
 
 	@JsonGetter("zoneId")
