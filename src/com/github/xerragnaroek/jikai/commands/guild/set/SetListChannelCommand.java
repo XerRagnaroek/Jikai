@@ -48,6 +48,7 @@ public class SetListChannelCommand implements GuildCommand {
 			boolean firstTimeSet = !j.hasListChannelSet(lang);
 			j.getJikaiData().setListChannelId(textC.getIdLong(), lang);
 			if (firstTimeSet) {
+				j.setALRHandler(Core.JM.getALHRM().makeNew(j, lang), lang);
 				j.getALRHandler(lang).sendList();
 			}
 			try {
