@@ -55,8 +55,8 @@ The subscription list also allows you to sub and unsub directly, no need to go t
 ![sub list](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/importSubsExample.gif)
 
 ### Lots of configurable options
-*Timezone for localised dates and times
-*Your prefered way how anime titles are displayed (Romaji, English or Native)
-*Your notification times up to a week
-*Jikai's language
-*Enable or disable any feature you don't like
+* Timezone for localised dates and times
+* Your prefered way how anime titles are displayed (Romaji, English or Native)
+* Your notification times up to a week
+* Jikai's language
+* Enable or disable any feature you don't like
