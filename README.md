@@ -5,6 +5,7 @@ Its main purpose is to allow users to subscribe to currently airing anime and be
 ## Features
 ### Centralised lists for the three title languages
 You can change you subscriptions here, simply by reacting with the respective emoji!
+
 **Romaji**
 
 ![List example Romaji](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/listRomajiExample.jpg)
