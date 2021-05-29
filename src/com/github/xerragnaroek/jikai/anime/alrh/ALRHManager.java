@@ -42,7 +42,7 @@ public class ALRHManager {
 	private Map<TitleLanguage, Map<String, List<String>>> aniAlph = new TreeMap<>();
 	private Map<TitleLanguage, Set<DTO>> listMsgs = new TreeMap<>();
 	private final Logger log = LoggerFactory.getLogger(ALRHManager.class);
-	private Map<Long, InitData> initMap = new TreeMap<>();
+	private Map<Long, List<InitData>> initMap = new TreeMap<>();
 	private Map<Long, Map<TitleLanguage, ALRHandler>> impls = Collections.synchronizedMap(new HashMap<>());
 
 	public void init() {
@@ -134,26 +134,28 @@ public class ALRHManager {
 
 	private void initImpls() {
 		log.debug("Loading ALRHs");
-		initMap.forEach((l, id) -> {
+		initMap.forEach((l, list) -> {
 			Jikai j = Core.JM.get(l);
 			// j would be null if the bot's loading data for a guild that it isn't connected to
 			if (j != null) {
-				Set<ALRHData> data = id.data();
-				Map<Long, String> msgIdTitleMap = id.msgIdEmbedTitles();
-				Pair<String, Long> seasonMsg = id.seasonMsg();
-				TitleLanguage lang = id.titleLang();
-				ALRHandler impl = new ALRHandler(l, lang);
-				if (data != null && !data.isEmpty()) {
-					removeOldEntries(data);
-					impl.setData(data);
-				}
-				if (msgIdTitleMap != null && !msgIdTitleMap.isEmpty()) {
-					impl.setMsgIdTitleMap(msgIdTitleMap);
-				}
-				impl.setSeasonMsg(seasonMsg);
-				j.setALRHandler(impl, lang);
-				impl.init();
-				putInMap(impl, j.getJikaiData().getGuildId(), lang);
+				list.forEach(id -> {
+					Set<ALRHData> data = id.data();
+					Map<Long, String> msgIdTitleMap = id.msgIdEmbedTitles();
+					Pair<String, Long> seasonMsg = id.seasonMsg();
+					TitleLanguage lang = id.titleLang();
+					ALRHandler impl = new ALRHandler(l, lang);
+					if (data != null && !data.isEmpty()) {
+						removeOldEntries(data);
+						impl.setData(data);
+					}
+					if (msgIdTitleMap != null && !msgIdTitleMap.isEmpty()) {
+						impl.setMsgIdTitleMap(msgIdTitleMap);
+					}
+					impl.setSeasonMsg(seasonMsg);
+					j.setALRHandler(impl, lang);
+					impl.init();
+					putInMap(impl, j.getJikaiData().getGuildId(), lang);
+				});
 			}
 		});
 		// not needed anymore
@@ -179,7 +181,7 @@ public class ALRHManager {
 	private void makeListMessages() {
 		aniAlph.forEach((tl, m) -> {
 			Set<DTO> tmp = new TreeSet<>((d1, d2) -> d1.getMessage().getDescription().compareTo(d2.getMessage().getDescription()));
-			m.forEach((l, list) -> tmp.add(getLetterListMessage(l, list)));
+			m.forEach((l, list) -> tmp.add(getLetterListMessage(l, list, tl)));
 			listMsgs.put(tl, tmp);
 		});
 		log.info("Made {} list massages", aniAlph.size());
@@ -200,7 +202,7 @@ public class ALRHManager {
 	 * @return - a DataTransferObject (DTO) containing the message and the title mapped to its
 	 *         respective unicode
 	 */
-	private DTO getLetterListMessage(String letter, List<String> titles) {
+	private DTO getLetterListMessage(String letter, List<String> titles, TitleLanguage lang) {
 		log.debug("Creating list for letter {} with {} titles", letter, titles.size());
 		Set<ALRHData> data = new TreeSet<>();
 		StringBuilder mb = new StringBuilder();
@@ -208,7 +210,7 @@ public class ALRHManager {
 		int cp = 0x1F1E6;
 		String uni = "";
 		for (String t : titles) {
-			Anime a = AnimeDB.getAnime(t, TitleLanguage.ROMAJI);
+			Anime a = AnimeDB.getAnime(t, lang);
 			uni = new String(Character.toChars(cp));
 			data.add(new ALRHData(EncodingUtil.encodeCodepoints(uni), a.getId()));
 			mb.append(uni + " : [**" + t + "**](" + a.getAniUrl() + ")\n");
@@ -256,7 +258,11 @@ public class ALRHManager {
 	}
 
 	public void addToInitMap(long id, Set<ALRHData> data, Map<Long, String> map, Pair<String, Long> seasonMsg, TitleLanguage lang) {
-		initMap.put(id, new InitData(data, map, seasonMsg, lang));
+		initMap.compute(id, (i, l) -> {
+			l = l == null ? l = new ArrayList<>(3) : l;
+			l.add(new InitData(data, map, seasonMsg, lang));
+			return l;
+		});
 	}
 
 	public void remove(long id) {

@@ -131,7 +131,7 @@ public class ALRHandler implements Initilizable {
 						Instant start = Instant.now();
 						send.whenComplete((v, e) -> {
 							if (e == null) {
-								m.editMessage(loc.getStringFormatted("g_list_done", Arrays.asList("time"), BotUtils.formatMillis(Duration.between(start, Instant.now()).toMillis(), loc))).queue();
+								m.editMessage(loc.getStringFormatted("g_list_done", Arrays.asList("lang", "time"), lang.toString(), BotUtils.formatMillis(Duration.between(start, Instant.now()).toMillis(), loc))).queue();
 							} else {
 								alh.setSending(false);
 								m.editMessage(loc.getString("g_list_fail")).queue();

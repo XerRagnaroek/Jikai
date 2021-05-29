@@ -2,6 +2,7 @@ package com.github.xerragnaroek.jikai.anime.alrh;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,7 +87,7 @@ public class ALRHDataBase {
 	}
 
 	Set<ALRHData> getData() {
-		return new TreeSet<>(aniIdMap.values());
+		return new HashSet<>(aniIdMap.values());
 	}
 
 	BidiMap<Long, String> getMsgIdTitleMap() {

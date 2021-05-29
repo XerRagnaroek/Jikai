@@ -85,7 +85,7 @@ public class ALRHData implements Comparable<ALRHData> {
 
 	@Override
 	public int compareTo(ALRHData o) {
-		return Integer.compare(aniId, o.aniId);
+		return codepoint.compareTo(o.codepoint);
 	}
 
 	@Override
@@ -99,6 +99,6 @@ public class ALRHData implements Comparable<ALRHData> {
 
 	@Override
 	public String toString() {
-		return String.format("ALRHData[tcId=%d,msgId=%d,aniId='%s',codepoint=%s,reacted=%b]", tcId, msgId, aniId, codepoint, reacted);
+		return String.format("ALRHData[tcId=%d,msgId=%d,aniId=%s,codepoint=%s,reacted=%b]", tcId, msgId, aniId, codepoint, reacted);
 	}
 }

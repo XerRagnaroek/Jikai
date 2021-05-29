@@ -187,11 +187,9 @@ class ALHandler {
 		if (edit) {
 			log.debug("Editing list msg '{}'", me.getTitle());
 			msg = tc.editMessageById(alrhDB.getMsgIdForEmbedTitle(me.getTitle()), me).submit().thenApply(m -> {
-				MDC.put("id", String.valueOf(alrh.gId));
 				log.debug("Edited msg, clearing reactions");
 				m.clearReactions().submit().join();
 				log.debug("Cleared reactions.");
-				MDC.remove("id");
 				return m;
 			});
 		} else {
@@ -203,7 +201,6 @@ class ALHandler {
 			alrhDB.mapEmbedTitleToId(m.getIdLong(), me.getTitle());
 			List<CompletableFuture<Void>> cfs = new ArrayList<>(data.size());
 			data.stream().forEachOrdered(alrhd -> {
-				MDC.put("id", String.valueOf(alrh.gId));
 				if (alrhDB.isReacted(alrhd)) {
 					alrhd.setReacted(true);
 				}
@@ -212,7 +209,6 @@ class ALHandler {
 				String uniCP = alrhd.getUnicodeCodePoint();
 				log.debug("Adding reaction {} to message", uniCP);
 				cfs.add(m.addReaction(uniCP).submit().thenAccept(v -> log.debug("Added reaction {} to message", uniCP)));
-				MDC.remove("id");
 			});
 			alrhDB.setDataForMessage(m.getIdLong(), data);
 			return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()]));
