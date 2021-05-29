@@ -83,6 +83,11 @@ public class JikaiUserManager {
 		juu.registerUser(ju);
 		user.put(ju.getId(), ju);
 		AniListSyncer.getInstance().registerUser(ju);
+		ju.titleLanguageProperty().onChange((o, n) -> {
+			if (!Core.INITIAL_LOAD.get()) {
+				BotUtils.switchTitleLangRole(ju, o, n);
+			}
+		});
 		log.debug("Registered JUser {}", ju.getId());
 		// AniListSyncer.getInstance().registerUser(ju);
 	}
