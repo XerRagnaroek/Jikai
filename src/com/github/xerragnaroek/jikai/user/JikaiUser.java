@@ -326,8 +326,12 @@ public class JikaiUser {
 	 * Basically subscribing to a user. Needed for internal tracking of what users this one is linked
 	 * to.
 	 */
-	public void linkToUser(long id) {
-		linkedToUsers.add(id);
+	public boolean linkToUser(long id) {
+		return linkedToUsers.add(id);
+	}
+
+	public boolean isLinkedToUser(long id) {
+		return linkedToUsers.contains(id);
 	}
 
 	public boolean unlinkUser(JikaiUser ju) {
@@ -339,12 +343,16 @@ public class JikaiUser {
 		return linkedUsers.remove(id);
 	}
 
-	public void unlinkFromUser(long id) {
-		linkedToUsers.remove(id);
+	public boolean unlinkFromUser(long id) {
+		return linkedToUsers.remove(id);
 	}
 
 	public Set<Long> getLinkedUsers() {
 		return linkedUsers.get();
+	}
+
+	public Set<Long> getLinkedToUsers() {
+		return linkedToUsers;
 	}
 
 	private boolean stepImpl(String input, boolean add) {

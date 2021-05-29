@@ -457,17 +457,40 @@ public class BotUtils {
 		log.debug("Deleting all messages in channel {}", tc.getName());
 		AtomicInteger count = new AtomicInteger(0);
 		long start = System.currentTimeMillis();
-		List<CompletableFuture<?>> cfs = new ArrayList<>();
-		tc.getIterableHistory().forEach(m -> {
-			cfs.add(m.delete().submit().thenAccept(v -> {
-				count.incrementAndGet();
-			}));
-		});
-		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).whenComplete((v, t) -> {
+		/*
+		 * List<CompletableFuture<?>> cfs = new ArrayList<>();
+		 * tc.getIterableHistory().forEach(m -> {
+		 * cfs.add(m.delete().submit().thenAccept(v -> {
+		 * count.incrementAndGet();
+		 * }));
+		 * });
+		 * return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).whenComplete((v,
+		 * t) -> {
+		 * if (t == null) {
+		 * log.debug("Successfully deleted " + count.get() + " messages in " +
+		 * formatMillis(System.currentTimeMillis() - start,
+		 * JikaiLocaleManager.getInstance().getLocale("en")));
+		 * } else {
+		 * Core.logThrowable(t);
+		 * }
+		 * });
+		 */
+		return clearImpl(tc, count).whenComplete((v, t) -> {
 			if (t == null) {
 				log.debug("Successfully deleted " + count.get() + " messages in " + formatMillis(System.currentTimeMillis() - start, JikaiLocaleManager.getInstance().getLocale("en")));
 			} else {
 				Core.logThrowable(t);
+			}
+		});
+	}
+
+	private static CompletableFuture<Void> clearImpl(TextChannel tc, AtomicInteger count) {
+		return tc.getHistoryFromBeginning(100).submit().thenAccept(mh -> {
+			if (!mh.isEmpty()) {
+				List<CompletableFuture<Void>> cfs = tc.purgeMessages(mh.getRetrievedHistory());
+				CompletableFuture.allOf(cfs.toArray(new CompletableFuture<?>[cfs.size()])).join();
+				count.addAndGet(mh.size());
+				clearImpl(tc, count).join();
 			}
 		});
 	}
@@ -663,7 +686,6 @@ public class BotUtils {
 		List<EmbedBuilder> ebs = new ArrayList<>();
 		EmbedBuilder eb = BotUtils.embedBuilder();
 		int cCount = 0;
-		String desc = "";
 		if (strings == null || strings.isEmpty()) {
 			return Collections.emptyList();
 		}
@@ -683,7 +705,6 @@ public class BotUtils {
 				ebs.add(eb);
 				eb = BotUtils.embedBuilder();
 				cCount = 0;
-				desc = "";
 			}
 		}
 		if (ebs.isEmpty()) {
@@ -808,4 +829,5 @@ public class BotUtils {
 			});
 		}
 	}
+
 }
