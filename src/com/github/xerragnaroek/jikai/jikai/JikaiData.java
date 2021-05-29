@@ -189,17 +189,17 @@ public class JikaiData {
 		return id;
 	}
 
-	@JsonProperty("info_channel_romaji_id")
+	@JsonProperty("list_channel_romaji_id")
 	public long getListChannelRomajiId() {
 		return listChRomajiId.get();
 	}
 
-	@JsonProperty("info_channel_native_id")
+	@JsonProperty("list_channel_native_id")
 	public long getListChannelNativeId() {
 		return listChNativeId.get();
 	}
 
-	@JsonProperty("info_channel_english_id")
+	@JsonProperty("list_channel_english_id")
 	public long getListChannelEnglishId() {
 		return listChEnglishId.get();
 	}

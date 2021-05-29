@@ -148,7 +148,7 @@ public class Jikai {
 	public ALRHandler getALRHandler(long channelId) {
 		for (TitleLanguage lang : TitleLanguage.values()) {
 			if (jd.getListChannelId(lang) == channelId) {
-				return getALRHandler(channelId);
+				return getALRHandler(lang);
 			}
 		}
 		return null;
