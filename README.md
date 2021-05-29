@@ -20,6 +20,7 @@ ___
 
 ### Notifications at configurable times
 Exemplary notifications:
+
 1 hour before the next episode airs
 
 ![1 hour prior notification](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/nextEpHourMsg.jpg)
