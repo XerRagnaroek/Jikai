@@ -32,7 +32,7 @@ public class TitleLanguageCommand implements JUCommand {
 				ju.sendPM(loc.getStringFormatted("com_ju_title_lang_range", Arrays.asList("num"), i));
 				return;
 			}
-			ju.setTitleLanguage(TitleLanguage.values()[i]);
+			ju.setTitleLanguage(TitleLanguage.values()[i - 1]);
 		} catch (NumberFormatException e) {
 			String str = arguments[0];
 			switch (str.toLowerCase()) {
