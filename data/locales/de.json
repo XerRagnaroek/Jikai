@@ -117,7 +117,7 @@
 	"g_error_no_info_ch": "Your server %name% doesn't have an info channel set for me! Please use `%pre%set info_channel <channel>` to set a new one.",
 	"g_error_no_list_ch": "%owner% I'm missing the list channel! Please set a new one with `%pre%set list_channel <channel>`",
 	"g_error_no_sched_ch": "%owner% I'm missing the schedule channel! Please set a new one with `%pre%set schedule_channel <channel>`",
-	"g_list_done": "List has been sent! ||%time%||",
+	"g_list_done": "%lang% list has been sent! ||%time%||",
 	"g_list_fail": "Failed sending the list!",
 	"g_list_season": "Current season: **%season%**",
 	"g_list_send": "Sending a new list...",
