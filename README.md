@@ -6,19 +6,25 @@ Its main purpose is to allow users to subscribe to currently airing anime and be
 ### Centralised lists for the three title languages
 You can change you subscriptions here, simply by reacting with the respective emoji!
 **Romaji**
+
 ![List example Romaji](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/listRomajiExample.jpg)
 ___
 **English**
+
 ![List example English](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/listEnglishExample.jpg)
 ___
 **Native**
+
 ![List example Native](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/listNativeExample.jpg)
 
 ### Notifications at configurable times
 Exemplary notifications:
 1 hour before the next episode airs
+
 ![1 hour prior notification](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/nextEpHourMsg.jpg)
+
 At release
+
 ![release message](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/releaseExample.jpg)
 
 ### Links to streaming sites
@@ -27,6 +33,7 @@ So far only Gogoanime links are supported (because it's the site I use). Other s
 ### Tracking of unwatched episodes
 Never lose track of episodes you haven't watched yet! Jikai can tell you which eps you're still missing, including links to their release messages and streaming links.
 When you've watched an episode, just click on 👀 to mark is as such!
+
 ![ep watched example](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/epWatchedExample.gif)
 
 ### Daily overview of your anime
