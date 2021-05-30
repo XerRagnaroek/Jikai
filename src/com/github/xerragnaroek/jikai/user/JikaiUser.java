@@ -17,6 +17,8 @@ import org.slf4j.MDC;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.github.xerragnaroek.jasa.Anime;
@@ -38,6 +40,7 @@ import net.dv8tion.jda.api.entities.User;
 
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
 @JsonPropertyOrder({ "id" })
+@JsonInclude(Include.NON_EMPTY)
 public class JikaiUser {
 
 	private long id;
