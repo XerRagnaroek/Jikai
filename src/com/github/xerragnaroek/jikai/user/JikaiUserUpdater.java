@@ -103,7 +103,7 @@ public class JikaiUserUpdater {
 		eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		eb.setTitle(loc.getString("ju_eb_sub_add_title"));
 		long seconds = Duration.between(LocalDateTime.now(ju.getTimeZone()), a.getNextEpisodeDateTime(ju.getTimeZone()).get()).toSeconds();
-		eb.setDescription(loc.getStringFormatted("ju_eb_sub_add_desc", Arrays.asList("title", "time", "cause"), "[" + a.getTitle(ju.getTitleLanguage()) + "](" + a.getAniUrl() + ")", BotUtils.formatSeconds(seconds, loc), cause));
+		eb.setDescription(loc.getStringFormatted("ju_eb_sub_add_desc", Arrays.asList("title", "time", "cause"), "[" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "](" + a.getAniUrl() + ")", BotUtils.formatSeconds(seconds, loc), cause));
 		return eb.build();
 	}
 
@@ -112,7 +112,7 @@ public class JikaiUserUpdater {
 		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		eb.setTitle(loc.getString("ju_eb_sub_add_title"));
 		eb.setThumbnail(a.getBiggestAvailableCoverImage());
-		eb.setDescription(loc.getStringFormatted("ju_eb_sub_add_no_data_desc", Arrays.asList("title", "cause"), "[" + a.getTitle(ju.getTitleLanguage()) + "](" + a.getAniUrl() + ")", cause));
+		eb.setDescription(loc.getStringFormatted("ju_eb_sub_add_no_data_desc", Arrays.asList("title", "cause"), "[" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "](" + a.getAniUrl() + ")", cause));
 		return eb.build();
 	}
 
@@ -121,7 +121,7 @@ public class JikaiUserUpdater {
 		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		eb.setTitle(loc.getString("ju_eb_sub_rem_title"));
-		eb.setDescription(loc.getStringFormatted("ju_eb_sub_rem_desc", Arrays.asList("title", "cause"), "[" + a.getTitle(ju.getTitleLanguage()) + "](" + a.getAniUrl() + ")", cause));
+		eb.setDescription(loc.getStringFormatted("ju_eb_sub_rem_desc", Arrays.asList("title", "cause"), "[" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "](" + a.getAniUrl() + ")", cause));
 		return eb.build();
 	}
 
@@ -358,7 +358,7 @@ public class JikaiUserUpdater {
 	private MessageEmbed makePeriodChangedEmbed(JikaiUser ju, Anime a, long dif) {
 		JikaiLocale loc = ju.getLocale();
 		EmbedBuilder eb = new EmbedBuilder();
-		eb.setTitle(loc.getStringFormatted("ju_eb_period_change_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl()).setThumbnail(a.getBiggestAvailableCoverImage());
+		eb.setTitle(loc.getStringFormatted("ju_eb_period_change_title", Arrays.asList("title"), (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()))), a.getAniUrl()).setThumbnail(a.getBiggestAvailableCoverImage());
 		// later
 		if (dif > 0) {
 			eb.setDescription(loc.getStringFormatted("ju_eb_period_change_later_desc", Arrays.asList("dif", "time", "date"), BotUtils.formatSeconds(dif, loc), BotUtils.formatSeconds(a.getNextEpisodesAirsIn(), loc), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale())));
@@ -372,7 +372,7 @@ public class JikaiUserUpdater {
 	private MessageEmbed makeReleaseChangedEmbed(JikaiUser ju, Anime a, long delay) {
 		EmbedBuilder eb = new EmbedBuilder();
 		JikaiLocale loc = ju.getLocale();
-		eb.setTitle(loc.getStringFormatted("ju_eb_release_change_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
+		eb.setTitle(loc.getStringFormatted("ju_eb_release_change_title", Arrays.asList("title"), (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()))), a.getAniUrl());
 		if (a.hasCoverImageMedium()) {
 			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
@@ -414,7 +414,7 @@ public class JikaiUserUpdater {
 		log.debug("Sending next episode message for {}, {}", a.getTitleRomaji(), a.getId());
 		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		JikaiLocale loc = ju.getLocale();
-		eb.setTitle(loc.getStringFormatted("ju_eb_next_ep_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
+		eb.setTitle(loc.getStringFormatted("ju_eb_next_ep_title", Arrays.asList("title"), (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()))), a.getAniUrl());
 		long minsTillAir = Instant.now().until(Instant.ofEpochSecond(a.getNextEpisodesAirsAt()), ChronoUnit.MINUTES) + 1;
 		eb.setDescription(loc.getStringFormatted("ju_eb_next_ep_desc", Arrays.asList("time", "date"), BotUtils.formatMinutes(minsTillAir, loc), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale())));
 		if (a.hasCoverImageMedium()) {
@@ -447,7 +447,7 @@ public class JikaiUserUpdater {
 			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
 		JikaiLocale loc = ju.getLocale();
-		eb.setTitle(loc.getStringFormatted("ju_eb_notify_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
+		eb.setTitle(loc.getStringFormatted("ju_eb_notify_title", Arrays.asList("title"), (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()))), a.getAniUrl());
 		int eps = a.getEpisodes();
 		String episodes = eps == 0 ? "" : String.format("/%2d", eps);
 		eb.setDescription(loc.getStringFormatted("ju_eb_notify_desc", Arrays.asList("date", "episodes", "time"), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale()), String.format("%2d%s", a.getNextEpisodeNumber(), episodes), BotUtils.formatSeconds(step, loc)));
@@ -464,7 +464,7 @@ public class JikaiUserUpdater {
 			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
 		JikaiLocale loc = ju.getLocale();
-		eb.setTitle(loc.getStringFormatted("ju_eb_notify_release_title", Arrays.asList("title"), a.getTitle(ju.getTitleLanguage())), a.getAniUrl());
+		eb.setTitle(loc.getStringFormatted("ju_eb_notify_release_title", Arrays.asList("title"), (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()))), a.getAniUrl());
 		int eps = a.getEpisodes();
 		String episodes = eps == 0 ? "" : String.format("/%2d", eps);
 		eb.setDescription(loc.getStringFormatted("ju_eb_notify_release_desc", Arrays.asList("episodes"), String.format("%2d%s", a.getNextEpisodeNumber(), episodes)));
@@ -476,7 +476,7 @@ public class JikaiUserUpdater {
 		if (a.hasDataForNextEpisode()) {
 			return step == 0 ? makeNotifyRelease(a, ju) : makeNotifyEmbed(a, step, ju);
 		} else {
-			return BotUtils.addJikaiMark(new EmbedBuilder()).setDescription("**" + a.getTitle(ju.getTitleLanguage()) + "** has no data available! step: " + step).build();
+			return BotUtils.addJikaiMark(new EmbedBuilder()).setDescription("**" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "** has no data available! step: " + step).build();
 		}
 	}
 
@@ -498,7 +498,7 @@ public class JikaiUserUpdater {
 
 	private Queue<MessageEmbed> createDailyMessage(JikaiUser ju, AnimeTable at, DayOfWeek day) {
 		JikaiLocale loc = ju.getLocale();
-		String content = at.toFormatedWeekString(ju.getTitleLanguage(), false, loc.getLocale()).get(day);
+		String content = at.toFormatedWeekString(ju.getTitleLanguage(), false, loc.getLocale(), ju).get(day);
 		StringBuilder bob = new StringBuilder();
 		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		eb.setTitle(loc.getString("ju_eb_daily_update_msg"));

@@ -770,7 +770,7 @@ public class BotUtils {
 	public static Queue<MessageEmbed> createWeeklySchedule(JikaiUser ju, AnimeTable at) {
 		JikaiLocale loc = ju.getLocale();
 		StringBuilder bob = new StringBuilder();
-		at.toFormatedWeekString(ju.getTitleLanguage(), true, loc.getLocale()).values().forEach(s -> bob.append("\n" + s));
+		at.toFormatedWeekString(ju.getTitleLanguage(), true, loc.getLocale(), ju).values().forEach(s -> bob.append("\n" + s));
 		MessageBuilder mb = new MessageBuilder();
 		mb.setContent(bob.toString());
 		Queue<MessageEmbed> q = new LinkedList<>();

@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.github.xerragnaroek.jikai.user.JikaiUser;
 
 /**
  * Maps anime to the day and time they air on, creating a timetable. Then turns that into an image.
@@ -184,7 +185,7 @@ public class AnimeTable {
 		g.drawString(mark, img.getWidth() - padding - strWidth, img.getHeight() - padding);
 	}
 
-	public Map<DayOfWeek, String> toFormatedWeekString(TitleLanguage tl, boolean includeDay, Locale loc) {
+	public Map<DayOfWeek, String> toFormatedWeekString(TitleLanguage tl, boolean includeDay, Locale loc, JikaiUser ju) {
 		Map<DayOfWeek, String> m = new TreeMap<>();
 		table.forEach((day, map) -> {
 			StringBuilder bob = new StringBuilder();
@@ -195,7 +196,7 @@ public class AnimeTable {
 			}
 			map.forEach((lt, cell) -> {
 				bob.append(String.format("[%s]%n", dtf.format(lt)));
-				cell.getAnime().forEach(a -> bob.append(String.format("\t%s%n", a.getTitle(tl))));
+				cell.getAnime().forEach(a -> bob.append(String.format("\t%s%n", (ju == null ? a.getTitle(tl) : (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(tl))))));
 			});
 			m.put(day, bob.toString());
 		});
@@ -204,7 +205,7 @@ public class AnimeTable {
 
 	@Override
 	public String toString() {
-		return StringUtils.joinWith("\n", toFormatedWeekString(TitleLanguage.ROMAJI, true, new Locale("en")).values());
+		return StringUtils.joinWith("\n", toFormatedWeekString(TitleLanguage.ROMAJI, true, new Locale("en"), null).values());
 	}
 }
 

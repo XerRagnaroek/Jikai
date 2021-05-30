@@ -1,6 +1,7 @@
 package com.github.xerragnaroek.jikai.commands.user;
 
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.ExportKeyHandler;
@@ -41,7 +42,7 @@ public class ImportSubscriptionsCommand implements JUCommand {
 					thumb = dUser.getEffectiveAvatarUrl();
 				}
 				PrivateList pl = new PrivateList(ju, loc.getStringFormatted(getLocaleKey() + "_eb_title", Arrays.asList("user"), name), thumb);
-				pl.sendList(user.getSubscribedAnime());
+				pl.sendList(user.getSubscribedAnime().stream().filter(aniId -> !user.isHiddenAnime(aniId)).collect(Collectors.toSet()));
 			} else {
 				ju.sendPM(loc.getStringFormatted(getLocaleKey() + "_no_subs", Arrays.asList("user"), dUser == null ? "This user" : dUser.getAsTag()));
 			}

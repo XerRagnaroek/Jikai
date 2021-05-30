@@ -113,7 +113,7 @@ class ALHandler {
 		log.debug("Season msg exists: {}", !resendAll);
 		if (resendAll) {
 			log.debug("No seasons msg present, resending the whole list!");
-			BotUtils.clearChannel(tc);
+			BotUtils.clearChannel(tc).join();
 			alrhDB.clearData();
 			cfs.add(tc.sendMessage(alrh.j.getLocale().getStringFormatted("g_list_season", Arrays.asList("season"), Core.CUR_SEASON.get())).submit().thenAccept(m -> alrhDB.setSeasonMsg(Pair.of(Core.CUR_SEASON.get(), m.getIdLong()))));
 			cfs.addAll(dtos.stream().map(dto -> handleDTONew(tc, dto, false)).collect(Collectors.toList()));

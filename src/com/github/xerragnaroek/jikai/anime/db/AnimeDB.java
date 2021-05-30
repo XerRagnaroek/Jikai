@@ -53,6 +53,16 @@ public class AnimeDB {
 		return aDB.getAnime(title, tt);
 	}
 
+	public static Anime getAnime(String title) {
+		for (TitleLanguage tl : TitleLanguage.values()) {
+			Anime a = getAnime(title, tl);
+			if (a != null) {
+				return a;
+			}
+		}
+		return null;
+	}
+
 	public static void startUpdateThread(boolean errorCheck) {
 		aDB.startUpdateThread(updateRate, errorCheck);
 	}
