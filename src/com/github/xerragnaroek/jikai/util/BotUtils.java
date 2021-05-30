@@ -63,6 +63,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.requests.RestAction;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
 
 public class BotUtils {
@@ -816,14 +817,21 @@ public class BotUtils {
 
 	public static void switchTitleLangRole(JikaiUser ju, TitleLanguage old, TitleLanguage newLang) {
 		if (old != newLang) {
+			log.debug("Swapping roles {}->{}", old, newLang);
 			Core.JDA.getMutualGuilds(ju.getUser()).stream().filter(Core.JM::hasManagerFor).forEach(g -> {
-				Role oldR = g.getRolesByName(old.name().toLowerCase(), false).get(0);
-				Role newR = g.getRolesByName(newLang.name().toLowerCase(), false).get(0);
-				g.removeRoleFromMember(ju.getId(), oldR).and(g.addRoleToMember(ju.getId(), newR)).mapToResult().submit().thenAccept(r -> {
+				Role newR = g.getRolesByName(newLang.toString().toLowerCase(), false).get(0);
+				RestAction<Void> ra = g.addRoleToMember(ju.getId(), newR);
+				if (old != null) {
+					List<Role> roles = g.getRolesByName(old.toString().toLowerCase(), false);
+					if (!roles.isEmpty()) {
+						ra = ra.and(g.removeRoleFromMember(ju.getId(), roles.get(0)));
+					}
+				}
+				ra.mapToResult().submit().thenAccept(r -> {
 					if (r.isFailure()) {
 						log.error("Failed swapping roles! guild={};user={}", g.getId(), ju.getId(), r.getFailure());
 					} else {
-						log.debug("Swapped roles {}->{} for user {} on guild {}", oldR.getName(), newR.getName(), ju.getId(), g.getId());
+						log.debug("Swapped roles {}->{} for user {} on guild {}", old, newR.getName(), ju.getId(), g.getId());
 					}
 				});
 			});
