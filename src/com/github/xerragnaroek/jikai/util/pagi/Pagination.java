@@ -97,6 +97,9 @@ public abstract class Pagination extends ListenerAdapter {
 	public void editStage(int stage, MessageEmbed edit) {
 		PaginationStage ps = stages.get(stage);
 		stages.set(stage, new PaginationStage(edit, ps.reactionCodePoints(), ps.reactionAddHandler(), ps.reactionRemHandler(), ps.externalAdvance(), ps.externalRetreat(), ps.onStageChange()));
+		if (stage == getCurrentStageInt()) {
+			editCurrentMessage(edit);
+		}
 	}
 
 	abstract CompletableFuture<?> doStageImpl();
