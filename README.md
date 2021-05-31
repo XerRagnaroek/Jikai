@@ -2,6 +2,8 @@
 Jikai is a discord bot made using [JDA](https://github.com/DV8FromTheWorld/JDA) and parsing all its anime data from [AniList](https://anilist.co/) (*not affiliated in any way!*).
 Its main purpose is to allow users to subscribe to currently airing anime and be notified when a new episode releases or anything changes.
 
+Join [here!](https://discord.gg/Q42Aesn)
+
 ## Features
 ### Centralised lists for the three title languages
 You can change you subscriptions here, simply by reacting with the respective emoji!

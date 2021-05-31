@@ -41,7 +41,7 @@ public class CustomTitleCommand implements JUCommand {
 				List<String> strings = new ArrayList<>(ju.customAnimeTitlesProperty().size());
 				ju.customAnimeTitlesProperty().forEach((id, title) -> {
 					Anime a = AnimeDB.getAnime(id);
-					strings.add(String.format("[%s](%s)->%s", a.getTitle(ju.getTitleLanguage()), a.getAniUrl(), title));
+					strings.add(String.format("**[%s](%s)**->**%s**", a.getTitle(ju.getTitleLanguage()), a.getAniUrl(), title));
 				});
 				eb.setDescription(BotUtils.padEquallyAndJoin("->", "\n", null, strings.toArray(new String[strings.size()])));
 				ju.sendPM(eb.build());
