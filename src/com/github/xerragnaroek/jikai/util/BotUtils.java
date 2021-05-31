@@ -63,6 +63,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.requests.RestAction;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
 
 public class BotUtils {
@@ -457,17 +458,40 @@ public class BotUtils {
 		log.debug("Deleting all messages in channel {}", tc.getName());
 		AtomicInteger count = new AtomicInteger(0);
 		long start = System.currentTimeMillis();
-		List<CompletableFuture<?>> cfs = new ArrayList<>();
-		tc.getIterableHistory().forEach(m -> {
-			cfs.add(m.delete().submit().thenAccept(v -> {
-				count.incrementAndGet();
-			}));
-		});
-		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).whenComplete((v, t) -> {
+		/*
+		 * List<CompletableFuture<?>> cfs = new ArrayList<>();
+		 * tc.getIterableHistory().forEach(m -> {
+		 * cfs.add(m.delete().submit().thenAccept(v -> {
+		 * count.incrementAndGet();
+		 * }));
+		 * });
+		 * return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).whenComplete((v,
+		 * t) -> {
+		 * if (t == null) {
+		 * log.debug("Successfully deleted " + count.get() + " messages in " +
+		 * formatMillis(System.currentTimeMillis() - start,
+		 * JikaiLocaleManager.getInstance().getLocale("en")));
+		 * } else {
+		 * Core.logThrowable(t);
+		 * }
+		 * });
+		 */
+		return clearImpl(tc, count).whenComplete((v, t) -> {
 			if (t == null) {
 				log.debug("Successfully deleted " + count.get() + " messages in " + formatMillis(System.currentTimeMillis() - start, JikaiLocaleManager.getInstance().getLocale("en")));
 			} else {
 				Core.logThrowable(t);
+			}
+		});
+	}
+
+	private static CompletableFuture<Void> clearImpl(TextChannel tc, AtomicInteger count) {
+		return tc.getHistoryFromBeginning(100).submit().thenAccept(mh -> {
+			if (!mh.isEmpty()) {
+				List<CompletableFuture<Void>> cfs = tc.purgeMessages(mh.getRetrievedHistory());
+				CompletableFuture.allOf(cfs.toArray(new CompletableFuture<?>[cfs.size()])).join();
+				count.addAndGet(mh.size());
+				clearImpl(tc, count).join();
 			}
 		});
 	}
@@ -663,7 +687,6 @@ public class BotUtils {
 		List<EmbedBuilder> ebs = new ArrayList<>();
 		EmbedBuilder eb = BotUtils.embedBuilder();
 		int cCount = 0;
-		String desc = "";
 		if (strings == null || strings.isEmpty()) {
 			return Collections.emptyList();
 		}
@@ -683,7 +706,6 @@ public class BotUtils {
 				ebs.add(eb);
 				eb = BotUtils.embedBuilder();
 				cCount = 0;
-				desc = "";
 			}
 		}
 		if (ebs.isEmpty()) {
@@ -748,7 +770,7 @@ public class BotUtils {
 	public static Queue<MessageEmbed> createWeeklySchedule(JikaiUser ju, AnimeTable at) {
 		JikaiLocale loc = ju.getLocale();
 		StringBuilder bob = new StringBuilder();
-		at.toFormatedWeekString(ju.getTitleLanguage(), true, loc.getLocale()).values().forEach(s -> bob.append("\n" + s));
+		at.toFormatedWeekString(ju.getTitleLanguage(), true, loc.getLocale(), ju).values().forEach(s -> bob.append("\n" + s));
 		MessageBuilder mb = new MessageBuilder();
 		mb.setContent(bob.toString());
 		Queue<MessageEmbed> q = new LinkedList<>();
@@ -795,17 +817,25 @@ public class BotUtils {
 
 	public static void switchTitleLangRole(JikaiUser ju, TitleLanguage old, TitleLanguage newLang) {
 		if (old != newLang) {
+			log.debug("Swapping roles {}->{}", old, newLang);
 			Core.JDA.getMutualGuilds(ju.getUser()).stream().filter(Core.JM::hasManagerFor).forEach(g -> {
-				Role oldR = g.getRolesByName(old.name().toLowerCase(), false).get(0);
-				Role newR = g.getRolesByName(newLang.name().toLowerCase(), false).get(0);
-				g.removeRoleFromMember(ju.getId(), oldR).and(g.addRoleToMember(ju.getId(), newR)).mapToResult().submit().thenAccept(r -> {
+				Role newR = g.getRolesByName(newLang.toString().toLowerCase(), false).get(0);
+				RestAction<Void> ra = g.addRoleToMember(ju.getId(), newR);
+				if (old != null) {
+					List<Role> roles = g.getRolesByName(old.toString().toLowerCase(), false);
+					if (!roles.isEmpty()) {
+						ra = ra.and(g.removeRoleFromMember(ju.getId(), roles.get(0)));
+					}
+				}
+				ra.mapToResult().submit().thenAccept(r -> {
 					if (r.isFailure()) {
 						log.error("Failed swapping roles! guild={};user={}", g.getId(), ju.getId(), r.getFailure());
 					} else {
-						log.debug("Swapped roles {}->{} for user {} on guild {}", oldR.getName(), newR.getName(), ju.getId(), g.getId());
+						log.debug("Swapped roles {}->{} for user {} on guild {}", old, newR.getName(), ju.getId(), g.getId());
 					}
 				});
 			});
 		}
 	}
+
 }

@@ -113,7 +113,8 @@ public class EpisodeTracker {
 			List<List<String>> chunked = new ArrayList<>(BotUtils.partitionCollection(eps, 25));
 			for (int i = 0; i < chunked.size(); i++) {
 				EmbedBuilder eb = BotUtils.embedBuilder();
-				eb.setTitle("**" + p.getLeft().getTitle(ju.getTitleLanguage()) + (chunked.size() == 1 ? "" : " [" + (i + 1) + "/" + chunked.size() + "]") + "**", p.getLeft().getAniUrl());
+				Anime a = p.getLeft();
+				eb.setTitle("**" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + (chunked.size() == 1 ? "" : " [" + (i + 1) + "/" + chunked.size() + "]") + "**", p.getLeft().getAniUrl());
 				eb.setThumbnail(p.getLeft().getBiggestAvailableCoverImage());
 				chunked.get(i).forEach(s -> eb.addField("", s, true));
 				ebs.add(eb);

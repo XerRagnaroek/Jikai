@@ -86,12 +86,13 @@ public class SubscriptionSet extends TreeSet<Integer> {
 		/*
 		 * StringBuilder bob = new StringBuilder();
 		 * bob.append("```asciidoc\n");
-		 * stream().map(AnimeDB::getAnime).map(a -> "- " + a.getTitle(ju.getTitleLanguage()) +
+		 * stream().map(AnimeDB::getAnime).map(a -> "- " +
+		 * (ju.hasCustomName(a.getId())?ju.getCustomName(a.getId()): a.getTitle(ju.getTitleLanguage())) +
 		 * "\n").sorted().forEach(bob::append);
 		 * bob.append("```");
 		 */
 
-		return stream().map(AnimeDB::getAnime).map(a -> "[**" + a.getTitle(ju.getTitleLanguage()) + "**](" + a.getAniUrl() + ")\n").sorted().collect(Collectors.toList());
+		return stream().map(AnimeDB::getAnime).map(a -> "[**" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "**](" + a.getAniUrl() + ")\n").sorted().collect(Collectors.toList());
 
 	}
 }

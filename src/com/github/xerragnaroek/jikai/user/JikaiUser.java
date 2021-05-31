@@ -17,6 +17,8 @@ import org.slf4j.MDC;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.github.xerragnaroek.jasa.Anime;
@@ -28,6 +30,7 @@ import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.BooleanProperty;
 import com.github.xerragnaroek.jikai.util.prop.IntegerProperty;
+import com.github.xerragnaroek.jikai.util.prop.MapProperty;
 import com.github.xerragnaroek.jikai.util.prop.Property;
 import com.github.xerragnaroek.jikai.util.prop.SetProperty;
 
@@ -37,6 +40,7 @@ import net.dv8tion.jda.api.entities.User;
 
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
 @JsonPropertyOrder({ "id" })
+@JsonInclude(Include.NON_EMPTY)
 public class JikaiUser {
 
 	private long id;
@@ -49,6 +53,8 @@ public class JikaiUser {
 	private SetProperty<Integer> notifBeforeRelease = new SetProperty<>();
 	// set of users that are linked to this user
 	private SetProperty<Long> linkedUsers = new SetProperty<>();
+	private MapProperty<Integer, String> customTitles = new MapProperty<>();
+	private SetProperty<Integer> hiddenAnime = new SetProperty<>();
 
 	// set of users this user is linked to
 	@JsonIgnore
@@ -82,6 +88,10 @@ public class JikaiUser {
 		locale.onChange((o, n) -> log("change locale: {}", n));
 		aniId.onChange((o, n) -> log("change aniId: {}", n));
 		titleLanguage.onChange((o, n) -> log("change titleLang: {}", n));
+		hiddenAnime.onAdd(id -> log("added hidden anime: {}", id));
+		hiddenAnime.onRemove(id -> log("removed hidden anime: {}", id));
+		customTitles.onPut((id, s) -> log("added custom title: {} = {}", id, s));
+		customTitles.onRemove((id, s) -> log("removed custom title: {} = {}", id, s));
 	}
 
 	@JsonIgnore
@@ -207,6 +217,8 @@ public class JikaiUser {
 	}
 
 	public boolean unsubscribeAnime(Anime a, String cause) {
+		unhideAnimeFromLists(a.getId());
+		removeCustomTitle(a.getId());
 		return subscribedAnime.remove(a.getId(), cause);
 	}
 
@@ -326,8 +338,12 @@ public class JikaiUser {
 	 * Basically subscribing to a user. Needed for internal tracking of what users this one is linked
 	 * to.
 	 */
-	public void linkToUser(long id) {
-		linkedToUsers.add(id);
+	public boolean linkToUser(long id) {
+		return linkedToUsers.add(id);
+	}
+
+	public boolean isLinkedToUser(long id) {
+		return linkedToUsers.contains(id);
 	}
 
 	public boolean unlinkUser(JikaiUser ju) {
@@ -339,12 +355,16 @@ public class JikaiUser {
 		return linkedUsers.remove(id);
 	}
 
-	public void unlinkFromUser(long id) {
-		linkedToUsers.remove(id);
+	public boolean unlinkFromUser(long id) {
+		return linkedToUsers.remove(id);
 	}
 
 	public Set<Long> getLinkedUsers() {
 		return linkedUsers.get();
+	}
+
+	public Set<Long> getLinkedToUsers() {
+		return linkedToUsers;
 	}
 
 	private boolean stepImpl(String input, boolean add) {
@@ -402,6 +422,42 @@ public class JikaiUser {
 
 	public boolean addReleaseSteps(String input) throws IllegalArgumentException {
 		return stepImpl(input, true);
+	}
+
+	public String addCustomTitle(int aniId, String title) {
+		return customTitles.put(aniId, title);
+	}
+
+	public String removeCustomTitle(int aniId) {
+		return customTitles.remove(aniId);
+	}
+
+	public String getCustomTitle(int aniId) {
+		return customTitles.get(aniId);
+	}
+
+	public boolean hasCustomTitle(int aniId) {
+		return customTitles.containsKey(aniId);
+	}
+
+	public MapProperty<Integer, String> customAnimeTitlesProperty() {
+		return customTitles;
+	}
+
+	public boolean hideAnimeFromLists(int id) {
+		return hiddenAnime.add(id);
+	}
+
+	public boolean unhideAnimeFromLists(int id) {
+		return hiddenAnime.remove(id);
+	}
+
+	public boolean isHiddenAnime(int aniId) {
+		return hiddenAnime.contains(aniId);
+	}
+
+	public SetProperty<Integer> hiddenAnimeProperty() {
+		return hiddenAnime;
 	}
 
 	public String getConfigFormatted() {
@@ -485,5 +541,7 @@ public class JikaiUser {
 		ju.notifBeforeRelease.forEach(this::addPreReleaseNotificaionStep);
 		linkedUsers.addAll(ju.linkedUsers);
 		ju.subscribedAnime.stream().filter(AnimeDB::hasAnime).forEach(id -> subscribeAnime(id, "Copy"));
+		customTitles.putAll(ju.customTitles);
+		hiddenAnime.addAll(ju.hiddenAnime);
 	}
 }

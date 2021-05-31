@@ -113,7 +113,7 @@ public class PrivateList extends ListenerAdapter {
 	private EmbedBuilder buildEmbed(Map<String, Anime> m) {
 		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		StringBuilder bob = new StringBuilder();
-		m.forEach((s, a) -> bob.append(String.format("%s: %s: [**%s**](%s)\n", BotUtils.processUnicode(s), ju.isSubscribedTo(a) ? subbed : notSubbed, a.getTitle(ju.getTitleLanguage()), a.getAniUrl())));
+		m.forEach((s, a) -> bob.append(String.format("%s: %s: [**%s**](%s)\n", BotUtils.processUnicode(s), ju.isSubscribedTo(a) ? subbed : notSubbed, (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())), a.getAniUrl())));
 		eb.setDescription(bob);
 		if (listThumb != null && !listThumb.isBlank()) {
 			eb.setThumbnail(listThumb);
@@ -201,7 +201,7 @@ public class PrivateList extends ListenerAdapter {
 		if (a != null) {
 			MessageEmbed me = m.getEmbeds().get(0);
 			EmbedBuilder eb = new EmbedBuilder(me);
-			eb.setDescription(me.getDescription().replace(String.format("%s: [**%s**]", subscribed ? notSubbed : subbed, a.getTitle(ju.getTitleLanguage())), String.format("%s: [**%s**]", subscribed ? subbed : notSubbed, a.getTitle(ju.getTitleLanguage()))));
+			eb.setDescription(me.getDescription().replace(String.format("%s: [**%s**]", subscribed ? notSubbed : subbed, (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()))), String.format("%s: [**%s**]", subscribed ? subbed : notSubbed, (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())))));
 			m.editMessage(eb.build()).submit();
 		}
 
