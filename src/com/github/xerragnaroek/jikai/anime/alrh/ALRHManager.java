@@ -120,10 +120,10 @@ public class ALRHManager {
 				titles = String.format("**[%s](%s)**\n", titles, a.getAniUrl());
 				eb.appendDescription(titles);
 				if (a.isFinished()) {
-					eb.appendDescription(loc.getString("g_eb_rem_anime_desc_finished"));
+					eb.appendDescription("\n" + loc.getString("g_eb_rem_anime_desc_finished"));
 				} else {
 					log.debug("{} has been removed but isn't finished. NextEpNum={},Episodes={}", a.getTitleRomaji(), a.getNextEpisodeNumber(), a.getEpisodes());
-					eb.setDescription(loc.getString("g_eb_rem_anime_desc_unknown"));
+					eb.appendDescription("\n" + loc.getString("g_eb_rem_anime_desc_unknown"));
 				}
 				BotUtils.sendToAllAnimeChannels(eb.build());
 			} catch (Exception e) {

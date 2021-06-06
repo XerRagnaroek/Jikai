@@ -158,7 +158,7 @@
 	"g_setup_tz_title": "Please your server's timezone!",
 	"ju_anime_finished": "%num% of your subscribed anime finished airing!",
 	"ju_bug": "Thank you for reporting a bug! Your bug is #%bugN%.",
-	"ju_config": "```asciidoc\nLanguage :: %lang%\nTime zone :: %zone%\nSend daily overview :: %daily%\nNotified on release :: %release%\nSend next ep message :: %nextEpMsg%\nRecieve weekly schedule :: %schedule%\nTitle language :: %title%\nNotify steps (in minutes):: %steps%\nLinked AniList account :: %aniId%\nLinked users :: %users%\n```",
+	"ju_config": "```asciidoc\nLanguage :: %lang%\nTime zone :: %zone%\nSend daily overview :: %daily%\nNotified on release :: %release%\nSend next ep message :: %nextEpMsg%\nRecieve weekly schedule :: %schedule%\nTitle language :: %title%\nNotify steps (in minutes):: %steps%\nLinked AniList account :: %aniId%\nLinked users :: %users%\nSubscribed anime :: %anime%\nHidden anime :: %hiddenAnime%\nCustom titles :: %customT%\n```",
 	"ju_config_sep": "::",
 	"ju_daily_ov_false": "You won't recieve the daily overview.",
 	"ju_daily_ov_true": "You will recieve a daily overview of all your subscribed anime releasing on that day!",

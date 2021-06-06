@@ -474,7 +474,7 @@ public class JikaiUser {
 		String aniId = (aniId = this.aniId.toString()).equals("0") ? "/" : aniId;
 		String users = linkedToUsers.stream().map(juId -> JikaiUserManager.getInstance().getUser(juId)).map(ju -> ju.getUser().getName()).sorted().collect(Collectors.joining(", "));
 		users = users.isEmpty() ? "/" : users;
-		return loc.getStringFormatted("ju_config", Arrays.asList("lang", "zone", "daily", "nextEpMsg", "release", "schedule", "title", "steps", "aniId", "users"), loc.getString("u_lang_name"), zone, daily, nextEpMsg, release, schedule, title, steps, aniId, users);
+		return loc.getStringFormatted("ju_config", Arrays.asList("lang", "zone", "daily", "nextEpMsg", "release", "schedule", "title", "steps", "aniId", "users", "anime", "hiddenAnime", "customT"), loc.getString("u_lang_name"), zone, daily, nextEpMsg, release, schedule, title, steps, aniId, users, subscribedAnime.size(), hiddenAnime.size(), customTitles.size());
 	}
 
 	public IntegerProperty aniIdProperty() {
