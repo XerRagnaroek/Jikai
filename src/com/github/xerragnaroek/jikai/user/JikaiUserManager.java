@@ -111,7 +111,7 @@ public class JikaiUserManager {
 	}
 
 	public void handleSubscriptions(JikaiUser ju) {
-		ju.getSubscribedAnime().onAdd((id, cause) -> {
+		ju.getSubscribedAnime().onAdd((id, cause, linked) -> {
 			subscriptionMap.compute(id, (t, s) -> {
 				if (s == null) {
 					s = Collections.synchronizedSet(new HashSet<>());

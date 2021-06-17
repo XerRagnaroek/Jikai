@@ -74,10 +74,11 @@ public class JikaiUser {
 		log = LoggerFactory.getLogger(JikaiUser.class + "#" + id);
 	}
 
+	@SuppressWarnings("unused")
 	private JikaiUser() {}
 
 	void init() {
-		subscribedAnime.onAdd((aid, str) -> log("subscribed to {}, cause: {}", aid, str));
+		subscribedAnime.onAdd((aid, str, linked) -> log("subscribed to {}, cause: {}, linked: {}", aid, str, linked));
 		subscribedAnime.onRemove((aid, str) -> log("unsubscribed from {}, cause: {}", aid, str));
 		notifBeforeRelease.onAdd(l -> log("added step {}", l));
 		notifBeforeRelease.onRemove(l -> log("removed step {}", l));
@@ -190,7 +191,7 @@ public class JikaiUser {
 	}
 
 	public boolean subscribeAnime(int id, String cause) {
-		boolean subbed = subscribedAnime.add(id, cause);
+		boolean subbed = subscribedAnime.add(id, cause, false);
 		for (long uid : linkedUsers) {
 			JikaiUser ju = JikaiUserManager.getInstance().getUser(uid);
 			if (ju == null) {
@@ -205,7 +206,7 @@ public class JikaiUser {
 	}
 
 	private void subscribeLinked(int id, String cause) {
-		subscribedAnime.add(id, cause);
+		subscribedAnime.add(id, cause, true);
 	}
 
 	public SubscriptionSet getSubscribedAnime() {

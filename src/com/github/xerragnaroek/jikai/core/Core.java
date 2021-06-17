@@ -53,6 +53,7 @@ public class Core {
 	public static final Property<String> CUR_SEASON = new Property<>();
 	public static BooleanProperty INITIAL_LOAD = new BooleanProperty(true);
 	public static final JikaiManager JM = new JikaiManager();
+	public static boolean IGNORE_LIST = false;
 
 	public static void main(String[] args) throws LoginException, InterruptedException, ExecutionException, ClassNotFoundException, IOException {
 		Instant start = Instant.now();
@@ -60,7 +61,7 @@ public class Core {
 		long mem = Runtime.getRuntime().freeMemory();
 		handleArgs(args);
 		JDABuilder builder = JDABuilder.create(token, GatewayIntent.DIRECT_MESSAGES, GatewayIntent.DIRECT_MESSAGE_REACTIONS, GatewayIntent.GUILD_MESSAGE_REACTIONS, GatewayIntent.GUILD_MESSAGES, GatewayIntent.GUILD_MEMBERS);
-		builder.disableCache(Arrays.asList(CacheFlag.ACTIVITY, CacheFlag.VOICE_STATE, CacheFlag.EMOTE));
+		builder.disableCache(Arrays.asList(CacheFlag.VOICE_STATE, CacheFlag.EMOTE));
 		builder.setEventPool(EXEC, true);
 		builder.addEventListeners(new JikaiEventListener());
 		JDA = builder.build();
@@ -137,6 +138,10 @@ public class Core {
 				case "-link_request_duration":
 					linkRequestDuration = Long.parseLong(it.next());
 					log.info("Set link_request_duration to {}", linkRequestDuration);
+					break;
+				case "-ignore_list":
+					IGNORE_LIST = true;
+					log.info("Ignoring list for now");
 					break;
 				default:
 					ERROR_LOG.error("Unrecognized option '" + arg + "'");

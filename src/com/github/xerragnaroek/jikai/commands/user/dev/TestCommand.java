@@ -4,9 +4,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.commands.user.JUCommand;
-import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
-import com.github.xerragnaroek.jikai.user.JikaiUserSetup;
+
+import net.dv8tion.jda.api.MessageBuilder;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.Button;
 
 /**
  * 
@@ -27,18 +29,10 @@ public class TestCommand implements JUCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		// new JikaiUserSetupRewritten(ju, Core.JM.getAny()).startSetup();
-		/*
-		 * Pagination page = new PrivatePagination();
-		 * for (int c = 0; c < 5; c++) {
-		 * page.addStage(BotUtils.makeSimpleEmbed("Stage " + (c + 1)), Arrays.asList("U+1f1f9", "U+1f1ea",
-		 * "U+1f1f8", "U+1f1e9", "U+3" + c + "U+fe0fU+20e3"), i -> log.debug("added {}", i), i ->
-		 * log.debug("removed {}", i));
-		 * }
-		 * page.send(ju.getUser().openPrivateChannel().complete());
-		 */
-		JikaiUserSetup.runSetup(ju, Core.JM.getAny());
-
+		MessageBuilder mb = new MessageBuilder();
+		mb.append("Boop");
+		mb.setActionRows(ActionRow.of(Button.link("https://www.pornhub.com/", "Epic webzone")));
+		ju.sendPM(mb.build());
 	}
 
 	@Override

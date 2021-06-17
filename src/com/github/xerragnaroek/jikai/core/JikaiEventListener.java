@@ -6,6 +6,7 @@ import static com.github.xerragnaroek.jikai.core.Core.JM;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.commands.user.JUCommandHandler;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiSetup;
@@ -20,6 +21,7 @@ import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
+import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionRemoveAllEvent;
@@ -136,5 +138,23 @@ public class JikaiEventListener extends ListenerAdapter {
 	public void onReconnected(ReconnectedEvent event) {
 		log.debug("Reconnected!");
 		JikaiUserManager.getInstance().cachePrivateChannels();
+	}
+
+	@Override
+	public void onButtonClick(ButtonClickEvent event) {
+		JikaiUserManager jum = JikaiUserManager.getInstance();
+		String[] split = event.getButton().getId().split(":");
+		switch (split[0]) {
+			case "unsub" -> {
+				if (jum.isKnownJikaiUser(event.getUser().getIdLong())) {
+					JikaiUser ju = jum.getUser(event.getUser().getIdLong());
+					int id = Integer.parseInt(split[1]);
+					if (AnimeDB.hasAnime(id)) {
+						ju.unsubscribeAnime(id, ju.getLocale().getString("ju_unsub_btn_click"));
+					}
+					event.editButton(event.getButton().asDisabled()).queue();
+				}
+			}
+		}
 	}
 }

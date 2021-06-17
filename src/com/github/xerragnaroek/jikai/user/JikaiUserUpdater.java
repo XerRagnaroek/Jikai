@@ -46,6 +46,8 @@ import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.MessageBuilder.SplitPolicy;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.Button;
 
 public class JikaiUserUpdater {
 	private Map<Integer, Map<Integer, Set<JikaiUser>>> stepMap = new ConcurrentHashMap<>();
@@ -79,16 +81,16 @@ public class JikaiUserUpdater {
 	}
 
 	private void subAdd(JikaiUser ju) {
-		ju.getSubscribedAnime().onAdd((id, cause) -> {
+		ju.getSubscribedAnime().onAdd((id, cause, linked) -> {
 			MDC.put("id", String.valueOf(ju.getId()));
 			log.debug("subscribed to {}", id);
 			Anime a = AnimeDB.getAnime(id);
-			MessageEmbed me = BotUtils.makeSimpleEmbed("If you get this message, please report it as a bug!");
+			Message me;
 			if (a.hasDataForNextEpisode()) {
 				animeAddImpl(a, id, ju);
-				me = subAddMsg(a, ju, cause);
+				me = subAddMsg(a, ju, cause, linked);
 			} else {
-				me = subAddNoDataMsg(a, ju, cause);
+				me = subAddNoDataMsg(a, ju, cause, linked);
 			}
 			if (!Core.INITIAL_LOAD.get()) {
 				ju.sendPM(me);
@@ -97,23 +99,31 @@ public class JikaiUserUpdater {
 		});
 	}
 
-	private MessageEmbed subAddMsg(Anime a, JikaiUser ju, String cause) {
+	private Message subAddMsg(Anime a, JikaiUser ju, String cause, boolean linked) {
 		JikaiLocale loc = ju.getLocale();
 		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		eb.setTitle(loc.getString("ju_eb_sub_add_title"));
 		long seconds = Duration.between(LocalDateTime.now(ju.getTimeZone()), a.getNextEpisodeDateTime(ju.getTimeZone()).get()).toSeconds();
 		eb.setDescription(loc.getStringFormatted("ju_eb_sub_add_desc", Arrays.asList("title", "time", "cause"), "[" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "](" + a.getAniUrl() + ")", BotUtils.formatSeconds(seconds, loc), cause));
-		return eb.build();
+		MessageBuilder mb = new MessageBuilder(eb);
+		if (linked) {
+			mb.setActionRows(ActionRow.of(Button.danger("unsub:" + a.getId(), loc.getString("ju_unsub_btn"))));
+		}
+		return mb.build();
 	}
 
-	private MessageEmbed subAddNoDataMsg(Anime a, JikaiUser ju, String cause) {
+	private Message subAddNoDataMsg(Anime a, JikaiUser ju, String cause, boolean linked) {
 		JikaiLocale loc = ju.getLocale();
 		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		eb.setTitle(loc.getString("ju_eb_sub_add_title"));
 		eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		eb.setDescription(loc.getStringFormatted("ju_eb_sub_add_no_data_desc", Arrays.asList("title", "cause"), "[" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "](" + a.getAniUrl() + ")", cause));
-		return eb.build();
+		MessageBuilder mb = new MessageBuilder(eb);
+		if (linked) {
+			mb.setActionRows(ActionRow.of(Button.danger("unsub:" + a.getId(), loc.getString("ju_unsub_btn"))));
+		}
+		return mb.build();
 	}
 
 	private MessageEmbed subRemMsg(Anime a, JikaiUser ju, String cause) {

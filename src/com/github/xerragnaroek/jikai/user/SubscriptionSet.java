@@ -11,11 +11,12 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.github.xerragnaroek.jikai.util.TriConsumer;
 
 @SuppressWarnings("serial")
 public class SubscriptionSet extends TreeSet<Integer> {
 	@JsonIgnore
-	private Set<BiConsumer<Integer, String>> onAdd = new HashSet<>();
+	private Set<TriConsumer<Integer, String, Boolean>> onAdd = new HashSet<>();
 	@JsonIgnore
 	private Set<BiConsumer<Integer, String>> onRem = new HashSet<>();
 
@@ -28,15 +29,15 @@ public class SubscriptionSet extends TreeSet<Integer> {
 	@Override
 	public boolean add(Integer id) {
 		if (super.add(id)) {
-			runCons(onAdd, id, "No cause");
+			runAddCons(id, "No cause", false);
 			return true;
 		}
 		return false;
 	}
 
-	public boolean add(int id, String cause) {
+	public boolean add(int id, String cause, boolean linked) {
 		if (super.add(id)) {
-			runCons(onAdd, id, cause);
+			runAddCons(id, cause, linked);
 			return true;
 		}
 		return false;
@@ -45,7 +46,7 @@ public class SubscriptionSet extends TreeSet<Integer> {
 	@Override
 	public boolean remove(Object o) {
 		if (super.remove(o)) {
-			runCons(onRem, (Integer) o, "No cause");
+			runRemCons((Integer) o, "No cause");
 			return true;
 		}
 		return false;
@@ -53,18 +54,22 @@ public class SubscriptionSet extends TreeSet<Integer> {
 
 	public boolean remove(int id, String cause) {
 		if (super.remove(id)) {
-			runCons(onRem, id, cause);
+			runRemCons(id, cause);
 			return true;
 		}
 		return false;
 	}
 
-	private void runCons(Set<BiConsumer<Integer, String>> cons, int i, String cause) {
-		cons.forEach(con -> con.accept(i, cause));
+	private void runAddCons(int i, String cause, boolean linked) {
+		onAdd.forEach(c -> c.accept(i, cause, linked));
 	}
 
-	public void onAdd(BiConsumer<Integer, String> idCauseCon) {
-		onAdd.add(idCauseCon);
+	private void runRemCons(int i, String cause) {
+		onRem.forEach(c -> c.accept(i, cause));
+	}
+
+	public void onAdd(TriConsumer<Integer, String, Boolean> idCauseLinkedCon) {
+		onAdd.add(idCauseLinkedCon);
 	}
 
 	public void onRemove(BiConsumer<Integer, String> idCauseCon) {

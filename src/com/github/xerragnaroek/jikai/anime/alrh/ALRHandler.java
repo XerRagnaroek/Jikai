@@ -156,15 +156,17 @@ public class ALRHandler implements Initilizable {
 		log.debug("Initializing...");
 		// jData.animeChannelIdProperty().bindAndSet(tcId);
 		jData.listChannelIdProperty().bindAndSet(tcId);
-		if (alrhDB.getData().size() != AnimeDB.size()) {
-			log.debug("Saved ALRHData doesn't fit loaded anime");
-			sendList();
-		} else {
-			if (!checkIfListValid()) {
-				log.debug("List is invalid, resending it!");
-				BotUtils.clearChannel(Core.JDA.getGuildById(gId).getTextChannelById(tcId.get()));
-				alrhDB.clearData();
+		if (!Core.IGNORE_LIST) {
+			if (alrhDB.getData().size() != AnimeDB.size()) {
+				log.debug("Saved ALRHData doesn't fit loaded anime");
 				sendList();
+			} else {
+				if (!checkIfListValid()) {
+					log.debug("List is invalid, resending it!");
+					BotUtils.clearChannel(Core.JDA.getGuildById(gId).getTextChannelById(tcId.get()));
+					alrhDB.clearData();
+					sendList();
+				}
 			}
 		}
 		initialized.set(true);
