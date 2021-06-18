@@ -81,19 +81,23 @@ public class JikaiUserUpdater {
 	}
 
 	private void subAdd(JikaiUser ju) {
-		ju.getSubscribedAnime().onAdd((id, cause, linked) -> {
+		ju.getSubscribedAnime().onAdd(sa -> {
 			MDC.put("id", String.valueOf(ju.getId()));
-			log.debug("subscribed to {}", id);
-			Anime a = AnimeDB.getAnime(id);
+			log.debug("subscribed to {}", sa.id());
+			Anime a = AnimeDB.getAnime(sa.id());
 			Message me;
 			if (a.hasDataForNextEpisode()) {
-				animeAddImpl(a, id, ju);
-				me = subAddMsg(a, ju, cause, linked);
-			} else {
-				me = subAddNoDataMsg(a, ju, cause, linked);
+				animeAddImpl(a, sa.id(), ju);
 			}
-			if (!Core.INITIAL_LOAD.get()) {
-				ju.sendPM(me);
+			if (!sa.silent()) {
+				if (a.hasDataForNextEpisode()) {
+					me = subAddMsg(a, ju, sa.cause(), sa.linked());
+				} else {
+					me = subAddNoDataMsg(a, ju, sa.cause(), sa.linked());
+				}
+				if (!Core.INITIAL_LOAD.get()) {
+					ju.sendPM(me);
+				}
 			}
 			MDC.remove("id");
 		});
@@ -180,18 +184,18 @@ public class JikaiUserUpdater {
 	}
 
 	private void subRem(JikaiUser ju) {
-		ju.getSubscribedAnime().onRemove((id, cause) -> {
-			if (stepMap.containsKey(id)) {
-				stepMap.compute(id, (idA, map) -> {
+		ju.getSubscribedAnime().onRemove(sr -> {
+			if (stepMap.containsKey(sr.id())) {
+				stepMap.compute(sr.id(), (idA, map) -> {
 					ju.getPreReleaseNotifcationSteps().forEach(step -> {
-						removeFromStepJUMap(id, step, ju, map);
+						removeFromStepJUMap(sr.id(), step, ju, map);
 					});
-					return handleMapEmpty(map, id);
+					return handleMapEmpty(map, sr.id());
 				});
 			}
 			Anime a;
-			if ((a = AnimeDB.getAnime(id)) != null) {
-				ju.sendPM(subRemMsg(a, ju, cause));
+			if ((a = AnimeDB.getAnime(sr.id())) != null && !sr.silent()) {
+				ju.sendPM(subRemMsg(a, ju, sr.cause()));
 			}
 		});
 

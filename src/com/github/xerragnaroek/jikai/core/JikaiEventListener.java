@@ -150,9 +150,9 @@ public class JikaiEventListener extends ListenerAdapter {
 					JikaiUser ju = jum.getUser(event.getUser().getIdLong());
 					int id = Integer.parseInt(split[1]);
 					if (AnimeDB.hasAnime(id)) {
-						ju.unsubscribeAnime(id, ju.getLocale().getString("ju_unsub_btn_click"));
+						ju.unsubscribeAnime(id, "Clicked unsub button", true);
 					}
-					event.editButton(event.getButton().asDisabled()).queue();
+					event.editButton(event.getButton().withLabel(ju.getLocale().getString("ju_unsub_btn_click")).asDisabled()).queue();
 				}
 			}
 		}

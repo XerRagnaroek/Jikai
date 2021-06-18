@@ -78,8 +78,8 @@ public class JikaiUser {
 	private JikaiUser() {}
 
 	void init() {
-		subscribedAnime.onAdd((aid, str, linked) -> log("subscribed to {}, cause: {}, linked: {}", aid, str, linked));
-		subscribedAnime.onRemove((aid, str) -> log("unsubscribed from {}, cause: {}", aid, str));
+		subscribedAnime.onAdd((sa) -> log("subscribed to {}, cause: {}, linked: {}, silent: {}", sa.id(), sa.cause(), sa.linked(), sa.silent()));
+		subscribedAnime.onRemove((sr) -> log("unsubscribed from {}, cause: {}, silent: {}", sr.id(), sr.cause(), sr.silent()));
 		notifBeforeRelease.onAdd(l -> log("added step {}", l));
 		notifBeforeRelease.onRemove(l -> log("removed step {}", l));
 		linkedUsers.onAdd(uid -> log("linked user {}", uid));
@@ -191,7 +191,11 @@ public class JikaiUser {
 	}
 
 	public boolean subscribeAnime(int id, String cause) {
-		boolean subbed = subscribedAnime.add(id, cause, false);
+		return subscribeAnime(id, cause, false, false);
+	}
+
+	public boolean subscribeAnime(int id, String cause, boolean linked, boolean silent) {
+		boolean subbed = subscribedAnime.add(id, cause, linked, silent);
 		for (long uid : linkedUsers) {
 			JikaiUser ju = JikaiUserManager.getInstance().getUser(uid);
 			if (ju == null) {
@@ -215,6 +219,10 @@ public class JikaiUser {
 
 	public boolean unsubscribeAnime(int id, String cause) {
 		return subscribedAnime.remove(id, cause);
+	}
+
+	public boolean unsubscribeAnime(int id, String cause, boolean silent) {
+		return subscribedAnime.remove(id, cause, silent);
 	}
 
 	public boolean unsubscribeAnime(Anime a, String cause) {

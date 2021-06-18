@@ -45,9 +45,9 @@ public class EpisodeTracker {
 	private EpisodeTracker(JikaiUser ju) {
 		this.ju = ju;
 		log = LoggerFactory.getLogger(EpisodeTracker.class.getCanonicalName() + "#" + ju.getId());
-		ju.getSubscribedAnime().onRemove((i, s) -> {
-			episodes.remove(i);
-			log.debug("Removed mapping for anime {}", i);
+		ju.getSubscribedAnime().onRemove((sr) -> {
+			episodes.remove(sr.id());
+			log.debug("Removed mapping for anime {}", sr.id());
 		});
 	}
 

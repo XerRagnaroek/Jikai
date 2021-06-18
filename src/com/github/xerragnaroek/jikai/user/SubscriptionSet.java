@@ -6,19 +6,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
-import com.github.xerragnaroek.jikai.util.TriConsumer;
 
 @SuppressWarnings("serial")
 public class SubscriptionSet extends TreeSet<Integer> {
 	@JsonIgnore
-	private Set<TriConsumer<Integer, String, Boolean>> onAdd = new HashSet<>();
+	private Set<Consumer<SubAdd>> onAdd = new HashSet<>();
 	@JsonIgnore
-	private Set<BiConsumer<Integer, String>> onRem = new HashSet<>();
+	private Set<Consumer<SubRem>> onRem = new HashSet<>();
 
 	public SubscriptionSet() {}
 
@@ -29,7 +28,7 @@ public class SubscriptionSet extends TreeSet<Integer> {
 	@Override
 	public boolean add(Integer id) {
 		if (super.add(id)) {
-			runAddCons(id, "No cause", false);
+			runAddCons(id, "No cause", false, false);
 			return true;
 		}
 		return false;
@@ -37,7 +36,15 @@ public class SubscriptionSet extends TreeSet<Integer> {
 
 	public boolean add(int id, String cause, boolean linked) {
 		if (super.add(id)) {
-			runAddCons(id, cause, linked);
+			runAddCons(id, cause, linked, false);
+			return true;
+		}
+		return false;
+	}
+
+	public boolean add(int id, String cause, boolean linked, boolean silent) {
+		if (super.add(id)) {
+			runAddCons(id, cause, linked, silent);
 			return true;
 		}
 		return false;
@@ -46,7 +53,7 @@ public class SubscriptionSet extends TreeSet<Integer> {
 	@Override
 	public boolean remove(Object o) {
 		if (super.remove(o)) {
-			runRemCons((Integer) o, "No cause");
+			runRemCons((Integer) o, "No cause", false);
 			return true;
 		}
 		return false;
@@ -54,26 +61,34 @@ public class SubscriptionSet extends TreeSet<Integer> {
 
 	public boolean remove(int id, String cause) {
 		if (super.remove(id)) {
-			runRemCons(id, cause);
+			runRemCons(id, cause, false);
 			return true;
 		}
 		return false;
 	}
 
-	private void runAddCons(int i, String cause, boolean linked) {
-		onAdd.forEach(c -> c.accept(i, cause, linked));
+	public boolean remove(int id, String cause, boolean silent) {
+		if (super.remove(id)) {
+			runRemCons(id, cause, silent);
+			return true;
+		}
+		return false;
 	}
 
-	private void runRemCons(int i, String cause) {
-		onRem.forEach(c -> c.accept(i, cause));
+	private void runAddCons(int i, String cause, boolean linked, boolean silent) {
+		onAdd.forEach(c -> c.accept(new SubAdd(i, cause, linked, silent)));
 	}
 
-	public void onAdd(TriConsumer<Integer, String, Boolean> idCauseLinkedCon) {
-		onAdd.add(idCauseLinkedCon);
+	private void runRemCons(int i, String cause, boolean silent) {
+		onRem.forEach(c -> c.accept(new SubRem(i, cause, silent)));
 	}
 
-	public void onRemove(BiConsumer<Integer, String> idCauseCon) {
-		onRem.add(idCauseCon);
+	public void onAdd(Consumer<SubAdd> con) {
+		onAdd.add(con);
+	}
+
+	public void onRemove(Consumer<SubRem> con) {
+		onRem.add(con);
 	}
 
 	public int removeInvalidAnime() {
@@ -101,3 +116,7 @@ public class SubscriptionSet extends TreeSet<Integer> {
 
 	}
 }
+
+record SubAdd(int id, String cause, boolean linked, boolean silent) {}
+
+record SubRem(int id, String cause, boolean silent) {}

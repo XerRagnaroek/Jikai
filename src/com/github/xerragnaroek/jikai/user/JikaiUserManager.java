@@ -111,8 +111,8 @@ public class JikaiUserManager {
 	}
 
 	public void handleSubscriptions(JikaiUser ju) {
-		ju.getSubscribedAnime().onAdd((id, cause, linked) -> {
-			subscriptionMap.compute(id, (t, s) -> {
+		ju.getSubscribedAnime().onAdd(sa -> {
+			subscriptionMap.compute(sa.id(), (t, s) -> {
 				if (s == null) {
 					s = Collections.synchronizedSet(new HashSet<>());
 				}
@@ -120,8 +120,8 @@ public class JikaiUserManager {
 				return s;
 			});
 		});
-		ju.getSubscribedAnime().onRemove((id, cause) -> {
-			subscriptionMap.computeIfPresent(id, (t, s) -> {
+		ju.getSubscribedAnime().onRemove(sr -> {
+			subscriptionMap.computeIfPresent(sr.id(), (t, s) -> {
 				s.remove(ju);
 				return s.isEmpty() ? null : s;
 			});
