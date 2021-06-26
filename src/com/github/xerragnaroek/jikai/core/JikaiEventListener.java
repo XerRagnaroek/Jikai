@@ -3,16 +3,20 @@ package com.github.xerragnaroek.jikai.core;
 
 import static com.github.xerragnaroek.jikai.core.Core.JM;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.commands.user.JUCommandHandler;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiSetup;
 import com.github.xerragnaroek.jikai.user.EpisodeTracker;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
+import com.github.xerragnaroek.jikai.util.ButtonInteractor;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.MessageReaction.ReactionEmote;
@@ -32,6 +36,14 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 public class JikaiEventListener extends ListenerAdapter {
 	private final Logger log = LoggerFactory.getLogger(JikaiEventListener.class);
+	private Map<String, ButtonInteractor> btnInteractors = new HashMap<>();
+
+	public void registerButtonInteractor(ButtonInteractor bi) {
+		if (btnInteractors.containsKey(bi.getIdentifier())) {
+			throw new IllegalStateException("This identifier is already in use!");
+		}
+		btnInteractors.put(bi.getIdentifier(), bi);
+	}
 
 	@Override
 	public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
@@ -142,19 +154,9 @@ public class JikaiEventListener extends ListenerAdapter {
 
 	@Override
 	public void onButtonClick(ButtonClickEvent event) {
-		JikaiUserManager jum = JikaiUserManager.getInstance();
 		String[] split = event.getButton().getId().split(":");
-		switch (split[0]) {
-			case "unsub" -> {
-				if (jum.isKnownJikaiUser(event.getUser().getIdLong())) {
-					JikaiUser ju = jum.getUser(event.getUser().getIdLong());
-					int id = Integer.parseInt(split[1]);
-					if (AnimeDB.hasAnime(id)) {
-						ju.unsubscribeAnime(id, "Clicked unsub button", true);
-					}
-					event.editButton(event.getButton().withLabel(ju.getLocale().getString("ju_unsub_btn_click")).asDisabled()).queue();
-				}
-			}
+		if (btnInteractors.containsKey(split[0])) {
+			btnInteractors.get(split[0]).handleButtonClick(ArrayUtils.subarray(split, 1, split.length), event);
 		}
 	}
 }

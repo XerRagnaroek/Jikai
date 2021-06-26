@@ -39,6 +39,7 @@ import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.util.BotUtils;
+import com.github.xerragnaroek.jikai.util.ButtonInteractor;
 import com.github.xerragnaroek.jikai.util.Pair;
 
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -46,10 +47,11 @@ import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.MessageBuilder.SplitPolicy;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
 
-public class JikaiUserUpdater {
+public class JikaiUserUpdater implements ButtonInteractor {
 	private Map<Integer, Map<Integer, Set<JikaiUser>>> stepMap = new ConcurrentHashMap<>();
 	private Map<Integer, Map<Integer, ScheduledFuture<?>>> futureMap = new ConcurrentHashMap<>();
 	private Map<ZoneId, ScheduledFuture<?>> dailyFutures = new ConcurrentHashMap<>();
@@ -71,6 +73,7 @@ public class JikaiUserUpdater {
 			}
 		});
 		AnimeDB.runOnDBUpdate(this::update);
+		Core.getEventListener().registerButtonInteractor(this);
 	}
 
 	public void registerUser(JikaiUser ju) {
@@ -112,7 +115,7 @@ public class JikaiUserUpdater {
 		eb.setDescription(loc.getStringFormatted("ju_eb_sub_add_desc", Arrays.asList("title", "time", "cause"), "[" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "](" + a.getAniUrl() + ")", BotUtils.formatSeconds(seconds, loc), cause));
 		MessageBuilder mb = new MessageBuilder(eb);
 		if (linked) {
-			mb.setActionRows(ActionRow.of(Button.danger("unsub:" + a.getId(), loc.getString("ju_unsub_btn"))));
+			mb.setActionRows(ActionRow.of(Button.danger("juu:" + a.getId(), loc.getString("ju_unsub_btn"))));
 		}
 		return mb.build();
 	}
@@ -125,7 +128,7 @@ public class JikaiUserUpdater {
 		eb.setDescription(loc.getStringFormatted("ju_eb_sub_add_no_data_desc", Arrays.asList("title", "cause"), "[" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "](" + a.getAniUrl() + ")", cause));
 		MessageBuilder mb = new MessageBuilder(eb);
 		if (linked) {
-			mb.setActionRows(ActionRow.of(Button.danger("unsub:" + a.getId(), loc.getString("ju_unsub_btn"))));
+			mb.setActionRows(ActionRow.of(Button.danger("juu:" + a.getId(), loc.getString("ju_unsub_btn"))));
 		}
 		return mb.build();
 	}
@@ -280,15 +283,23 @@ public class JikaiUserUpdater {
 	public void updateUser(Anime a, int step) {
 		stepMap.get(a.getId()).get(step).forEach(ju -> {
 			log.debug("Sending update: JUser={},Anime={},Step={}", ju.getId(), a.getTitleRomaji(), step);
-			MessageEmbed me = step == 0 ? makeNotifyRelease(a, ju) : makeNotifyEmbed(a, step, ju);
-			BotUtils.retryFuture(2, () -> BotUtils.sendPM(ju.getUser(), me).thenAccept(m -> {
-				if (step == 0) {
-					m.addReaction(EpisodeTracker.WATCHED_EMOJI_UNICODE).and(m.pin()).submit().thenAccept(v -> {
-						log.debug("Pinned and added watched emoji to message {}" + m.getIdLong());
-						EpisodeTracker.getTracker(ju).registerEpisode(a, m.getIdLong());
-					});
-				}
-			}));
+			if (step == 0) {
+				Message m = EpisodeTrackerNew.addButton(a, makeNotifyRelease(a, ju), false);
+				BotUtils.sendPM(ju.getUser(), m).get(0).thenAccept(msg -> msg.pin().queue(v -> log.debug("Sent and pinned release msg {}", msg.getId())));
+			} else {
+				ju.sendPM(makeNotifyEmbed(a, step, ju)).thenAccept(b -> log.debug("Send notify msg success: {}", b));
+			}
+			/*
+			 * MessageEmbed me = step == 0 ? makeNotifyRelease(a, ju) : makeNotifyEmbed(a, step, ju);
+			 * BotUtils.retryFuture(2, () -> BotUtils.sendPM(ju.getUser(), me).thenAccept(m -> {
+			 * if (step == 0) {
+			 * m.addReaction(EpisodeTracker.WATCHED_EMOJI_UNICODE).and(m.pin()).submit().thenAccept(v -> {
+			 * log.debug("Pinned and added watched emoji to message {}" + m.getIdLong());
+			 * EpisodeTracker.getTracker(ju).registerEpisode(a, m.getIdLong());
+			 * });
+			 * }
+			 * }));
+			 */
 		});
 	}
 
@@ -486,11 +497,19 @@ public class JikaiUserUpdater {
 		return eb.build();
 	}
 
-	public MessageEmbed testNotify(Anime a, int step, JikaiUser ju) {
+	public Message testNotify(Anime a, int step, JikaiUser ju) {
 		if (a.hasDataForNextEpisode()) {
-			return step == 0 ? makeNotifyRelease(a, ju) : makeNotifyEmbed(a, step, ju);
+			MessageEmbed me = step == 0 ? makeNotifyRelease(a, ju) : makeNotifyEmbed(a, step, ju);
+			Message m;
+			if (step == 0) {
+				m = EpisodeTrackerNew.addButton(a, me, true);
+			} else {
+				m = new MessageBuilder(me).build();
+			}
+			return m;
 		} else {
-			return BotUtils.addJikaiMark(new EmbedBuilder()).setDescription("**" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "** has no data available! step: " + step).build();
+			MessageEmbed me = BotUtils.addJikaiMark(new EmbedBuilder()).setDescription("**" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "** has no data available! step: " + step).build();
+			return new MessageBuilder(me).build();
 		}
 	}
 
@@ -554,4 +573,22 @@ public class JikaiUserUpdater {
 			BotUtils.sendPMsEmbed(ju.getUser(), createDailyMessage(ju, at, today));
 		}
 	}
+
+	@Override
+	public String getIdentifier() {
+		return "juu";
+	}
+
+	@Override
+	public void handleButtonClick(String[] data, ButtonClickEvent event) {
+		if (jum.isKnownJikaiUser(event.getUser().getIdLong())) {
+			JikaiUser ju = jum.getUser(event.getUser().getIdLong());
+			int id = Integer.parseInt(data[0]);
+			if (AnimeDB.hasAnime(id)) {
+				ju.unsubscribeAnime(id, "Clicked unsub button", true);
+			}
+			event.editButton(event.getButton().withLabel(ju.getLocale().getString("ju_unsub_btn_click")).asDisabled()).queue();
+		}
+	}
+
 }

@@ -4,7 +4,6 @@ package com.github.xerragnaroek.jikai.commands.user.dev;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.commands.user.JUCommand;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
-import com.github.xerragnaroek.jikai.user.EpisodeTracker;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
@@ -30,13 +29,7 @@ public class TestNotifyCommand implements JUCommand {
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		User u = ju.getUser();
 		ju.getSubscribedAnime().stream().map(AnimeDB::getAnime).forEach(a -> {
-			ju.getPreReleaseNotifcationSteps().forEach(step -> {
-				BotUtils.sendPM(u, JikaiUserManager.getInstance().getUserUpdater().testNotify(a, step, ju)).thenAccept(m -> {
-					if (step == 0) {
-						m.addReaction(EpisodeTracker.WATCHED_EMOJI_UNICODE).queue();
-					}
-				});
-			});
+			ju.getPreReleaseNotifcationSteps().forEach(step -> BotUtils.sendPM(u, JikaiUserManager.getInstance().getUserUpdater().testNotify(a, step, ju)));
 		});
 	}
 

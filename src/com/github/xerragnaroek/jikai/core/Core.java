@@ -25,6 +25,7 @@ import com.github.xerragnaroek.jikai.anime.ani.AniListSyncer;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.jikai.JikaiManager;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+import com.github.xerragnaroek.jikai.user.EpisodeTrackerNew;
 import com.github.xerragnaroek.jikai.user.PrivateList;
 import com.github.xerragnaroek.jikai.user.link.LinkRequest;
 import com.github.xerragnaroek.jikai.util.BotUtils;
@@ -54,6 +55,7 @@ public class Core {
 	public static BooleanProperty INITIAL_LOAD = new BooleanProperty(true);
 	public static final JikaiManager JM = new JikaiManager();
 	public static boolean IGNORE_LIST = false;
+	private static JikaiEventListener listener;
 
 	public static void main(String[] args) throws LoginException, InterruptedException, ExecutionException, ClassNotFoundException, IOException {
 		Instant start = Instant.now();
@@ -63,7 +65,7 @@ public class Core {
 		JDABuilder builder = JDABuilder.create(token, GatewayIntent.DIRECT_MESSAGES, GatewayIntent.DIRECT_MESSAGE_REACTIONS, GatewayIntent.GUILD_MESSAGE_REACTIONS, GatewayIntent.GUILD_MESSAGES, GatewayIntent.GUILD_MEMBERS);
 		builder.disableCache(Arrays.asList(CacheFlag.VOICE_STATE, CacheFlag.EMOTE));
 		builder.setEventPool(EXEC, true);
-		builder.addEventListeners(new JikaiEventListener());
+		builder.addEventListeners((listener = new JikaiEventListener()));
 		JDA = builder.build();
 		JDA.awaitReady();
 		init(args);
@@ -82,6 +84,7 @@ public class Core {
 		AniListSyncer.startSyncThread(aniSyncMinutes);
 		LinkRequest.setBidiRequestDuration(linkRequestDuration);
 		PrivateList.setListDuration(privateListDuration);
+		EpisodeTrackerNew.init();
 	}
 
 	private static void sendOnlineMsg(Instant start) {
@@ -165,5 +168,9 @@ public class Core {
 				logThrowable(e);
 			}
 		});
+	}
+
+	public static JikaiEventListener getEventListener() {
+		return listener;
 	}
 }
