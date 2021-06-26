@@ -11,6 +11,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -145,7 +146,7 @@ public class ALRHManager {
 					TitleLanguage lang = id.titleLang();
 					ALRHandler impl = new ALRHandler(l, lang);
 					if (data != null && !data.isEmpty()) {
-						removeOldEntries(data);
+						CollectionUtils.filter(data, d -> AnimeDB.hasAnime(d.getAnimeId()));
 						impl.setData(data);
 					}
 					if (msgIdTitleMap != null && !msgIdTitleMap.isEmpty()) {
@@ -161,14 +162,6 @@ public class ALRHManager {
 		// not needed anymore
 		initMap.clear();
 		initMap = null;
-	}
-
-	private void removeOldEntries(Set<ALRHData> data) {
-		Set<Integer> anime = AnimeDB.getLoadedAnime().stream().map(Anime::getId).collect(Collectors.toSet());
-		new TreeSet<>(data).stream().filter(t -> !anime.contains(t.getAnimeId())).forEach(t -> {
-			data.remove(t);
-			log.debug("Removed old ALRHData for '{}'", t);
-		});
 	}
 
 	Set<DTO> getListMessages(TitleLanguage lang) {

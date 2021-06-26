@@ -54,8 +54,7 @@ public class EpisodeTrackerNew implements ButtonInteractor {
 		MessageEmbed me = event.getMessage().getEmbeds().get(0);
 		EmbedBuilder bob = new EmbedBuilder(me);
 		bob.setDescription(me.getDescription() + "\n" + loc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"), BotUtils.getTodayDateForJUserFormatted(ju)));
-		event.editMessage(new MessageBuilder(bob.build()).build()).queue(v -> log.debug("Message edited!"));
-		event.getMessage().unpin().queue(v -> log.debug("Message unpinned!"));
+		event.editMessage(new MessageBuilder(bob.build()).build()).flatMap(ih -> event.getMessage().unpin()).queue(v -> log.debug("Message edited and unpinned!"));
 		MDC.remove("id");
 	}
 

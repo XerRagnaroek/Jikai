@@ -273,8 +273,16 @@ public class JikaiData {
 		return infoChId;
 	}
 
-	public LongProperty listChannelIdProperty() {
+	public LongProperty listChannelRomajiIdProperty() {
 		return listChRomajiId;
+	}
+
+	public LongProperty listChannelNativeIdProperty() {
+		return listChNativeId;
+	}
+
+	public LongProperty listChannelEnglishIdProperty() {
+		return listChEnglishId;
 	}
 
 	public LongProperty scheduleChannelIdProperty() {

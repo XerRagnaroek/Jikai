@@ -67,7 +67,7 @@ public class ALRHandler implements Initilizable {
 		alh = new ALHandler(this, lang);
 		arh = new ARHandler(this);
 		jData = j.getJikaiData();
-		jData.listChannelIdProperty().bindAndSet(tcId);
+		jData.listChannelRomajiIdProperty().bindAndSet(tcId);
 		initialized = new AtomicBoolean(false);
 		j.setALRHandler(this, lang);
 	}
@@ -155,7 +155,11 @@ public class ALRHandler implements Initilizable {
 	public void init() {
 		log.debug("Initializing...");
 		// jData.animeChannelIdProperty().bindAndSet(tcId);
-		jData.listChannelIdProperty().bindAndSet(tcId);
+		switch (lang) {
+			case ROMAJI -> jData.listChannelRomajiIdProperty().bindAndSet(tcId);
+			case NATIVE -> jData.listChannelNativeIdProperty().bindAndSet(tcId);
+			case ENGLISH -> jData.listChannelEnglishIdProperty().bindAndSet(tcId);
+		}
 		if (!Core.IGNORE_LIST) {
 			if (alrhDB.getData().size() != AnimeDB.size()) {
 				log.debug("Saved ALRHData doesn't fit loaded anime");
