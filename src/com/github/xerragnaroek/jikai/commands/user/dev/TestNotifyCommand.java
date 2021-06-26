@@ -29,7 +29,11 @@ public class TestNotifyCommand implements JUCommand {
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		User u = ju.getUser();
 		ju.getSubscribedAnime().stream().map(AnimeDB::getAnime).forEach(a -> {
-			ju.getPreReleaseNotifcationSteps().forEach(step -> BotUtils.sendPM(u, JikaiUserManager.getInstance().getUserUpdater().testNotify(a, step, ju)));
+			ju.getPreReleaseNotifcationSteps().forEach(step -> BotUtils.sendPM(u, JikaiUserManager.getInstance().getUserUpdater().testNotify(a, step, ju)).get(0).thenAccept(m -> {
+				if (step == 0) {
+					m.pin().queue();
+				}
+			}));
 		});
 	}
 

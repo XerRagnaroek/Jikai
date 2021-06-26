@@ -41,7 +41,7 @@ public class AnimeUpdate {
 		handleReleaseChanged(newAnime, oldA);
 		handleNextEp(newAnime, oldA);
 		// handleReleasePeriod(newAnime);
-		String msg = String.format("Updated AnimeDB.\nRemoved: %d\nNot in new data but still valid: %d\nNew: %d\nPostponed: %d\nNext episode: %d", removed.size(), removedButStillValid.size(), newA.size(), changed.size(), nextEp.size());
+		String msg = String.format("Updated AnimeDB.\nRemoved: %d\nNot in new data but still valid: %d\nNew: %d\nChanged release: %d\nNext episode: %d", removed.size(), removedButStillValid.size(), newA.size(), changed.size(), nextEp.size());
 		log.info(msg);
 		BotUtils.sendToAllInfoChannels(msg);
 	}
@@ -70,6 +70,9 @@ public class AnimeUpdate {
 						changed.add(Pair.of(a, delay));
 						log.info("{} has been {} by {}!", a.getTitleRomaji(), (delay > 0 ? "postponed" : "advanced"), BotUtils.formatSeconds(delay, JikaiLocaleManager.getEN()));
 					}
+				} else if (oldA.hasDataForNextEpisode() && !a.hasDataForNextEpisode()) {
+					changed.add(Pair.of(a, 0l));
+					log.info("{} has been postponed for an unknown amount of time!", a.getTitleRomaji());
 				}
 			}
 		});
@@ -79,7 +82,7 @@ public class AnimeUpdate {
 		newA.forEach(a -> {
 			if (old.contains(a)) {
 				Anime oldA = old.get(old.indexOf(a));
-				if (oldA.hasDataForNextEpisode() && a.hasDataForNextEpisode() && a.getNextEpisodeNumber() > oldA.getNextEpisodeNumber()) {
+				if ((!oldA.hasDataForNextEpisode() && a.hasDataForNextEpisode()) || (oldA.hasDataForNextEpisode() && a.hasDataForNextEpisode() && a.getNextEpisodeNumber() > oldA.getNextEpisodeNumber())) {
 					nextEp.add(a);
 					log.info("{} has a new episode coming up!", a.getTitleRomaji());
 				}

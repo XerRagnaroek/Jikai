@@ -387,9 +387,12 @@ public class JikaiUserUpdater implements ButtonInteractor {
 		// later
 		if (dif > 0) {
 			eb.setDescription(loc.getStringFormatted("ju_eb_period_change_later_desc", Arrays.asList("dif", "time", "date"), BotUtils.formatSeconds(dif, loc), BotUtils.formatSeconds(a.getNextEpisodesAirsIn(), loc), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale())));
-		} else {
+		} else if (dif < 0) {
 			// earlier
 			eb.setDescription(loc.getStringFormatted("ju_eb_period_change_earlier_desc", Arrays.asList("dif", "time", "date"), BotUtils.formatSeconds(dif, loc), BotUtils.formatSeconds(a.getNextEpisodesAirsIn(), loc), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale())));
+		} else {
+			// dif = 0
+			eb.setDescription(loc.getStringFormatted("ju_eb_period_change_unknown", Arrays.asList("links"), BotUtils.formatExternalSites(a)));
 		}
 		return eb.build();
 	}

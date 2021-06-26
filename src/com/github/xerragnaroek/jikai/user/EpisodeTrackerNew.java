@@ -18,7 +18,6 @@ import net.dv8tion.jda.api.entities.Emoji;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
-import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
 import net.dv8tion.jda.internal.utils.EncodingUtil;
@@ -55,7 +54,8 @@ public class EpisodeTrackerNew implements ButtonInteractor {
 		MessageEmbed me = event.getMessage().getEmbeds().get(0);
 		EmbedBuilder bob = new EmbedBuilder(me);
 		bob.setDescription(me.getDescription() + "\n" + loc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"), BotUtils.getTodayDateForJUserFormatted(ju)));
-		event.editMessage(new MessageBuilder(bob.build()).build()).flatMap(InteractionHook::retrieveOriginal).map(Message::unpin).queue(v -> log.debug("Unpinned message!"));
+		event.editMessage(new MessageBuilder(bob.build()).build()).queue(v -> log.debug("Message edited!"));
+		event.getMessage().unpin().queue(v -> log.debug("Message unpinned!"));
 		MDC.remove("id");
 	}
 
