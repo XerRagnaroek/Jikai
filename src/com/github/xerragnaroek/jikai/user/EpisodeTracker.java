@@ -23,7 +23,9 @@ import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Emoji;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
+import net.dv8tion.jda.api.events.message.priv.react.PrivateMessageReactionAddEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
 import net.dv8tion.jda.internal.utils.EncodingUtil;
@@ -78,34 +80,30 @@ public class EpisodeTracker {
 		});
 	}
 
-	/*
-	 * public void handleEmojiReacted(PrivateMessageReactionAddEvent event) {
-	 * User u = event.getUser();
-	 * if (!u.isBot()) {
-	 * long msgId = event.getMessageIdLong();
-	 * log.debug("Handling emoji reacted for msg {}", msgId);
-	 * if (idAnime.containsKey(msgId)) {
-	 * JikaiUser ju = JikaiUserManager.getInstance().getUser(u.getIdLong());
-	 * JikaiLocale jLoc = ju.getLocale();
-	 * event.getChannel().retrieveMessageById(msgId).flatMap(m -> {
-	 * log.debug("Editing release notify message to show that user watched it!");
-	 * MessageEmbed me = m.getEmbeds().get(0);
-	 * EmbedBuilder bob = new EmbedBuilder(me);
-	 * bob.setDescription(me.getDescription() + "\n" +
-	 * jLoc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"),
-	 * BotUtils.getTodayDateForJUserFormatted(ju)));
-	 * return m.editMessage(bob.build());
-	 * }).submit().thenAccept(m -> {
-	 * log.debug("Successfully edited msg: {}", m.getId());
-	 * episodeWatched(msgId);
-	 * m.unpin().submit().thenAccept(v -> log.debug("msg unpinned"));
-	 * });
-	 * } else {
-	 * log.debug("Msg isn't a registered release notify message");
-	 * }
-	 * }
-	 * }
-	 */
+	public void handleEmojiReacted(PrivateMessageReactionAddEvent event) {
+		User u = event.getUser();
+		if (!u.isBot()) {
+			long msgId = event.getMessageIdLong();
+			log.debug("Handling emoji reacted for msg {}", msgId);
+			if (idAnime.containsKey(msgId)) {
+				JikaiUser ju = JikaiUserManager.getInstance().getUser(u.getIdLong());
+				JikaiLocale jLoc = ju.getLocale();
+				event.getChannel().retrieveMessageById(msgId).flatMap(m -> {
+					log.debug("Editing release notify message to show that user watched it!");
+					MessageEmbed me = m.getEmbeds().get(0);
+					EmbedBuilder bob = new EmbedBuilder(me);
+					bob.setDescription(me.getDescription() + "\n" + jLoc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"), BotUtils.getTodayDateForJUserFormatted(ju)));
+					return m.editMessage(bob.build());
+				}).submit().thenAccept(m -> {
+					log.debug("Successfully edited msg: {}", m.getId());
+					episodeWatched(msgId);
+					m.unpin().submit().thenAccept(v -> log.debug("msg unpinned"));
+				});
+			} else {
+				log.debug("Msg isn't a registered release notify message");
+			}
+		}
+	}
 
 	public List<EmbedBuilder> makeEpisodeList() {
 		long pcId = ju.getUser().openPrivateChannel().complete().getIdLong();

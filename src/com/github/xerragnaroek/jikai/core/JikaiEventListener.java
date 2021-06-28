@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jikai.commands.user.JUCommandHandler;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiSetup;
+import com.github.xerragnaroek.jikai.user.EpisodeTracker;
+import com.github.xerragnaroek.jikai.user.EpisodeTrackerManager;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.util.ButtonInteractor;
@@ -95,7 +97,11 @@ public class JikaiEventListener extends ListenerAdapter {
 
 	@Override
 	public void onPrivateMessageReactionAdd(PrivateMessageReactionAddEvent event) {
-
+		JikaiUserManager jum = JikaiUserManager.getInstance();
+		JikaiUser ju;
+		if (event.getReactionEmote().getAsCodepoints().equals(EpisodeTracker.WATCHED_EMOJI_CP) && (ju = jum.getUser(event.getUserIdLong())) != null) {
+			EpisodeTrackerManager.getTracker(ju).handleEmojiReacted(event);
+		}
 	}
 
 	@Override
