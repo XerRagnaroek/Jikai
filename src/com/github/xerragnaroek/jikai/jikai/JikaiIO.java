@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
-import com.github.xerragnaroek.jikai.user.EpisodeTracker;
+import com.github.xerragnaroek.jikai.user.EpisodeTrackerManager;
 import com.github.xerragnaroek.jikai.user.ExportKeyHandler;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
@@ -40,7 +40,7 @@ public class JikaiIO {
 			// saveReleaseMessageIds();
 			// saveAnimeReleaseTracker();
 			saveExportKeyHandler();
-			saveEpisodeTracker();
+			saveEpisodeTrackerManager();
 		} catch (IOException e) {
 			Core.ERROR_LOG.error("Failed saving", e);
 		}
@@ -66,7 +66,7 @@ public class JikaiIO {
 					}
 				});
 				// loadReleaseMessages(Path.of(loc.toString(), "/rmids.txt"));
-				loadEpisodeTracker();
+				loadEpisodeTrackerManager();
 			} else {
 				log.debug("Creating config directory");
 				log.info("No configurations found, falling back to default settings");
@@ -105,17 +105,17 @@ public class JikaiIO {
 	 * Files.write(loc, ids, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 	 * }
 	 */
-	private static void loadEpisodeTracker() throws IOException {
+	private static void loadEpisodeTrackerManager() throws IOException {
 		Path rmids = Path.of(Core.DATA_LOC.toString(), "/rmids.txt");
 		if (Files.exists(rmids)) {
-			EpisodeTracker.loadOld(Files.lines(rmids).map(Long::parseLong).collect(Collectors.toSet()));
+			EpisodeTrackerManager.loadOld(Files.lines(rmids).map(Long::parseLong).collect(Collectors.toSet()));
 			Files.delete(rmids);
 		} else {
 			Path ets = Path.of(Core.DATA_LOC.toString(), "/et.json");
 			if (Files.exists(ets)) {
 				TypeReference<Map<Long, Map<Integer, Map<Long, Integer>>>> ref = new TypeReference<>() {};
 				Map<Long, Map<Integer, Map<Long, Integer>>> map = new ObjectMapper().readValue(Files.readString(ets), ref);
-				EpisodeTracker.load(map);
+				EpisodeTrackerManager.load(map);
 			}
 		}
 	}
@@ -124,10 +124,10 @@ public class JikaiIO {
 		Core.EXEC.scheduleAtFixedRate(() -> JikaiIO.save(false), delay, delay, unit);
 	}
 
-	private static void saveEpisodeTracker() throws JsonProcessingException, IOException {
-		Map<Long, Map<Integer, Map<Long, Integer>>> ets = EpisodeTracker.getSavableMap();
+	private static void saveEpisodeTrackerManager() throws JsonProcessingException, IOException {
+		Map<Long, Map<Integer, Map<Long, Integer>>> ets = EpisodeTrackerManager.getSavableMap();
 		Path loc = Paths.get(Core.DATA_LOC.toString(), "/et.json");
-		log.debug("Saving EpisodeTracker, size {}, to {}", ets.size(), loc.toAbsolutePath());
+		log.debug("Saving EpisodeTrackerManager, size {}, to {}", ets.size(), loc.toAbsolutePath());
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.enable(SerializationFeature.INDENT_OUTPUT);
 		Files.writeString(loc, mapper.writeValueAsString(ets), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);

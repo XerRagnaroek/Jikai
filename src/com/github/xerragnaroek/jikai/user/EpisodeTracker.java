@@ -5,27 +5,27 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import com.github.xerragnaroek.jasa.Anime;
-import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
-import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Pair;
 
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.MessageBuilder;
+import net.dv8tion.jda.api.entities.Emoji;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.events.message.priv.react.PrivateMessageReactionAddEvent;
-import net.dv8tion.jda.api.exceptions.ErrorResponseException;
+import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.Button;
 import net.dv8tion.jda.internal.utils.EncodingUtil;
 
 /**
@@ -35,14 +35,13 @@ public class EpisodeTracker {
 
 	public static final String WATCHED_EMOJI_UNICODE = "U+1f440";
 	public static final String WATCHED_EMOJI_CP = EncodingUtil.encodeCodepoints(WATCHED_EMOJI_UNICODE);
-	private static Map<Long, EpisodeTracker> tracker = Collections.synchronizedMap(new TreeMap<>());
 	private JikaiUser ju;
-	private Map<Integer, Map<Long, Integer>> episodes = Collections.synchronizedMap(new TreeMap<>());
+	Map<Integer, Map<Long, Integer>> episodes = Collections.synchronizedMap(new TreeMap<>());
 	private Map<Long, Integer> idAnime = new TreeMap<>();
 
 	private final Logger log;
 
-	private EpisodeTracker(JikaiUser ju) {
+	EpisodeTracker(JikaiUser ju) {
 		this.ju = ju;
 		log = LoggerFactory.getLogger(EpisodeTracker.class.getCanonicalName() + "#" + ju.getId());
 		ju.getSubscribedAnime().onRemove((sr) -> {
@@ -79,30 +78,34 @@ public class EpisodeTracker {
 		});
 	}
 
-	public void handleEmojiReacted(PrivateMessageReactionAddEvent event) {
-		User u = event.getUser();
-		if (!u.isBot()) {
-			long msgId = event.getMessageIdLong();
-			log.debug("Handling emoji reacted for msg {}", msgId);
-			if (idAnime.containsKey(msgId)) {
-				JikaiUser ju = JikaiUserManager.getInstance().getUser(u.getIdLong());
-				JikaiLocale jLoc = ju.getLocale();
-				event.getChannel().retrieveMessageById(msgId).flatMap(m -> {
-					log.debug("Editing release notify message to show that user watched it!");
-					MessageEmbed me = m.getEmbeds().get(0);
-					EmbedBuilder bob = new EmbedBuilder(me);
-					bob.setDescription(me.getDescription() + "\n" + jLoc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"), BotUtils.getTodayDateForJUserFormatted(ju)));
-					return m.editMessage(bob.build());
-				}).submit().thenAccept(m -> {
-					log.debug("Successfully edited msg: {}", m.getId());
-					episodeWatched(msgId);
-					m.unpin().submit().thenAccept(v -> log.debug("msg unpinned"));
-				});
-			} else {
-				log.debug("Msg isn't a registered release notify message");
-			}
-		}
-	}
+	/*
+	 * public void handleEmojiReacted(PrivateMessageReactionAddEvent event) {
+	 * User u = event.getUser();
+	 * if (!u.isBot()) {
+	 * long msgId = event.getMessageIdLong();
+	 * log.debug("Handling emoji reacted for msg {}", msgId);
+	 * if (idAnime.containsKey(msgId)) {
+	 * JikaiUser ju = JikaiUserManager.getInstance().getUser(u.getIdLong());
+	 * JikaiLocale jLoc = ju.getLocale();
+	 * event.getChannel().retrieveMessageById(msgId).flatMap(m -> {
+	 * log.debug("Editing release notify message to show that user watched it!");
+	 * MessageEmbed me = m.getEmbeds().get(0);
+	 * EmbedBuilder bob = new EmbedBuilder(me);
+	 * bob.setDescription(me.getDescription() + "\n" +
+	 * jLoc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"),
+	 * BotUtils.getTodayDateForJUserFormatted(ju)));
+	 * return m.editMessage(bob.build());
+	 * }).submit().thenAccept(m -> {
+	 * log.debug("Successfully edited msg: {}", m.getId());
+	 * episodeWatched(msgId);
+	 * m.unpin().submit().thenAccept(v -> log.debug("msg unpinned"));
+	 * });
+	 * } else {
+	 * log.debug("Msg isn't a registered release notify message");
+	 * }
+	 * }
+	 * }
+	 */
 
 	public List<EmbedBuilder> makeEpisodeList() {
 		long pcId = ju.getUser().openPrivateChannel().complete().getIdLong();
@@ -179,63 +182,25 @@ public class EpisodeTracker {
 		return Pair.of(a, episodes);
 	}
 
-	public static EpisodeTracker getTracker(JikaiUser ju) {
-		return tracker.compute(ju.getId(), (key, t) -> t == null ? new EpisodeTracker(ju) : t);
-	}
-
-	public static void removeTracker(JikaiUser ju) {
-		tracker.remove(ju.getId());
-	}
-
-	public static void loadOld(Set<Long> ids) {
-		Logger log = LoggerFactory.getLogger(EpisodeTracker.class);
-		log.debug("Loading old rmids");
-		ids.forEach(l -> {
-			Core.EXEC.execute(() -> {
-				log.debug("Checking {}", l);
-				JikaiUserManager.getInstance().users().forEach(ju -> {
-					try {
-						Message m = ju.getUser().openPrivateChannel().complete().retrieveMessageById(l).complete();
-						// since we're now here that means the message was for this user
-						String title = m.getEmbeds().get(0).getTitle();
-						title = title.substring(2, title.length() - 2);
-						Anime a = AnimeDB.getAnime(title, ju.getTitleLanguage());
-						if (a == null) {
-							for (TitleLanguage tt : TitleLanguage.values()) {
-								if (tt != ju.getTitleLanguage()) {
-									a = AnimeDB.getAnime(title, tt);
-								}
-							}
-						}
-						log.debug("Found anime: {}", a);
-						if (a != null) {
-							String[] split = ju.getLocale().getString("ju_eb_notify_release_desc").split("%episodes%");
-							int episode = Integer.parseInt(m.getEmbeds().get(0).getDescription().replace(split[0], "").replace(split[1], "").split("/")[0].trim());
-							getTracker(ju).registerEpisodeDetailed(a.getId(), l, episode);
-						}
-					} catch (ErrorResponseException e) {
-						log.debug("Message wasn't for user {}", ju.getId());
-					}
-				});
-			});
+	public void handleButtonClick(String[] data, ButtonClickEvent event) {
+		MDC.put("id", event.getMessageId());
+		log.debug("Handling button click");
+		// so far nothing happens besides the msg being edited
+		JikaiLocale loc = ju.getLocale();
+		MessageEmbed me = event.getMessage().getEmbeds().get(0);
+		EmbedBuilder bob = new EmbedBuilder(me);
+		bob.setDescription(me.getDescription() + "\n" + loc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"), BotUtils.getTodayDateForJUserFormatted(ju)));
+		event.editMessage(new MessageBuilder(bob.build()).build()).flatMap(ih -> event.getMessage().unpin()).queue(v -> {
+			log.debug("Message edited and unpinned!");
+			episodeWatched(event.getMessageIdLong());
 		});
+		MDC.remove("id");
 	}
 
-	public static Map<Long, Map<Integer, Map<Long, Integer>>> getSavableMap() {
-		Map<Long, Map<Integer, Map<Long, Integer>>> map = new TreeMap<>();
-		tracker.forEach((l, t) -> map.put(l, t.episodes));
-		return map;
+	public static Message addButton(Anime a, MessageEmbed m, boolean test) {
+		MessageBuilder mb = new MessageBuilder(m);
+		mb.setActionRows(ActionRow.of(Button.secondary("ept:" + a.getId() + ":" + a.getNextEpisodeNumber() + (test ? ":t" : ""), Emoji.fromUnicode(WATCHED_EMOJI_UNICODE))));
+		return mb.build();
 	}
 
-	public static void load(Map<Long, Map<Integer, Map<Long, Integer>>> map) {
-		map.forEach((l, m) -> {
-			JikaiUser ju = JikaiUserManager.getInstance().getUser(l);
-			EpisodeTracker et = getTracker(ju);
-			m.forEach((aniId, idEpMap) -> {
-				if (ju.isSubscribedTo(aniId)) {
-					idEpMap.forEach((msgId, epNum) -> et.registerEpisodeDetailed(aniId, msgId, epNum));
-				}
-			});
-		});
-	}
 }

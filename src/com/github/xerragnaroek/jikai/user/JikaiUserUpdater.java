@@ -284,8 +284,11 @@ public class JikaiUserUpdater implements ButtonInteractor {
 		stepMap.get(a.getId()).get(step).forEach(ju -> {
 			log.debug("Sending update: JUser={},Anime={},Step={}", ju.getId(), a.getTitleRomaji(), step);
 			if (step == 0) {
-				Message m = EpisodeTrackerNew.addButton(a, makeNotifyRelease(a, ju), false);
-				BotUtils.sendPM(ju.getUser(), m).get(0).thenAccept(msg -> msg.pin().queue(v -> log.debug("Sent and pinned release msg {}", msg.getId())));
+				Message m = EpisodeTracker.addButton(a, makeNotifyRelease(a, ju), false);
+				BotUtils.sendPM(ju.getUser(), m).get(0).thenAccept(msg -> msg.pin().queue(v -> {
+					log.debug("Sent and pinned release msg {}", msg.getId());
+					EpisodeTrackerManager.getTracker(ju).registerEpisode(a, m.getIdLong());
+				}));
 			} else {
 				ju.sendPM(makeNotifyEmbed(a, step, ju)).thenAccept(b -> log.debug("Send notify msg success: {}", b));
 			}

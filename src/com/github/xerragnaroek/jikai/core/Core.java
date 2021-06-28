@@ -25,7 +25,7 @@ import com.github.xerragnaroek.jikai.anime.ani.AniListSyncer;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.jikai.JikaiManager;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
-import com.github.xerragnaroek.jikai.user.EpisodeTrackerNew;
+import com.github.xerragnaroek.jikai.user.EpisodeTrackerManager;
 import com.github.xerragnaroek.jikai.user.PrivateList;
 import com.github.xerragnaroek.jikai.user.link.LinkRequest;
 import com.github.xerragnaroek.jikai.util.BotUtils;
@@ -84,7 +84,8 @@ public class Core {
 		AniListSyncer.startSyncThread(aniSyncMinutes);
 		LinkRequest.setBidiRequestDuration(linkRequestDuration);
 		PrivateList.setListDuration(privateListDuration);
-		EpisodeTrackerNew.init();
+		// EpisodeTrackerNew.init();
+		EpisodeTrackerManager.init();
 	}
 
 	private static void sendOnlineMsg(Instant start) {

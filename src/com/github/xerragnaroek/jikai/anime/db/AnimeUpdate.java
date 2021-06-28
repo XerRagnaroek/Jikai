@@ -1,6 +1,7 @@
 package com.github.xerragnaroek.jikai.anime.db;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -51,8 +52,11 @@ public class AnimeUpdate {
 		removed = newA.stream().filter(a -> a.getStatus().equals("FINISHED")).collect(Collectors.toList());
 		removedOldA.forEach(a -> {
 			if (a.hasDataForNextEpisode()) {
-				removedButStillValid.add(a);
-				log.debug("{} isn't in the data but still has a valid next ep on{}!", a.getTitleRomaji(), a.getNextEpisodeDateTime(ZoneId.systemDefault()));
+				LocalDateTime ldt = a.getNextEpisodeDateTime(ZoneId.systemDefault()).get();
+				if (ldt.isAfter(LocalDateTime.now())) {
+					removedButStillValid.add(a);
+					log.debug("{} isn't in the data but still has a valid next ep on {}!", a.getTitleRomaji(), ldt);
+				}
 			} else {
 				removed.add(a);
 			}

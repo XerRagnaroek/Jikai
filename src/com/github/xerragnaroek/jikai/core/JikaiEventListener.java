@@ -13,13 +13,11 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jikai.commands.user.JUCommandHandler;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiSetup;
-import com.github.xerragnaroek.jikai.user.EpisodeTracker;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.util.ButtonInteractor;
 
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.MessageReaction.ReactionEmote;
 import net.dv8tion.jda.api.events.ReconnectedEvent;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent;
@@ -97,15 +95,7 @@ public class JikaiEventListener extends ListenerAdapter {
 
 	@Override
 	public void onPrivateMessageReactionAdd(PrivateMessageReactionAddEvent event) {
-		JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getUserIdLong());
-		if (ju != null) {
-			ReactionEmote re = event.getReactionEmote();
-			if (re.isEmoji()) {
-				if (re.getAsCodepoints().equals(EpisodeTracker.WATCHED_EMOJI_UNICODE)) {
-					EpisodeTracker.getTracker(ju).handleEmojiReacted(event);
-				}
-			}
-		}
+
 	}
 
 	@Override
