@@ -508,7 +508,7 @@ public class JikaiUserUpdater implements ButtonInteractor {
 			MessageEmbed me = step == 0 ? makeNotifyRelease(a, ju) : makeNotifyEmbed(a, step, ju);
 			Message m;
 			if (step == 0) {
-				m = EpisodeTrackerNew.addButton(a, me, true);
+				m = EpisodeTracker.addButton(a, me, true);
 			} else {
 				m = new MessageBuilder(me).build();
 			}
