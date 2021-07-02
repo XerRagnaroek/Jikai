@@ -285,10 +285,10 @@ public class JikaiUserUpdater implements ButtonInteractor {
 			log.debug("Sending update: JUser={},Anime={},Step={}", ju.getId(), a.getTitleRomaji(), step);
 			if (step == 0) {
 				Message m = EpisodeTracker.addButton(a, makeNotifyRelease(a, ju), false);
-				BotUtils.sendPM(ju.getUser(), m).get(0).thenAccept(msg -> msg.pin().queue(v -> {
-					log.debug("Sent and pinned release msg {}", msg.getId());
-					EpisodeTrackerManager.getTracker(ju).registerEpisode(a, m.getIdLong());
-				}));
+				BotUtils.sendPM(ju.getUser(), m).get(0).thenAccept(msg -> {
+					log.debug("Sent release msg {}", msg.getId());
+					EpisodeTrackerManager.getTracker(ju).registerEpisode(a, msg.getIdLong());
+				});
 			} else {
 				ju.sendPM(makeNotifyEmbed(a, step, ju)).thenAccept(b -> log.debug("Send notify msg success: {}", b));
 			}
@@ -401,7 +401,7 @@ public class JikaiUserUpdater implements ButtonInteractor {
 	}
 
 	private MessageEmbed makeReleaseChangedEmbed(JikaiUser ju, Anime a, long delay) {
-		EmbedBuilder eb = new EmbedBuilder();
+		EmbedBuilder eb = BotUtils.embedBuilder();
 		JikaiLocale loc = ju.getLocale();
 		eb.setTitle(loc.getStringFormatted("ju_eb_release_change_title", Arrays.asList("title"), (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()))), a.getAniUrl());
 		if (a.hasCoverImageMedium()) {
@@ -409,18 +409,22 @@ public class JikaiUserUpdater implements ButtonInteractor {
 		}
 		List<String> externalLinks = a.getExternalLinks().stream().filter(es -> es.getSite().equals("Twitter") || es.getSite().equals("Official Site")).map(es -> String.format("[**%s**](%s)", es.getSite(), es.getUrl())).collect(Collectors.toList());
 		StringBuilder bob = new StringBuilder();
-		// the optional here will always have a value since this method can only get called when its value
-		// changes
-		String date = formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale());
-		if (delay > 0) {
-			bob.append(loc.getStringFormatted("ju_eb_release_change_pp", Arrays.asList("time", "date"), BotUtils.formatSeconds(delay, loc), date));
+		if (delay == 0) {
+			bob.append(loc.getString("ju_eb_release_change_unknown"));
 		} else {
-			bob.append(loc.getStringFormatted("ju_eb_release_change_earlier", Arrays.asList("time", "date"), BotUtils.formatSeconds(delay, loc), date));
+			// the optional here will always have a value since this method can only get called when its value
+			// changes
+			String date = formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale());
+			if (delay > 0) {
+				bob.append(loc.getStringFormatted("ju_eb_release_change_pp", Arrays.asList("time", "date"), BotUtils.formatSeconds(delay, loc), date));
+			} else {
+				bob.append(loc.getStringFormatted("ju_eb_release_change_earlier", Arrays.asList("time", "date"), BotUtils.formatSeconds(delay, loc), date));
+			}
 		}
 		if (!externalLinks.isEmpty()) {
 			bob.append(loc.getStringFormatted("ju_eb_release_change_links", Arrays.asList("links"), StringUtils.joinWith(", ", externalLinks)));
 		}
-		eb.setDescription(bob).setTimestamp(Instant.now());
+		eb.setDescription(bob);
 		return eb.build();
 	}
 

@@ -173,7 +173,7 @@
     "ju_eb_notify_title": "**%title%**",
     "ju_eb_period_change_earlier_desc": "erscheint **%dif%** früher als normal!\nDie nächste Episode erscheint in **%time%** am\n **%date%**.",
     "ju_eb_period_change_later_desc": "erscheint **%dif%** später als normal!\nDie nächste Episode erscheint in **%time%** am\n **%date%**.",
-	"ju_eb_period_change_unknown": "wurde auf ein noch unbekanntes Datumn verschoben!\nSchaue bei den offiziellen Links vorbei für mehr Informationen:\n%links%",
+	"ju_eb_release_change_unknown": "wurde auf ein noch unbekanntes Datumn verschoben!\n",
     "ju_eb_period_change_title": "**%title%**",
     "ju_eb_private_list_exp": "*Diese Liste ist abgelaufen und du kannst sie nicht mehr zum de-/abonnieren nutzen.*",
     "ju_eb_private_list_timed": "\n\n*Diese Liste ist %time% aktiv.*",

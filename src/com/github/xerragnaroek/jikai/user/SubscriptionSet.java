@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 
-@SuppressWarnings("serial")
 public class SubscriptionSet extends TreeSet<Integer> {
 	@JsonIgnore
 	private Set<Consumer<SubAdd>> onAdd = new HashSet<>();

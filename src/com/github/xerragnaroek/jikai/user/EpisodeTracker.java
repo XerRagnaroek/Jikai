@@ -97,7 +97,6 @@ public class EpisodeTracker {
 				}).submit().thenAccept(m -> {
 					log.debug("Successfully edited msg: {}", m.getId());
 					episodeWatched(msgId);
-					m.unpin().submit().thenAccept(v -> log.debug("msg unpinned"));
 				});
 			} else {
 				log.debug("Msg isn't a registered release notify message");
@@ -188,8 +187,8 @@ public class EpisodeTracker {
 		MessageEmbed me = event.getMessage().getEmbeds().get(0);
 		EmbedBuilder bob = new EmbedBuilder(me);
 		bob.setDescription(me.getDescription() + "\n" + loc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"), BotUtils.getTodayDateForJUserFormatted(ju)));
-		event.editMessage(new MessageBuilder(bob.build()).build()).flatMap(ih -> event.getMessage().unpin()).queue(v -> {
-			log.debug("Message edited and unpinned!");
+		event.editMessage(new MessageBuilder(bob.build()).build()).queue(v -> {
+			log.debug("Message edited!");
 			episodeWatched(event.getMessageIdLong());
 		});
 		MDC.remove("id");

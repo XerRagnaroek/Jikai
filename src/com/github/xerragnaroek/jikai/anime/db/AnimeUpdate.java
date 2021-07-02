@@ -65,7 +65,7 @@ public class AnimeUpdate {
 	}
 
 	private void handleReleaseChanged(List<Anime> newA, List<Anime> old) {
-		newA.forEach(a -> {
+		newA.stream().filter(a -> !a.isFinished()).forEach(a -> {
 			if (old.contains(a)) {
 				Anime oldA = old.get(old.indexOf(a));
 				if (oldA.hasDataForNextEpisode() && a.hasDataForNextEpisode() && oldA.getNextEpisodeNumber() == a.getNextEpisodeNumber()) {

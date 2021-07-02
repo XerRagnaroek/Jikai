@@ -20,6 +20,7 @@ import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.util.ButtonInteractor;
 
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.MessageReaction.ReactionEmote;
 import net.dv8tion.jda.api.events.ReconnectedEvent;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent;
@@ -97,11 +98,16 @@ public class JikaiEventListener extends ListenerAdapter {
 
 	@Override
 	public void onPrivateMessageReactionAdd(PrivateMessageReactionAddEvent event) {
-		JikaiUserManager jum = JikaiUserManager.getInstance();
-		JikaiUser ju;
-		if (event.getReactionEmote().getAsCodepoints().equals(EpisodeTracker.WATCHED_EMOJI_CP) && (ju = jum.getUser(event.getUserIdLong())) != null) {
-			EpisodeTrackerManager.getTracker(ju).handleEmojiReacted(event);
+		JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getUserIdLong());
+		if (ju != null) {
+			ReactionEmote re = event.getReactionEmote();
+			if (re.isEmoji()) {
+				if (re.getAsCodepoints().equals(EpisodeTracker.WATCHED_EMOJI_UNICODE)) {
+					EpisodeTrackerManager.getTracker(ju).handleEmojiReacted(event);
+				}
+			}
 		}
+
 	}
 
 	@Override
@@ -150,6 +156,7 @@ public class JikaiEventListener extends ListenerAdapter {
 
 	@Override
 	public void onButtonClick(ButtonClickEvent event) {
+		log.debug("Button clicked: {}", event.getId());
 		String[] split = event.getButton().getId().split(":");
 		if (btnInteractors.containsKey(split[0])) {
 			btnInteractors.get(split[0]).handleButtonClick(ArrayUtils.subarray(split, 1, split.length), event);

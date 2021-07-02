@@ -74,7 +74,6 @@ public class JikaiUser {
 		log = LoggerFactory.getLogger(JikaiUser.class + "#" + id);
 	}
 
-	@SuppressWarnings("unused")
 	private JikaiUser() {}
 
 	void init() {

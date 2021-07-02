@@ -33,8 +33,7 @@ public class TestNotifyCommand implements JUCommand {
 		EpisodeTracker et = EpisodeTrackerManager.getTracker(ju);
 		ju.getSubscribedAnime().stream().map(AnimeDB::getAnime).forEach(a -> {
 			ju.getPreReleaseNotifcationSteps().forEach(step -> BotUtils.sendPM(u, JikaiUserManager.getInstance().getUserUpdater().testNotify(a, step, ju)).get(0).thenAccept(m -> {
-				if (step == 0) {
-					m.pin().queue();
+				if (step == 0 && a.hasDataForNextEpisode()) {
 					et.registerEpisode(a, m.getIdLong());
 				}
 			}));

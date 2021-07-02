@@ -24,7 +24,6 @@ public class ALRHDataBase {
 	private Map<Integer, ALRHData> aniIdMap = Collections.synchronizedMap(new TreeMap<>());
 	// title of the Embed mapped to its msgid
 	private BidiMap<Long, String> msgIdEmbedTitleMap = new TreeBidiMap<Long, String>();
-	@SuppressWarnings("rawtypes")
 	private MultiKeyMap ucMsgMap = new MultiKeyMap();
 	private long sentTcId;
 	private Pair<String, Long> seasonMsg;
@@ -49,7 +48,6 @@ public class ALRHDataBase {
 		sentTcId = data.getTextChannelId();
 	}
 
-	@SuppressWarnings("unchecked")
 	void addALRHData(ALRHData d) {
 		aniIdMap.put(d.getAnimeId(), d);
 		ucMsgMap.put(d.getMessageId(), d.getUnicodeCodePoint(), d);

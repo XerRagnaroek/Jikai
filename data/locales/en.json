@@ -173,7 +173,7 @@
     "ju_eb_notify_title": "**%title%**",
     "ju_eb_period_change_earlier_desc": "airs **%dif%** earlier than ususal!\nThe next episode will be in **%time%** on\n **%date%**.",
     "ju_eb_period_change_later_desc": "airs **%dif%** later than ususal!\nThe next episode will be in **%time%** on\n **%date%**.",
-	"ju_eb_period_change_unknown": "has been postponed to an unknown date!\nCheck the official links for more infomation:\n%links%",
+	"ju_eb_release_change_unknown": "has been postponed to an unknown date!\n",
     "ju_eb_period_change_title": "**%title%**",
     "ju_eb_private_list_exp": "*This list has expired. You can no longer sub or unsub using it.*",
     "ju_eb_private_list_timed": "\n\n*This list is active for the next %time%.*",
