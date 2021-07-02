@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 
 /**
  * @author XerRagnaroek
- *
  */
 public class BooleanProperty extends Property<Boolean> {
 
@@ -37,6 +36,12 @@ public class BooleanProperty extends Property<Boolean> {
 		if (val) {
 			set(true);
 		}
+	}
+
+	public boolean flip() {
+		boolean val = !value;
+		set(val);
+		return val;
 	}
 
 	@JsonCreator

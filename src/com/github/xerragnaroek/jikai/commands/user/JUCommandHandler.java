@@ -41,7 +41,7 @@ public class JUCommandHandler {
 	private static final Logger log = LoggerFactory.getLogger(JUCommandHandler.class);
 	private static String prefix = "!";
 	static {
-		JUCommand coms[] = new JUCommand[] { new HideAllCommand(), new UnhideAllCommand(), new CustomTitleCommand(), new HideAnimeCommand(), new LinksCommand(), new ChangeLocaleCommand(), new NextEpisodeMsgCommand(), new TestCommand(), new TestEpisodeTrackerCommand(), new ForceSaveCommand(), new EpisodesCommand(), new SubAllCommand(), new UnsubAllCommand(), new UnlinkUserCommand(), new LinkUserCommand(), new SetActivityCommand(), new CodePointTestCommand(), new ImportSubscriptionsCommand(), new ExportSubscriptionsCommand(), new SendPMCommand(), new TestNextEpMessageCommand(), new TestPeriodChangeCommand(), new CancelUpdateThreadCommand(), new UpdateThreadStatusCommand(), new TestReactionCommand(), new UnlinkAniAccountCommand(), new LinkAniAccountCommand(), new ReloadLocalesCommand(), new BugCommand(), new UnregisterCommand(), new WeeklyScheduleCommand(), new ForceDBUpdateCommand(), new TestDailyUpdateCommand(), new TestPostponeCommand(), new SubscriptionsCommand(), new ForceDBUpdateCommand(), new TestNotifyCommand(), new StopCommand(), new HelpCommand(), new ConfigCommand(), new DailyUpdateCommand(), new NotifyReleaseCommand(), new NotificationTimeCommand(), new TimeZoneCommand(), new TitleLanguageCommand() };
+		JUCommand coms[] = new JUCommand[] { new ShowAdultCommand(), new HideAllCommand(), new UnhideAllCommand(), new CustomTitleCommand(), new HideAnimeCommand(), new LinksCommand(), new ChangeLocaleCommand(), new NextEpisodeMsgCommand(), new TestCommand(), new TestEpisodeTrackerCommand(), new ForceSaveCommand(), new EpisodesCommand(), new SubAllCommand(), new UnsubAllCommand(), new UnlinkUserCommand(), new LinkUserCommand(), new SetActivityCommand(), new CodePointTestCommand(), new ImportSubscriptionsCommand(), new ExportSubscriptionsCommand(), new SendPMCommand(), new TestNextEpMessageCommand(), new TestPeriodChangeCommand(), new CancelUpdateThreadCommand(), new UpdateThreadStatusCommand(), new TestReactionCommand(), new UnlinkAniAccountCommand(), new LinkAniAccountCommand(), new ReloadLocalesCommand(), new BugCommand(), new UnregisterCommand(), new WeeklyScheduleCommand(), new ForceDBUpdateCommand(), new TestDailyUpdateCommand(), new TestPostponeCommand(), new SubscriptionsCommand(), new ForceDBUpdateCommand(), new TestNotifyCommand(), new StopCommand(), new HelpCommand(), new ConfigCommand(), new DailyUpdateCommand(), new NotifyReleaseCommand(), new NotificationTimeCommand(), new TimeZoneCommand(), new TitleLanguageCommand() };
 		commands.addAll(Arrays.asList(coms));
 	}
 
@@ -60,7 +60,11 @@ public class JUCommandHandler {
 				log.debug("Found command: '{}'", com.getName());
 				// remove the command from the content and execute it
 				tmp = (String[]) ArrayUtils.subarray(tmp, 1, tmp.length);
-				com.executeCommand(ju, tmp);
+				try {
+					com.executeCommand(ju, tmp);
+				} catch (IllegalArgumentException e) {
+					ju.getLocale().getStringFormatted("com_ju_invalid", Arrays.asList("input"), String.join(" ", tmp));
+				}
 			}
 		}
 	}

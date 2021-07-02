@@ -51,6 +51,7 @@ public class JikaiUser {
 	private BooleanProperty sendWeeklySchedule = new BooleanProperty();
 	private BooleanProperty sendNextEpMessage = new BooleanProperty();
 	private SetProperty<Integer> notifBeforeRelease = new SetProperty<>();
+	private BooleanProperty showAdult = new BooleanProperty();
 	// set of users that are linked to this user
 	private SetProperty<Long> linkedUsers = new SetProperty<>();
 	private MapProperty<Integer, String> customTitles = new MapProperty<>();
@@ -85,6 +86,7 @@ public class JikaiUser {
 		sendDailyUpdate.onChange((o, n) -> log("change send daily update {}", n));
 		sendWeeklySchedule.onChange((o, n) -> log("change send weekly schedule {}", n));
 		sendNextEpMessage.onChange((o, n) -> log("change send next ep message {}", n));
+		showAdult.onChange((o, n) -> log("change show adult {}", n));
 		locale.onChange((o, n) -> log("change locale: {}", n));
 		aniId.onChange((o, n) -> log("change aniId: {}", n));
 		titleLanguage.onChange((o, n) -> log("change titleLang: {}", n));
@@ -468,6 +470,18 @@ public class JikaiUser {
 		return hiddenAnime;
 	}
 
+	public void setShowAdult(boolean show) {
+		showAdult.set(show);
+	}
+
+	public boolean isShownAdult() {
+		return showAdult.get();
+	}
+
+	public BooleanProperty showAdultProperty() {
+		return showAdult;
+	}
+
 	public String getConfigFormatted() {
 		JikaiLocale loc = getLocale();
 		String yes = loc.getString("u_yes");
@@ -481,8 +495,9 @@ public class JikaiUser {
 		String steps = getPreReleaseNotifcationSteps().stream().map(i -> i / 60).sorted().map(String::valueOf).collect(Collectors.joining(", "));
 		String aniId = (aniId = this.aniId.toString()).equals("0") ? "/" : aniId;
 		String users = linkedToUsers.stream().map(juId -> JikaiUserManager.getInstance().getUser(juId)).map(ju -> ju.getUser().getName()).sorted().collect(Collectors.joining(", "));
+		String adult = isShownAdult() ? yes : no;
 		users = users.isEmpty() ? "/" : users;
-		return loc.getStringFormatted("ju_config", Arrays.asList("lang", "zone", "daily", "nextEpMsg", "release", "schedule", "title", "steps", "aniId", "users", "anime", "hiddenAnime", "customT"), loc.getString("u_lang_name"), zone, daily, nextEpMsg, release, schedule, title, steps, aniId, users, subscribedAnime.size(), hiddenAnime.size(), customTitles.size());
+		return loc.getStringFormatted("ju_config", Arrays.asList("lang", "zone", "daily", "nextEpMsg", "release", "schedule", "showAdult", "title", "steps", "aniId", "users", "anime", "hiddenAnime", "customT"), loc.getString("u_lang_name"), zone, daily, nextEpMsg, release, schedule, adult, title, steps, aniId, users, subscribedAnime.size(), hiddenAnime.size(), customTitles.size());
 	}
 
 	public IntegerProperty aniIdProperty() {
