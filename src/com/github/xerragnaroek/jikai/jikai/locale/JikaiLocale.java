@@ -67,7 +67,11 @@ public class JikaiLocale implements Comparable<JikaiLocale> {
 	}
 
 	public boolean isFormattedString(String key) {
-		return Pattern.matches(".*%\\S+?%.*", getString(key) == null ? "" : getString(key));
+		String tmp;
+		if ((tmp = getString(key)) != null) {
+			return Pattern.matches(".*%\\S+?%.*", tmp);
+		}
+		return false;
 	}
 
 	void registerKey(String key, String str) {

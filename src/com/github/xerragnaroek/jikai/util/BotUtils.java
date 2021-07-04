@@ -625,7 +625,11 @@ public class BotUtils {
 		EmbedBuilder eb = embedBuilder();
 		int[] formatIndex = { 0 };
 		Function<String, String> func = key -> loc.isFormattedString(key) ? loc.getStringFormatted(key, format[formatIndex[0]].getLeft(), format[formatIndex[0]++].getRight()) : loc.getString(key);
-		eb.setTitle(func.apply(locKeyBase + "_title")).setDescription(func.apply(locKeyBase + "_desc"));
+		eb.setTitle(func.apply(locKeyBase + "_title"), func.apply(locKeyBase + "_url")).setDescription(func.apply(locKeyBase + "_desc"));
+		String thumb = func.apply(locKeyBase + "_thumb");
+		if (thumb != null) {
+			eb.setThumbnail(thumb);
+		}
 		int field = 1;
 		String name = "";
 		String tmpField = "";
@@ -654,6 +658,10 @@ public class BotUtils {
 	}
 
 	public static List<MessageEmbed> buildFiedldedEmbeds(String title, List<String> strings, boolean inline) {
+		return buildFiedldedEmbeds(title, null, strings, inline);
+	}
+
+	public static List<MessageEmbed> buildFiedldedEmbeds(String title, String url, List<String> strings, boolean inline) {
 		List<EmbedBuilder> ebs = new ArrayList<>();
 		EmbedBuilder eb = BotUtils.embedBuilder();
 		int cCount = 0;
@@ -674,10 +682,10 @@ public class BotUtils {
 			ebs.add(eb);
 		}
 		if (ebs.size() == 1) {
-			eb.setTitle(title);
+			eb.setTitle(title, url);
 		} else {
 			for (int i = 0; i < ebs.size(); i++) {
-				ebs.get(i).setTitle(title + " [" + (i + 1) + "/" + ebs.size() + "]");
+				ebs.get(i).setTitle(title + " [" + (i + 1) + "/" + ebs.size() + "]", url);
 			}
 		}
 		return ebs.stream().map(EmbedBuilder::build).collect(Collectors.toList());
@@ -800,7 +808,6 @@ public class BotUtils {
 				if (unwantedLangs.contains(r.getName())) {
 					g.removeRoleFromMember(m, r).queue();
 				}
-
 				if (r.getName().equals(titleLang)) {
 					roleFound = true;
 					break;

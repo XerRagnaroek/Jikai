@@ -1,4 +1,4 @@
-package com.github.xerragnaroek.jikai.anime.alrh;
+package com.github.xerragnaroek.jikai.anime.list;
 
 import java.util.Map;
 import java.util.Set;

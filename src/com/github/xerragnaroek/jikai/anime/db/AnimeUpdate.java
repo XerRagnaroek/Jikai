@@ -31,13 +31,14 @@ public class AnimeUpdate {
 	private List<Anime> nextEp = new ArrayList<>();
 	private List<Pair<Anime, Long>> changedPeriod = new ArrayList<>();
 	private List<Anime> removedButStillValid = new ArrayList<>();
+	private List<Anime> finished = new ArrayList<>();
 	private final Logger log = LoggerFactory.getLogger(AnimeUpdate.class);
 
 	private AnimeUpdate() {}
 
 	private void listChanges(List<Anime> oldA, List<Anime> newAnime) {
 		handleRemoved(newAnime, oldA);
-		newA = newAnime.stream().filter(a -> !oldA.contains(a)).collect(Collectors.toCollection(() -> Collections.synchronizedList(new ArrayList<>())));
+		newA = newAnime.stream().filter(a -> !oldA.contains(a)).filter(a -> !a.isFinished()).collect(Collectors.toCollection(() -> Collections.synchronizedList(new ArrayList<>())));
 		newA.forEach(a -> log.debug("New anime: {}", a.getTitleRomaji()));
 		handleReleaseChanged(newAnime, oldA);
 		handleNextEp(newAnime, oldA);

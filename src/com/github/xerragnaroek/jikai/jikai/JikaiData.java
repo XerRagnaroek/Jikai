@@ -27,8 +27,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.github.xerragnaroek.jasa.TitleLanguage;
-import com.github.xerragnaroek.jikai.anime.alrh.ALRHData;
-import com.github.xerragnaroek.jikai.anime.alrh.ALRHandler;
+import com.github.xerragnaroek.jikai.anime.list.ALRHData;
+import com.github.xerragnaroek.jikai.anime.list.ALRHandler;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
@@ -50,6 +50,7 @@ public class JikaiData {
 	private LongProperty listChRomajiId = new LongProperty(0l);
 	private LongProperty listChNativeId = new LongProperty(0l);
 	private LongProperty listChEnglishId = new LongProperty(0l);
+	private LongProperty listChAdultId = new LongProperty(0l);
 	private LongProperty commandChId = new LongProperty(0l);
 	private final Logger log;
 	private LongProperty schedChId = new LongProperty(0l);
@@ -204,6 +205,11 @@ public class JikaiData {
 		return listChEnglishId.get();
 	}
 
+	@JsonProperty("list_channel_adult_id")
+	public long getListChannelAdultId() {
+		return listChAdultId.get();
+	}
+
 	@JsonProperty("schedule_channel_id")
 	public long getScheduleChannelId() {
 		return schedChId.get();
@@ -285,6 +291,10 @@ public class JikaiData {
 		return listChEnglishId;
 	}
 
+	public LongProperty listChannelAdultIdProperty() {
+		return listChAdultId;
+	}
+
 	public LongProperty scheduleChannelIdProperty() {
 		return schedChId;
 	}
@@ -313,6 +323,12 @@ public class JikaiData {
 			case NATIVE -> oldId = setData(listChNativeId, id, "list_channel_native_id");
 		}
 		return oldId;
+	}
+
+	public long setListChannelAdultId(long id) {
+		long old = listChAdultId.get();
+		setData(listChAdultId, id, "list_channel_adult_id");
+		return old;
 	}
 
 	public long setScheduleChannelId(long id) {
@@ -382,13 +398,14 @@ public class JikaiData {
 	}
 
 	@JsonCreator
-	public static JikaiData of(@JsonProperty("language") String lang, @JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") long gId, @JsonProperty("prefix") Property<String> pre, @JsonProperty("anime_channel_id") LongProperty aniChId, @JsonProperty("list_channel_romaji_id") LongProperty listChRomajiId, @JsonProperty("list_channel_english_id") LongProperty listChEnglishId, @JsonProperty("list_channel_native_id") LongProperty listChNativeId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data_romaji") Set<ALRHData> dataRomaji, @JsonProperty("alrh_data_english") Set<ALRHData> dataEnglish, @JsonProperty("alrh_data_native") Set<ALRHData> dataNative, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") LongProperty icId, @JsonProperty("schedule_channel_id") LongProperty schId, @JsonProperty("command_channel_id") LongProperty comChId, @JsonProperty("msg_id_title_romaji") Map<Long, String> msgIdTitleMapRomaji, @JsonProperty("msg_id_title_english") Map<Long, String> msgIdTitleMapEnglish, @JsonProperty("msg_id_title_native") Map<Long, String> msgIdTitleMapNative, @JsonProperty("season_msg_romaji") Pair<String, Long> seasonMsgRomaji, @JsonProperty("season_msg_english") Pair<String, Long> seasonMsgEnglish, @JsonProperty("season_msg_native") Pair<String, Long> seasonMsgNative) {
+	public static JikaiData of(@JsonProperty("language") String lang, @JsonProperty("exec_command_count") Property<Integer> execComs, @JsonProperty("guild_id") long gId, @JsonProperty("prefix") Property<String> pre, @JsonProperty("anime_channel_id") LongProperty aniChId, @JsonProperty("list_channel_romaji_id") LongProperty listChRomajiId, @JsonProperty("list_channel_english_id") LongProperty listChEnglishId, @JsonProperty("list_channel_native_id") LongProperty listChNativeId, @JsonProperty("list_channel_adult_id") LongProperty listChAdultId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data_romaji") Set<ALRHData> dataRomaji, @JsonProperty("alrh_data_english") Set<ALRHData> dataEnglish, @JsonProperty("alrh_data_native") Set<ALRHData> dataNative, @JsonProperty("completed_setup") Property<Boolean> setupCompleted, @JsonProperty("commands_enabled") Property<Boolean> comsEnabled, @JsonProperty("info_channel_id") LongProperty icId, @JsonProperty("schedule_channel_id") LongProperty schId, @JsonProperty("command_channel_id") LongProperty comChId, @JsonProperty("msg_id_title_romaji") Map<Long, String> msgIdTitleMapRomaji, @JsonProperty("msg_id_title_english") Map<Long, String> msgIdTitleMapEnglish, @JsonProperty("msg_id_title_native") Map<Long, String> msgIdTitleMapNative, @JsonProperty("season_msg_romaji") Pair<String, Long> seasonMsgRomaji, @JsonProperty("season_msg_english") Pair<String, Long> seasonMsgEnglish, @JsonProperty("season_msg_native") Pair<String, Long> seasonMsgNative) {
 		JikaiData jd = new JikaiData(gId, false);
 		setIfNonNull(jd.prefix, pre);
 		setIfNonNull(jd.aniChId, aniChId);
 		setIfNonNull(jd.listChRomajiId, listChRomajiId);
 		setIfNonNull(jd.listChEnglishId, listChEnglishId);
 		setIfNonNull(jd.listChNativeId, listChNativeId);
+		setIfNonNull(jd.listChAdultId, listChAdultId);
 		if (zone != null) {
 			jd.zone = Property.of(ZoneId.of(zone));
 		}

@@ -67,7 +67,7 @@ class AnimeDBImpl implements Initilizable {
 			Set<Anime> distinctAnime = new TreeSet<>();
 			distinctAnime.addAll(jasa.fetchAllAiringAnime(0, LocalDate.now().getYear() + 1));
 			distinctAnime.addAll(jasa.fetchSeasonalAnime(1));
-			List<Anime> newAnime = distinctAnime.stream().filter(a -> !a.getStatus().equals("FINISHED")).collect(Collectors.toList());
+			List<Anime> newAnime = distinctAnime.stream().collect(Collectors.toList());
 			List<Anime> old = new ArrayList<>();
 			CollectionUtils.addAll(old, anime.values());
 			if (old.isEmpty()) {

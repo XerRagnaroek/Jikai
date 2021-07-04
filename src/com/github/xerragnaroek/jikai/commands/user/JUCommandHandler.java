@@ -33,6 +33,7 @@ import com.github.xerragnaroek.jikai.commands.user.dev.TestReactionCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.UnhideAllCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.UnsubAllCommand;
 import com.github.xerragnaroek.jikai.commands.user.dev.UpdateThreadStatusCommand;
+import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 
 public class JUCommandHandler {
@@ -63,7 +64,11 @@ public class JUCommandHandler {
 				try {
 					com.executeCommand(ju, tmp);
 				} catch (IllegalArgumentException e) {
-					ju.getLocale().getStringFormatted("com_ju_invalid", Arrays.asList("input"), String.join(" ", tmp));
+					if (!e.getMessage().isEmpty()) {
+						Core.ERROR_LOG.error("", e);
+					} else {
+						ju.getLocale().getStringFormatted("com_ju_invalid", Arrays.asList("input"), String.join(" ", tmp));
+					}
 				}
 			}
 		}

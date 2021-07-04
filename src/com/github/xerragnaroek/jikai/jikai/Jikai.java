@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import com.github.xerragnaroek.jasa.TitleLanguage;
-import com.github.xerragnaroek.jikai.anime.alrh.ALRHandler;
+import com.github.xerragnaroek.jikai.anime.list.ALRHandler;
 import com.github.xerragnaroek.jikai.commands.guild.CommandHandler;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
@@ -196,6 +196,10 @@ public class Jikai {
 
 	public boolean hasListChannelSet(TitleLanguage lang) {
 		return jd.getListChannelId(lang) != 0;
+	}
+
+	public boolean hasListChannelAdultSet() {
+		return jd.getListChannelAdultId() != 0;
 	}
 
 	public boolean hasAnimeChannelSet() {

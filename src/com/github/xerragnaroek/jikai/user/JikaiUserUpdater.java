@@ -489,7 +489,7 @@ public class JikaiUserUpdater implements ButtonInteractor {
 		return eb.build();
 	}
 
-	private static String formatAirDateTime(LocalDateTime ldt, Locale loc) {
+	public static String formatAirDateTime(LocalDateTime ldt, Locale loc) {
 		return ldt.format(DateTimeFormatter.ofPattern("eeee, dd.MM.yyyy, HH:mm").localizedBy(loc));
 	}
 

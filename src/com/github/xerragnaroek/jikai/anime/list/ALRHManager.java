@@ -1,4 +1,4 @@
-package com.github.xerragnaroek.jikai.anime.alrh;
+package com.github.xerragnaroek.jikai.anime.list;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -221,11 +221,11 @@ public class ALRHManager {
 	 */
 	private void mapAnimesToStartingLetter() {
 		log.debug("Mapping animes to starting letter");
-		Set<Anime> data = AnimeDB.getLoadedAnime();
+		Set<Anime> data = AnimeDB.getLoadedAnime().stream().filter(a -> !a.isAdult()).collect(Collectors.toSet());
 		for (TitleLanguage lang : TitleLanguage.values()) {
 			aniAlph.put(lang, checkReactionLimit(data.stream().map(a -> a.getTitle(lang)).sorted(String.CASE_INSENSITIVE_ORDER).collect(Collectors.groupingBy(a -> "" + a.toUpperCase().charAt(0)))));
 		}
-		log.info("Mapped {} anime to {} letters", data.size(), aniAlph.size());
+		log.info("Mapped {} non adult animes to {} letters", data.size(), aniAlph.size());
 	}
 
 	/**
