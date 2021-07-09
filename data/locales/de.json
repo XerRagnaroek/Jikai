@@ -286,5 +286,21 @@
     "u_no": "nein",
     "u_sec": "Sekunde",
     "u_secs": "Sekunden",
-    "u_yes": "ja"
+    "u_yes": "ja",
+	"dam_synonyms_n": "**Synonyme**",
+	"dam_synonyms_v": "%synonyms%",
+	"dam_episodes_n": "**Episoden**",
+	"dam_episodes_v": "%eps%",
+	"dam_start_date_n": "**Start**",
+	"dam_start_date_v": "%date%",
+	"dam_end_date_n": "**Ende**",
+	"dam_end_date_v": "%date%",
+	"dam_next_ep_date_n": "**Nächste Episode am**",
+	"dam_next_ep_date_v": "%nextEp%",
+	"dam_next_ep_num_n": "**Nächste Episode**",
+	"dam_next_ep_num_v": "%nextEpNum%",
+	"dam_external_n": "**Externe Links**",
+	"dam_external_v": "%extLinks%",
+	"dam_popularity_n": "**Beliebtheit**",
+	"dam_popularity_v": "%pop%"
 }

@@ -1,12 +1,16 @@
 package com.github.xerragnaroek.jikai.anime.db;
 
 import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jasa.AniException;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.JASA;
 import com.github.xerragnaroek.jasa.TitleLanguage;
@@ -39,6 +43,10 @@ public class AnimeDB {
 
 	public static Set<Anime> getLoadedAnime() {
 		return aDB.getLoadedAnime();
+	}
+
+	public static Set<Anime> getAiringOrUpcomingAnime() {
+		return aDB.getLoadedAnime().stream().filter(a -> a.isReleasing() || a.isNotYetReleased()).sorted().collect(Collectors.toSet());
 	}
 
 	public static void waitUntilLoaded() {
@@ -92,7 +100,7 @@ public class AnimeDB {
 	}
 
 	public static void update() {
-		aDB.loadAiringAnime();
+		aDB.loadAnime();
 	}
 
 	public static boolean isUpdateThreadRunning() {
@@ -109,5 +117,9 @@ public class AnimeDB {
 
 	public static JASA getJASA() {
 		return aDB.getJASA();
+	}
+
+	public static List<Anime> loadAnimeViaId(int... ids) throws AniException, IOException {
+		return aDB.loadAnime(ids);
 	}
 }

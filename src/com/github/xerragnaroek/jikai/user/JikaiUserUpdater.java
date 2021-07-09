@@ -2,7 +2,6 @@
 package com.github.xerragnaroek.jikai.user;
 
 import java.time.DayOfWeek;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,6 +39,7 @@ import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.ButtonInteractor;
+import com.github.xerragnaroek.jikai.util.DetailedAnimeMessageBuilder;
 import com.github.xerragnaroek.jikai.util.Pair;
 
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -92,15 +92,13 @@ public class JikaiUserUpdater implements ButtonInteractor {
 			if (a.hasDataForNextEpisode()) {
 				animeAddImpl(a, sa.id(), ju);
 			}
-			if (!sa.silent()) {
+			if (!sa.silent() && !Core.INITIAL_LOAD.get()) {
 				if (a.hasDataForNextEpisode()) {
 					me = subAddMsg(a, ju, sa.cause(), sa.linked());
 				} else {
 					me = subAddNoDataMsg(a, ju, sa.cause(), sa.linked());
 				}
-				if (!Core.INITIAL_LOAD.get()) {
-					ju.sendPM(me);
-				}
+				ju.sendPM(me);
 			}
 			MDC.remove("id");
 		});
@@ -108,12 +106,12 @@ public class JikaiUserUpdater implements ButtonInteractor {
 
 	private Message subAddMsg(Anime a, JikaiUser ju, String cause, boolean linked) {
 		JikaiLocale loc = ju.getLocale();
-		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
-		eb.setThumbnail(a.getBiggestAvailableCoverImage());
-		eb.setTitle(loc.getString("ju_eb_sub_add_title"));
-		long seconds = Duration.between(LocalDateTime.now(ju.getTimeZone()), a.getNextEpisodeDateTime(ju.getTimeZone()).get()).toSeconds();
-		eb.setDescription(loc.getStringFormatted("ju_eb_sub_add_desc", Arrays.asList("title", "time", "cause"), "[" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "](" + a.getAniUrl() + ")", BotUtils.formatSeconds(seconds, loc), cause));
-		MessageBuilder mb = new MessageBuilder(eb);
+		DetailedAnimeMessageBuilder damb = new DetailedAnimeMessageBuilder(a, ju.getTimeZone(), loc);
+		damb.ignoreEmptyFields();
+		damb.withAll(false);
+		damb.setTitle(ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()), a.getAniUrl());
+		damb.setDescription(loc.getStringFormatted("ju_eb_sub_cause", Arrays.asList("cause"), cause));
+		MessageBuilder mb = new MessageBuilder(damb.build());
 		if (linked) {
 			mb.setActionRows(ActionRow.of(Button.danger("juu:" + a.getId(), loc.getString("ju_unsub_btn"))));
 		}
@@ -122,11 +120,11 @@ public class JikaiUserUpdater implements ButtonInteractor {
 
 	private Message subAddNoDataMsg(Anime a, JikaiUser ju, String cause, boolean linked) {
 		JikaiLocale loc = ju.getLocale();
-		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
-		eb.setTitle(loc.getString("ju_eb_sub_add_title"));
-		eb.setThumbnail(a.getBiggestAvailableCoverImage());
-		eb.setDescription(loc.getStringFormatted("ju_eb_sub_add_no_data_desc", Arrays.asList("title", "cause"), "[" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "](" + a.getAniUrl() + ")", cause));
-		MessageBuilder mb = new MessageBuilder(eb);
+		DetailedAnimeMessageBuilder damb = new DetailedAnimeMessageBuilder(a, ju.getTimeZone(), loc);
+		damb.ignoreEmptyFields();
+		damb.setTitle(ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()), a.getAniUrl());
+		damb.setDescription(loc.getStringFormatted("ju_eb_sub_add_no_data_desc", Arrays.asList("cause"), cause));
+		MessageBuilder mb = new MessageBuilder(damb.build());
 		if (linked) {
 			mb.setActionRows(ActionRow.of(Button.danger("juu:" + a.getId(), loc.getString("ju_unsub_btn"))));
 		}
@@ -135,11 +133,12 @@ public class JikaiUserUpdater implements ButtonInteractor {
 
 	private MessageEmbed subRemMsg(Anime a, JikaiUser ju, String cause) {
 		JikaiLocale loc = ju.getLocale();
-		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
-		eb.setThumbnail(a.getBiggestAvailableCoverImage());
-		eb.setTitle(loc.getString("ju_eb_sub_rem_title"));
-		eb.setDescription(loc.getStringFormatted("ju_eb_sub_rem_desc", Arrays.asList("title", "cause"), "[" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + "](" + a.getAniUrl() + ")", cause));
-		return eb.build();
+		String title = ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage());
+		DetailedAnimeMessageBuilder damb = new DetailedAnimeMessageBuilder(a, ju.getTimeZone(), loc);
+		damb.ignoreEmptyFields();
+		damb.withAll(false);
+		damb.setTitle(title, a.getAniUrl()).setDescription(loc.getString("ju_eb_sub_rem_desc") + loc.getStringFormatted("ju_eb_sub_cause", Arrays.asList("cause"), cause));
+		return damb.build();
 	}
 
 	private void animeAddImpl(Anime a, int id, JikaiUser ju) {
@@ -323,34 +322,66 @@ public class JikaiUserUpdater implements ButtonInteractor {
 			updateRem(au);
 			updateReleaseChanged(au);
 			updateNextEp(au);
-			updatePeriodChanged(au);
+			updateFinished(au);
+			updateCancelled(au);
+			updateHiatus(au);
 		}
 	}
 
-	private void updateRem(AnimeUpdate au) {
-		if (au.hasRemovedAnime()) {
-			List<Anime> removed = au.getRemovedAnime();
-			Map<Integer, Anime> remA = removed.stream().collect(Collectors.toMap(Anime::getId, a -> a));
-			Set<JikaiUser> jus = jum.users();
-			jus.forEach(ju -> {
-				Set<Integer> rem = removed.stream().map(Anime::getId).collect(Collectors.toSet());
-				rem.retainAll(ju.getSubscribedAnime());
-				if (!rem.isEmpty()) {
-					rem.forEach(id -> {
-						Anime a = remA.get(id);
-						JikaiLocale loc = ju.getLocale();
-						String cause = null;
-						if (a.isFinished()) {
-							cause = loc.getString("ju_sub_rem_cause_finished");
-						} else {
-							cause = loc.getStringFormatted("ju_sub_rem_cause_unknown", Arrays.asList("links"), BotUtils.formatExternalSites(a));
-						}
-						ju.unsubscribeAnime(a, cause);
-						ju.sendPM(subRemMsg(a, ju, cause));
+	private void updateFinished(AnimeUpdate au) {
+		if (au.hasFinishedAnime()) {
+			List<Anime> finished = au.getFinishedAnime();
+			Map<Integer, Anime> finA = finished.stream().collect(Collectors.toMap(Anime::getId, a -> a));
+			jum.users().forEach(ju -> {
+				Set<Integer> fin = finished.stream().map(Anime::getId).collect(Collectors.toSet());
+				fin.retainAll(ju.getSubscribedAnime());
+				if (!fin.isEmpty()) {
+					fin.forEach(id -> {
+						ju.unsubscribeAnime(finA.get(id), "it finished!");
 					});
 				}
 			});
 		}
+	}
+
+	private void updateCancelled(AnimeUpdate au) {
+
+	}
+
+	private void updateHiatus(AnimeUpdate au) {
+
+	}
+
+	private void updateRem(AnimeUpdate au) {
+		if (au.hasRemovedAnime()) {
+			au.getRemovedAnime().stream().forEach(a -> jum.getJUSubscribedToAnime(a).forEach(ju -> ju.unsubscribeAnime(a, ju.getLocale().getStringFormatted("ju_sub_rem_cause_unknown", Arrays.asList("links"), BotUtils.formatExternalSites(a)))));
+		}
+
+		/*
+		 * if (au.hasRemovedAnime()) {
+		 * List<Anime> removed = au.getRemovedAnime();
+		 * Map<Integer, Anime> remA = removed.stream().collect(Collectors.toMap(Anime::getId, a -> a));
+		 * Set<JikaiUser> jus = jum.users();
+		 * jus.forEach(ju -> {
+		 * Set<Integer> rem = removed.stream().map(Anime::getId).collect(Collectors.toSet());
+		 * rem.retainAll(ju.getSubscribedAnime());
+		 * if (!rem.isEmpty()) {
+		 * rem.forEach(id -> {
+		 * Anime a = remA.get(id);
+		 * JikaiLocale loc = ju.getLocale();
+		 * String cause = null;
+		 * if (a.isFinished()) {
+		 * cause = loc.getString("ju_sub_rem_cause_finished");
+		 * } else {
+		 * cause = loc.getStringFormatted("ju_sub_rem_cause_unknown", Arrays.asList("links"),
+		 * BotUtils.formatExternalSites(a));
+		 * }
+		 * ju.unsubscribeAnime(a, cause);
+		 * });
+		 * }
+		 * });
+		 * }
+		 */
 	}
 
 	private void updateReleaseChanged(AnimeUpdate au) {
@@ -365,19 +396,6 @@ public class JikaiUserUpdater implements ButtonInteractor {
 					ju.getPreReleaseNotifcationSteps().forEach(step -> {
 						addToAnimeStepMap(a.getId(), step, a, ju);
 					});
-				});
-			});
-		}
-	}
-
-	private void updatePeriodChanged(AnimeUpdate au) {
-		if (au.hasAnimeChangedPeriod()) {
-			List<Pair<Anime, Long>> changedP = au.getAnimeChangedPeriod();
-			changedP.forEach(pair -> {
-				Anime a = pair.getLeft();
-				long dif = pair.getRight();
-				jum.getJUSubscribedToAnime(a).forEach(ju -> {
-					ju.sendPM(makePeriodChangedEmbed(ju, a, dif));
 				});
 			});
 		}

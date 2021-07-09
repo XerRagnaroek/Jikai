@@ -33,11 +33,21 @@ public class JikaiLocale implements Comparable<JikaiLocale> {
 	}
 
 	public String getString(String key) {
-		return content.get(key);
+		if (hasString(key)) {
+			return content.get(key);
+		} else {
+			if (!identifier.equals("en")) {
+				return JikaiLocaleManager.getEN().getString(key);
+			}
+			return null;
+		}
 	}
 
 	public String getStringFormatted(String key, List<String> str, Object... objs) {
 		if (!hasString(key)) {
+			if (!identifier.equals("en")) {
+				return JikaiLocaleManager.getEN().getStringFormatted(key, str, objs);
+			}
 			throw new IllegalArgumentException("No message for key: '" + key + "'");
 		}
 		if (str.size() > objs.length) {

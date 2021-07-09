@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.imageio.ImageIO;
 
@@ -33,7 +35,6 @@ import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
-import com.github.xerragnaroek.jikai.util.Initilizable;
 
 import net.dv8tion.jda.api.entities.Activity;
 
@@ -42,10 +43,11 @@ import net.dv8tion.jda.api.entities.Activity;
  * 
  * @author XerRagnaroek
  */
-class AnimeDBImpl implements Initilizable {
+class AnimeDBImpl {
 	private Map<Integer, Anime> anime = new ConcurrentHashMap<>();
+	private Map<Integer, Anime> separatelyLoaded = new ConcurrentHashMap<>();
 	private Map<Integer, BufferedImage> coverImages = new ConcurrentHashMap<>();
-	private static final Logger log = LoggerFactory.getLogger(AnimeDBImpl.class);
+	private final Logger log = LoggerFactory.getLogger(AnimeDBImpl.class);
 	private AtomicBoolean loading = new AtomicBoolean(true);
 	private AtomicBoolean initialized = new AtomicBoolean(false);
 	private JASA jasa = new JASA();
@@ -54,13 +56,23 @@ class AnimeDBImpl implements Initilizable {
 
 	AnimeDBImpl() {}
 
-	public void init() {
+	void init() {
 		log.info("Initializing AnimeBase");
-		loadAiringAnime();
+		startSeparatelyLoadedClear();
+		loadAnime();
 		initialized.set(true);
 	}
 
-	void loadAiringAnime() {
+	private void startSeparatelyLoadedClear() {
+		LocalDateTime now = LocalDateTime.now();
+		long secondsTilMidnight = now.until(now.plusDays(1).withHour(0).truncatedTo(ChronoUnit.HOURS), ChronoUnit.SECONDS) + 1;
+		Core.EXEC.scheduleAtFixedRate(() -> {
+			log.info("Cleared separately loaded anime map!");
+			separatelyLoaded.clear();
+		}, secondsTilMidnight, TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS);
+	}
+
+	void loadAnime() {
 		loading.set(true);
 		Core.JDA.getPresence().setPresence(Activity.watching("the anime load!"), false);
 		try {
@@ -127,11 +139,37 @@ class AnimeDBImpl implements Initilizable {
 	}
 
 	Anime getAnime(int id) {
-		return anime.get(id);
+		Anime a = anime.get(id);
+		if (a == null) {
+			a = separatelyLoaded.get(id);
+		}
+		return a;
 	}
 
 	Anime getAnime(String title, TitleLanguage tt) {
-		return anime.values().stream().filter(a -> a.getTitle(tt).equals(title)).findFirst().get();
+		Optional<Anime> opt = anime.values().stream().filter(a -> a.getTitle(tt).equals(title)).findFirst();
+		if (opt.isEmpty()) {
+			opt = separatelyLoaded.values().stream().filter(a -> a.getTitle(tt).equals(title)).findFirst();
+		}
+		return opt.get();
+	}
+
+	List<Anime> loadAnime(int... ids) throws AniException, IOException {
+		List<Anime> a = new ArrayList<>(ids.length);
+		int[] array = IntStream.of(ids).filter(id -> {
+			Anime an = getAnime(id);
+			if (an == null) {
+				return true;
+			} else {
+				a.add(an);
+				return false;
+			}
+		}).toArray();
+		jasa.fetchAnimeViaId(array).forEach(an -> {
+			a.add(an);
+			separatelyLoaded.put(an.getId(), an);
+		});
+		return a;
 	}
 
 	BufferedImage getCoverImage(Anime a) {
@@ -156,7 +194,7 @@ class AnimeDBImpl implements Initilizable {
 	void startUpdateThreadImpl(long updateRateSeconds) {
 		LocalDateTime now = LocalDateTime.now();
 		long untilNextFullHour = now.until(now.truncatedTo(ChronoUnit.HOURS).plusHours(1), ChronoUnit.SECONDS);
-		updateFuture = Core.EXEC.scheduleAtFixedRate(this::loadAiringAnime, untilNextFullHour, updateRateSeconds, TimeUnit.SECONDS);
+		updateFuture = Core.EXEC.scheduleAtFixedRate(this::loadAnime, untilNextFullHour, updateRateSeconds, TimeUnit.SECONDS);
 		log.debug("Update thread started, first running in {} and updating every {} hours", BotUtils.formatSeconds(untilNextFullHour, JikaiLocaleManager.getEN()), BotUtils.formatSeconds(updateRateSeconds, JikaiLocaleManager.getEN()));
 	}
 
@@ -196,6 +234,8 @@ class AnimeDBImpl implements Initilizable {
 					} catch (InterruptedException e1) {
 						log.error("", e1);
 					}
+				} catch (IllegalArgumentException e) {
+					log.error("Failed loading image! '{}'", e.getMessage());
 				}
 			}
 		});
@@ -213,7 +253,7 @@ class AnimeDBImpl implements Initilizable {
 		AnimeUpdate au = AnimeUpdate.categoriseUpdates(old, newA);
 		if (au.hasChange()) {
 			// newA.removeIf(a -> !a.hasDataForNextEpisode());
-			anime = newA.stream().collect(Collectors.toConcurrentMap(a -> a.getId(), a -> a));
+			anime = newA.stream().peek(a -> separatelyLoaded.remove(a.getId())).collect(Collectors.toConcurrentMap(a -> a.getId(), a -> a));
 			if (au.hasRemovedButStillValid()) {
 				au.getRemovedButStillValid().forEach(a -> anime.put(a.getId(), a));
 			}
@@ -222,12 +262,7 @@ class AnimeDBImpl implements Initilizable {
 		dbUpdated(au);
 	}
 
-	@Override
-	public boolean isInitialized() {
-		return initialized.get();
-	}
-
-	public JASA getJASA() {
+	JASA getJASA() {
 		return jasa;
 	}
 }

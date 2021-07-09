@@ -83,9 +83,7 @@ public class EpisodeTrackerManager implements ButtonInteractor {
 			JikaiUser ju = JikaiUserManager.getInstance().getUser(l);
 			EpisodeTracker et = getTracker(ju);
 			m.forEach((aniId, idEpMap) -> {
-				if (ju.isSubscribedTo(aniId)) {
-					idEpMap.forEach((msgId, epNum) -> et.registerEpisodeDetailed(aniId, msgId, epNum));
-				}
+				idEpMap.forEach((msgId, epNum) -> et.registerEpisodeDetailed(aniId, msgId, epNum));
 			});
 		});
 	}

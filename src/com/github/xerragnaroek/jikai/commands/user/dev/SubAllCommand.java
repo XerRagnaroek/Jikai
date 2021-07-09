@@ -21,7 +21,7 @@ public class SubAllCommand implements JUCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		AnimeDB.getLoadedAnime().forEach(a -> ju.subscribeAnime(a.getId(), "Sub all command"));
+		AnimeDB.getAiringOrUpcomingAnime().stream().forEach(a -> ju.subscribeAnime(a.getId(), "Sub all command"));
 	}
 
 	@Override

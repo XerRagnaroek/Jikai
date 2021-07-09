@@ -1,5 +1,6 @@
 package com.github.xerragnaroek.jikai.user;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import com.github.xerragnaroek.jasa.AniException;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
@@ -46,10 +48,6 @@ public class EpisodeTracker {
 	EpisodeTracker(JikaiUser ju) {
 		this.ju = ju;
 		log = LoggerFactory.getLogger(EpisodeTracker.class.getCanonicalName() + "#" + ju.getId());
-		ju.getSubscribedAnime().onRemove((sr) -> {
-			episodes.remove(sr.id());
-			log.debug("Removed mapping for anime {}", sr.id());
-		});
 	}
 
 	public void registerEpisode(Anime a, long id) {
@@ -170,6 +168,16 @@ public class EpisodeTracker {
 
 	private Pair<Anime, List<String>> formatAnimeEpisodes(long pcId, int anime) {
 		Anime a = AnimeDB.getAnime(anime);
+		if (a == null) {
+			try {
+				List<Anime> loaded = AnimeDB.loadAnimeViaId(anime);
+				if (!loaded.isEmpty()) {
+					a = loaded.get(0);
+				}
+			} catch (AniException | IOException e) {
+				log.error("Couldn't separately load anime '{}'", anime, e);
+			}
+		}
 		Map<Integer, Long> msgs = new TreeMap<>();
 		episodes.get(anime).forEach((l, i) -> msgs.put(i, l));
 		List<String> episodes = new ArrayList<>();

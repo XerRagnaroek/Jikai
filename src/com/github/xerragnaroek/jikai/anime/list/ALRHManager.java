@@ -1,6 +1,7 @@
 package com.github.xerragnaroek.jikai.anime.list;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -9,7 +10,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -24,6 +24,7 @@ import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
+import com.github.xerragnaroek.jikai.util.DetailedAnimeMessageBuilder;
 import com.github.xerragnaroek.jikai.util.Pair;
 
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -76,61 +77,99 @@ public class ALRHManager {
 		if (au.hasChange()) {
 			mapAnimesToStartingLetter();
 			makeListMessages();
-			sendNewAnime(au);
-			sendRemovedAnime(au);
+			if (au.hasNewAnime()) {
+				sendNewAnime(au);
+			}
+			if (au.hasRemovedAnime()) {
+				sendRemovedAnime(au);
+			}
+			if (au.hasCancelledAnime()) {
+				sendCancelledAnime(au);
+			}
+			if (au.hasFinishedAnime()) {
+				sendFinishedAnime(au);
+			}
+			if (au.hasHiatusAnime()) {
+				sendHiatusAnime(au);
+			}
+			if (au.hasChangedReleaseAnime()) {
+				sendChangedReleaseAnime(au);
+			}
 			Core.executeLogException(() -> impls.values().forEach(impl -> impl.values().forEach(imp -> imp.update(au))));
 		}
 	}
 
 	private void sendNewAnime(AnimeUpdate au) {
 		List<Anime> newA = au.getNewAnime();
-		if (!newA.isEmpty()) {
-			log.debug("Sending {} new anime embeds to anime channel", newA.size());
-			for (Anime a : newA) {
-				EmbedBuilder eb = new EmbedBuilder();
-				BotUtils.addJikaiMark(eb);
-				eb.setThumbnail(a.getBiggestAvailableCoverImage());
-				try {
-					eb.setTitle("New addition to the list!");
-					String titles = Stream.of(TitleLanguage.values()).map(a::getTitle).collect(Collectors.joining("\n"));
-					titles = String.format("**[%s](%s)**", titles, a.getAniUrl());
-					eb.appendDescription(titles);
-					BotUtils.sendToAllAnimeChannels(eb.build());
-					// alrh.j.getAnimeChannel().sendMessage(eb.build()).submit().thenAccept(m -> log.debug("Sent embed
-					// for {}", title));
-				} catch (Exception e) {
-					log.error("", e);
-				}
-			}
-		}
-
+		log.debug("Sending {} removed anime embeds to anime channel", newA.size());
+		JikaiLocale loc = JikaiLocaleManager.getEN();
+		sendToAnimeChannel(newA, loc.getString("g_eb_new_anime_desc"), loc);
 	}
 
 	private void sendRemovedAnime(AnimeUpdate au) {
 		List<Anime> removedA = au.getRemovedAnime();
 		log.debug("Sending {} removed anime embeds to anime channel", removedA.size());
-		for (Anime a : removedA) {
-			log.debug("{} status: {}", a.getTitleRomaji(), a.getStatus());
-			EmbedBuilder eb = new EmbedBuilder();
-			BotUtils.addJikaiMark(eb);
-			eb.setThumbnail(a.getBiggestAvailableCoverImage());
+		JikaiLocale loc = JikaiLocaleManager.getEN();
+		sendToAnimeChannel(removedA, loc.getString("g_eb_rem_anime_desc_unknown"), loc);
+	}
+
+	private void sendFinishedAnime(AnimeUpdate au) {
+		List<Anime> finished = au.getFinishedAnime();
+		log.debug("Sending {} finished anime embeds to anime channels", finished.size());
+		JikaiLocale loc = JikaiLocaleManager.getEN();
+		sendToAnimeChannel(finished, loc.getString("g_eb_rem_anime_desc_finished"), loc);
+	}
+
+	private void sendCancelledAnime(AnimeUpdate au) {
+		List<Anime> cancelled = au.getFinishedAnime();
+		log.debug("Sending {} cancelled anime embeds to anime channels", cancelled.size());
+		JikaiLocale loc = JikaiLocaleManager.getEN();
+		sendToAnimeChannel(cancelled, loc.getString("g_eb_cancelled_anime_desc"), loc);
+	}
+
+	private void sendHiatusAnime(AnimeUpdate au) {
+		List<Anime> cancelled = au.getFinishedAnime();
+		log.debug("Sending {} hiatus anime embeds to anime channels", cancelled.size());
+		JikaiLocale loc = JikaiLocaleManager.getEN();
+		sendToAnimeChannel(cancelled, loc.getString("g_eb_hiatus_anime_desc"), loc);
+	}
+
+	private void sendChangedReleaseAnime(AnimeUpdate au) {
+		List<Pair<Anime, Long>> changed = au.getChangedReleaseAnime();
+		log.debug("Sending {} changed releaseanime embeds to anime channels", changed.size());
+		JikaiLocale loc = JikaiLocaleManager.getEN();
+		changed.forEach(p -> {
+			DetailedAnimeMessageBuilder damb = new DetailedAnimeMessageBuilder(p.getLeft(), Core.EUROPE_BERLIN, loc);
+			damb.ignoreEmptyFields().withAll(false);
+			long time = p.getRight();
+			String days = BotUtils.formatSeconds(Math.abs(time), loc);
+			if (time > 0) {
+				damb.setDescription(loc.getString("g_eb_changed_rel_anime_desc") + loc.getStringFormatted("g_eb_changed_rel_later_anime_desc", Arrays.asList("days"), days));
+			} else if (time < 0) {
+				damb.setDescription(loc.getString("g_eb_changed_rel_anime_desc") + loc.getStringFormatted("g_eb_changed_rel_earlier_anime_desc", Arrays.asList("days"), days));
+			} else {
+				damb.setDescription(loc.getString("g_eb_changed_rel_anime_desc") + loc.getString("g_eb_changed_rel_unk_anime_desc"));
+			}
 			try {
-				JikaiLocale loc = JikaiLocaleManager.getEN();
-				eb.setTitle("Anime has been removed from the list!");
-				String titles = Stream.of(TitleLanguage.values()).map(a::getTitle).collect(Collectors.joining("\n"));
-				titles = String.format("**[%s](%s)**\n", titles, a.getAniUrl());
-				eb.appendDescription(titles);
-				if (a.isFinished()) {
-					eb.appendDescription("\n" + loc.getString("g_eb_rem_anime_desc_finished"));
-				} else {
-					log.debug("{} has been removed but isn't finished. NextEpNum={},Episodes={}", a.getTitleRomaji(), a.getNextEpisodeNumber(), a.getEpisodes());
-					eb.appendDescription("\n" + loc.getString("g_eb_rem_anime_desc_unknown"));
-				}
-				BotUtils.sendToAllAnimeChannels(eb.build());
+				BotUtils.sendToAllAnimeChannels(damb.build());
 			} catch (Exception e) {
 				log.error("", e);
 			}
-		}
+		});
+	}
+
+	private void sendToAnimeChannel(List<Anime> anime, String desc, JikaiLocale loc) {
+
+		anime.forEach(a -> {
+			try {
+				DetailedAnimeMessageBuilder damb = new DetailedAnimeMessageBuilder(a, Core.EUROPE_BERLIN, loc);
+				damb.ignoreEmptyFields().withAll(false);
+				damb.setDescription(desc);
+				BotUtils.sendToAllAnimeChannels(damb.build());
+			} catch (Exception e) {
+				log.error("", e);
+			}
+		});
 	}
 
 	private void initImpls() {
@@ -221,7 +260,7 @@ public class ALRHManager {
 	 */
 	private void mapAnimesToStartingLetter() {
 		log.debug("Mapping animes to starting letter");
-		Set<Anime> data = AnimeDB.getLoadedAnime().stream().filter(a -> !a.isAdult()).collect(Collectors.toSet());
+		Set<Anime> data = AnimeDB.getAiringOrUpcomingAnime().stream().collect(Collectors.toSet());
 		for (TitleLanguage lang : TitleLanguage.values()) {
 			aniAlph.put(lang, checkReactionLimit(data.stream().map(a -> a.getTitle(lang)).sorted(String.CASE_INSENSITIVE_ORDER).collect(Collectors.groupingBy(a -> "" + a.toUpperCase().charAt(0)))));
 		}

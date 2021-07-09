@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -52,6 +53,7 @@ public class Core {
 	public static final Path DATA_LOC = Paths.get("./data/");
 	public static final ScheduledExecutorService EXEC = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 	public static final Property<String> CUR_SEASON = new Property<>();
+	public static final ZoneId EUROPE_BERLIN = ZoneId.of("Europe/Berlin");
 	public static BooleanProperty INITIAL_LOAD = new BooleanProperty(true);
 	public static final JikaiManager JM = new JikaiManager();
 	public static boolean IGNORE_LIST = false;

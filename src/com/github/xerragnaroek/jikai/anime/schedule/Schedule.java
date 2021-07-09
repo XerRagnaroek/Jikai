@@ -89,7 +89,7 @@ public class Schedule {
 
 	void populateSchedule(Collection<Anime> oldA) {
 		List<Anime> anime = new ArrayList<>();
-		anime.addAll(AnimeDB.getLoadedAnime());
+		anime.addAll(AnimeDB.getAiringOrUpcomingAnime());
 		if (oldA != null) {
 			anime.addAll(oldA);
 		}
