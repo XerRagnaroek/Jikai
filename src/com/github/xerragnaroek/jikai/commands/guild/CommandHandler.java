@@ -15,6 +15,7 @@ import com.github.xerragnaroek.jikai.commands.ForceSaveCommand;
 import com.github.xerragnaroek.jikai.commands.HelpCommand;
 import com.github.xerragnaroek.jikai.commands.ReloadLocalesCommand;
 import com.github.xerragnaroek.jikai.commands.StopCommand;
+import com.github.xerragnaroek.jikai.commands.TestCommand;
 import com.github.xerragnaroek.jikai.commands.guild.set.SetCommand;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiData;
@@ -39,18 +40,18 @@ public class CommandHandler implements Initilizable {
 	public static Permission[] MOD_PERMS = new Permission[] { Permission.MANAGE_CHANNEL, Permission.MANAGE_ROLES, Permission.MESSAGE_MANAGE, Permission.KICK_MEMBERS, Permission.BAN_MEMBERS };
 
 	static {
-		GuildCommand[] coms = new GuildCommand[] { new ReloadLocalesCommand(), new BugCommand(), new SetupJikaiServerCommand(), new ClearChannelCommand(), new ForceSaveCommand(), new ForceRegisterCommand(), new StopCommand(), new StatusCommand(), /*
-																																																														 * new
-																																																														 * PingCommand
-																																																														 * (
-																																																														 * )
-																																																														 * ,
-																																																														 */ new SetCommand(), new ScheduleCommand(), new AnimeListCommand(), new HelpCommand(), new EnableCommandsCommand(), new DisableCommandsCommand(),/*
-																																																																																																			 * new
-																																																																																																			 * RequestAssistanceCommand
-																																																																																																			 * (
-																																																																																																			 * )
-																																																																																																			 */ };
+		GuildCommand[] coms = new GuildCommand[] { new TestCommand(), new ReloadLocalesCommand(), new BugCommand(), new SetupJikaiServerCommand(), new ClearChannelCommand(), new ForceSaveCommand(), new ForceRegisterCommand(), new StopCommand(), new StatusCommand(), /*
+																																																																			 * new
+																																																																			 * PingCommand
+																																																																			 * (
+																																																																			 * )
+																																																																			 * ,
+																																																																			 */ new SetCommand(), new ScheduleCommand(), new AnimeListCommand(), new HelpCommand(), new EnableCommandsCommand(), new DisableCommandsCommand(),/*
+																																																																																																								 * new
+																																																																																																								 * RequestAssistanceCommand
+																																																																																																								 * (
+																																																																																																								 * )
+																																																																																																								 */ };
 		commands.addAll(Arrays.asList(coms));
 	}
 

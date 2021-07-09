@@ -8,6 +8,9 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.list.ALRHManager;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
@@ -24,6 +27,7 @@ public class JikaiManager extends Manager<Jikai> {
 	final JikaiDataManager jdm = new JikaiDataManager();
 	final ALRHManager alrhm = new ALRHManager();
 	private MapProperty<ZoneId, Set<Long>> timeZones = new MapProperty<>();
+	private final Logger log = LoggerFactory.getLogger(JikaiManager.class);
 
 	public JikaiManager() {
 		super(Jikai.class);
@@ -48,7 +52,12 @@ public class JikaiManager extends Manager<Jikai> {
 	@Override
 	public Jikai registerNew(long id) {
 		if (Core.JDA.getGuildById(id) != null) {
-			return super.registerNew(id);
+			Jikai j = super.registerNew(id);
+			try {
+				j.validateGuildRoles();
+			} catch (Exception e) {
+				log.error("Couldn't validate the guild roles!", e);
+			}
 		}
 		return null;
 	}

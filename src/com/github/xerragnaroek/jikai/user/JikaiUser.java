@@ -94,6 +94,12 @@ public class JikaiUser {
 		hiddenAnime.onRemove(id -> log("removed hidden anime: {}", id));
 		customTitles.onPut((id, s) -> log("added custom title: {} = {}", id, s));
 		customTitles.onRemove((id, s) -> log("removed custom title: {} = {}", id, s));
+		showAdult.onChange((o, n) -> {
+			log("change show adult {}", n);
+			if (!Core.INITIAL_LOAD.get()) {
+				BotUtils.setAdultRole(this);
+			}
+		});
 	}
 
 	@JsonIgnore
@@ -198,11 +204,9 @@ public class JikaiUser {
 	public boolean subscribeAnime(int id, String cause, boolean linked, boolean silent) {
 		boolean subbed = subscribedAnime.add(id, cause, linked, silent);
 		for (long uid : linkedUsers) {
-			JikaiUser ju = JikaiUserManager.getInstance().getUser(uid);
-			if (ju == null) {
-				JikaiUserManager.getInstance().removeUser(uid);
-			} else {
-				if (subbed && !Core.INITIAL_LOAD.get()) {
+			if (!Core.INITIAL_LOAD.get()) {
+				JikaiUser ju = JikaiUserManager.getInstance().getUser(uid);
+				if (subbed) {
 					ju.subscribeLinked(id, ju.getLocale().getStringFormatted("ju_sub_add_cause_linked", Arrays.asList("name"), getUser().getName()));
 				}
 			}
@@ -566,5 +570,6 @@ public class JikaiUser {
 		ju.subscribedAnime.stream().filter(AnimeDB::hasAnime).forEach(id -> subscribeAnime(id, "Copy"));
 		customTitles.putAll(ju.customTitles);
 		hiddenAnime.addAll(ju.hiddenAnime);
+		setShowAdult(ju.isShownAdult());
 	}
 }

@@ -346,6 +346,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 		if (skip) {
 			setup.skipToStage(setup.getStages() - 1);
 		}
+		BotUtils.addJikaiUserRole(ju);
 		setup.end();
 	}
 

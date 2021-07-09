@@ -35,6 +35,8 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 
+import org.apache.commons.collections4.BidiMap;
+import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
@@ -795,6 +797,29 @@ public class BotUtils {
 		return q;
 	}
 
+	public static void validateRolesTMP(Jikai j, JikaiUser ju) {
+		BidiMap<TitleLanguage, Long> tls = new DualHashBidiMap<>(j.getJikaiData().getTitleLanguageRoles());
+		try {
+			Guild g = j.getGuild();
+			Member m = g.getMember(ju.getUser());
+			long wantedRole = tls.get(ju.getTitleLanguage());
+			boolean roleFound = false;
+			for (Role r : m.getRoles()) {
+				if (r.getIdLong() != wantedRole && tls.containsValue(r.getIdLong())) {
+					g.removeRoleFromMember(m, r);
+				}
+				if (r.getIdLong() == wantedRole) {
+					roleFound = true;
+				}
+			}
+			if (!roleFound) {
+				g.addRoleToMember(m, g.getRoleById(tls.get(ju.getTitleLanguage()))).queue();
+			}
+		} catch (Exception e) {
+			Core.ERROR_LOG.error("couldn't get guild!", e);
+		}
+	}
+
 	public static void validateRoles(Jikai j, JikaiUser ju) {
 		try {
 			Guild g = j.getGuild();
@@ -817,6 +842,10 @@ public class BotUtils {
 				Role r = g.getRolesByName(titleLang, false).get(0);
 				g.addRoleToMember(m, r).queue(v -> log.debug("successfully added role {} to user {}", r.getName(), ju.getId()));
 			}
+			setAdultImpl(g, j, m, ju);
+			addJikaiUserRole(ju, j);
+			g.getMembersWithRoles(g.getRoleById(j.getJikaiData().getJikaiUserRole())).stream().filter(mem -> !JikaiUserManager.getInstance().isKnownJikaiUser(mem.getIdLong())).forEach(mem -> removeJikaiUserRole(m.getIdLong(), j));
+			;
 		} catch (Exception e) {
 			Core.ERROR_LOG.error("couldn't get guild!", e);
 		}
@@ -825,23 +854,82 @@ public class BotUtils {
 	public static void switchTitleLangRole(JikaiUser ju, TitleLanguage old, TitleLanguage newLang) {
 		if (old != newLang) {
 			log.debug("Swapping roles {}->{}", old, newLang);
-			Core.JDA.getMutualGuilds(ju.getUser()).stream().filter(Core.JM::hasManagerFor).forEach(g -> {
-				Role newR = g.getRolesByName(newLang.toString().toLowerCase(), false).get(0);
-				RestAction<Void> ra = g.addRoleToMember(ju.getId(), newR);
-				if (old != null) {
-					List<Role> roles = g.getRolesByName(old.toString().toLowerCase(), false);
-					if (!roles.isEmpty()) {
-						ra = ra.and(g.removeRoleFromMember(ju.getId(), roles.get(0)));
+			Core.JDA.getMutualGuilds(ju.getUser()).stream().filter(Core.JM::hasManagerFor).map(Core.JM::get).forEach(j -> {
+				try {
+					Guild g = j.getGuild();
+					Role newR = g.getRoleById(j.getJikaiData().getTitleLanguageRole(newLang));
+					RestAction<Void> ra = g.addRoleToMember(ju.getId(), newR);
+					if (old != null) {
+						ra = ra.and(g.removeRoleFromMember(ju.getId(), g.getRoleById(j.getJikaiData().getTitleLanguageRole(old))));
 					}
+					ra.mapToResult().submit().thenAccept(r -> {
+						if (r.isFailure()) {
+							log.error("Failed swapping roles! guild={};user={}", g.getId(), ju.getId(), r.getFailure());
+						} else {
+							log.debug("Swapped roles {}->{} for user {} on guild {}", old, newR.getName(), ju.getId(), g.getId());
+						}
+					});
+				} catch (Exception e) {
+					log.error("Couldn't get guild {}!", j.getJikaiData().getGuildId(), e);
 				}
-				ra.mapToResult().submit().thenAccept(r -> {
-					if (r.isFailure()) {
-						log.error("Failed swapping roles! guild={};user={}", g.getId(), ju.getId(), r.getFailure());
-					} else {
-						log.debug("Swapped roles {}->{} for user {} on guild {}", old, newR.getName(), ju.getId(), g.getId());
-					}
-				});
 			});
+
+		}
+	}
+
+	public static void setAdultRole(JikaiUser ju) {
+		Core.JDA.getMutualGuilds(ju.getUser()).stream().filter(Core.JM::hasManagerFor).map(Core.JM::get).forEach(j -> {
+			try {
+				Guild g = j.getGuild();
+				Member m = g.getMember(ju.getUser());
+				setAdultImpl(g, j, m, ju);
+			} catch (Exception e) {
+				log.error("Couldn't get guild {}!", j.getJikaiData().getGuildId(), e);
+			}
+		});
+	}
+
+	private static void setAdultImpl(Guild g, Jikai j, Member m, JikaiUser ju) {
+		Role adult = g.getRoleById(j.getJikaiData().getAdultRoleId());
+		boolean hasAdult = m.getRoles().contains(adult);
+		if (hasAdult && !ju.isShownAdult()) {
+			g.removeRoleFromMember(m, adult).queue(v -> log.debug("removed false adult role from {}", ju.getId()));
+		} else if (!hasAdult && ju.isShownAdult()) {
+			g.addRoleToMember(m, adult).queue(v -> log.debug("added missing adult role to {}", ju.getId()));
+		}
+	}
+
+	public static void addJikaiUserRole(JikaiUser ju) {
+		Core.JDA.getMutualGuilds(ju.getUser()).stream().filter(Core.JM::hasManagerFor).map(Core.JM::get).forEach(j -> addJikaiUserRole(ju, j));
+	}
+
+	public static void addJikaiUserRole(JikaiUser ju, Jikai j) {
+		try {
+			Guild g = j.getGuild();
+			Member m = g.getMember(ju.getUser());
+			Role user = g.getRoleById(j.getJikaiData().getJikaiUserRole());
+			if (!m.getRoles().contains(user)) {
+				g.addRoleToMember(m, user).queue(v -> log.debug("added user role to {} on {}", ju.getId(), g.getId()));
+			}
+		} catch (Exception e) {
+			log.error("Couldn't get guild {}!", j.getJikaiData().getGuildId(), e);
+		}
+	}
+
+	public static void removeJikaiUserRole(JikaiUser ju) {
+		Core.JDA.getMutualGuilds(ju.getUser()).stream().filter(Core.JM::hasManagerFor).map(Core.JM::get).forEach(j -> removeJikaiUserRole(ju.getId(), j));
+	}
+
+	public static void removeJikaiUserRole(long id, Jikai j) {
+		try {
+			Guild g = j.getGuild();
+			Member m = g.getMemberById(id);
+			Role user = g.getRoleById(j.getJikaiData().getJikaiUserRole());
+			if (m.getRoles().contains(user)) {
+				g.removeRoleFromMember(m, user).queue(v -> log.debug("removed user role from {} on {}", id, g.getId()));
+			}
+		} catch (Exception e) {
+			log.error("Couldn't get guild {}!", j.getJikaiData().getGuildId(), e);
 		}
 	}
 

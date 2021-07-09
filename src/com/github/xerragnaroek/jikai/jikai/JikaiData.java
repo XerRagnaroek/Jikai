@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -90,6 +91,8 @@ public class JikaiData {
 	private LongProperty adultRole = new LongProperty(0l);
 	@JsonProperty("title_language_roles")
 	private Map<TitleLanguage, Long> titleLanguageRoles = new MapProperty<>();
+	@JsonProperty("user_role")
+	private LongProperty userRole = new LongProperty(0l);
 
 	public JikaiData(long guildId, boolean save) {
 		log = LoggerFactory.getLogger(JikaiData.class + "#" + guildId);
@@ -404,15 +407,27 @@ public class JikaiData {
 	}
 
 	public void setAdultRoleId(long id) {
-		adultRole.set(id);
+		setData(adultRole, id, "adult_role");
 	}
 
 	public long getTitleLanguageRole(TitleLanguage tl) {
 		return titleLanguageRoles.get(tl);
 	}
 
+	public Map<TitleLanguage, Long> getTitleLanguageRoles() {
+		return new HashMap<>(titleLanguageRoles);
+	}
+
 	public void setTitleLanguageRole(TitleLanguage tl, long id) {
 		titleLanguageRoles.put(tl, id);
+	}
+
+	public void setJikaiUserRole(long id) {
+		setData(userRole, id, "user_role");
+	}
+
+	public long getJikaiUserRole() {
+		return userRole.get();
 	}
 
 	private void hasChanged() {

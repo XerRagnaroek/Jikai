@@ -46,7 +46,6 @@ public class AniListSyncer {
 
 	public void registerUser(JikaiUser ju) {
 		MDC.put("id", String.valueOf(ju.getId()));
-		log.debug("Registering user");
 		IntegerProperty idP = ju.aniIdProperty();
 		int id = idP.get();
 		if (id > 0) {

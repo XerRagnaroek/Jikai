@@ -35,4 +35,9 @@ public class Pair<U, T> {
 	public static <U, T> Pair<U, T> of(@JsonProperty("left") U left, @JsonProperty("right") T right) {
 		return new Pair<>(left, right);
 	}
+
+	@Override
+	public String toString() {
+		return String.format("Pair{%s,%s}", left, right);
+	}
 }

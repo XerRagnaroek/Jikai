@@ -3,7 +3,10 @@ package com.github.xerragnaroek.jikai.jikai;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +23,7 @@ import com.github.xerragnaroek.jikai.util.BotUtils;
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 
@@ -164,6 +168,92 @@ public class Jikai {
 
 	public JikaiLocale getLocale() {
 		return jd.getLocale();
+	}
+
+	public void validateGuildRoles() throws Exception {
+		log.debug("Validating roles...");
+		Guild g = getGuild();
+		CompletableFuture.allOf(valTlRoles(g), valAdultRole(g), valJURole(g)).join();
+	}
+
+	private CompletableFuture<Void> valTlRoles(Guild g) {
+		Map<TitleLanguage, Long> tlRoles = jd.getTitleLanguageRoles();
+		List<TitleLanguage> missingLangs = new LinkedList<>();
+		for (TitleLanguage tl : TitleLanguage.values()) {
+			if (!tlRoles.containsKey(tl)) {
+				log.debug("No saved role for {}", tl);
+				List<Role> roles = g.getRolesByName(tl.toString(), true);
+				if (!roles.isEmpty()) {
+					Role r = roles.get(0);
+					jd.setTitleLanguageRole(tl, r.getIdLong());
+					log.debug("Found role for {}, {}", tl, r.getId());
+				} else {
+					missingLangs.add(tl);
+				}
+			} else {
+				if (g.getRoleById(tlRoles.get(tl)) == null) {
+					log.debug("Saved role for {} is invalid", tl);
+					missingLangs.add(tl);
+				}
+			}
+		}
+		List<CompletableFuture<Void>> cfs = new LinkedList<>();
+		for (TitleLanguage tl : missingLangs) {
+			cfs.add(g.createRole().submit().thenAccept(r -> {
+				r.getManager().setName(tl.toString().toLowerCase()).queue();
+				jd.setTitleLanguageRole(tl, r.getIdLong());
+				log.debug("Created role for {}, {}", tl, r.getId());
+			}));
+		}
+		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture<?>[cfs.size()]));
+	}
+
+	private CompletableFuture<Void> valAdultRole(Guild g) {
+		boolean createAdult = false;
+		if (jd.getAdultRoleId() == 0) {
+			log.debug("No saved adult role");
+			createAdult = true;
+		} else {
+			if (g.getRoleById(jd.getAdultRoleId()) == null) {
+				createAdult = true;
+				log.debug("Saved adult role is invalid");
+			} else {
+				log.debug("Saved adult role is valid");
+			}
+		}
+		if (createAdult) {
+			return g.createRole().submit().thenAccept(r -> {
+				r.getManager().setName("adult").queue();
+				jd.setAdultRoleId(r.getIdLong());
+				log.debug("Created adult role {}", r.getId());
+			});
+		} else {
+			return CompletableFuture.completedFuture(null);
+		}
+	}
+
+	private CompletableFuture<Void> valJURole(Guild g) {
+		boolean create = false;
+		if (jd.getJikaiUserRole() == 0) {
+			log.debug("No saved user role");
+			create = true;
+		} else {
+			if (g.getRoleById(jd.getJikaiUserRole()) == null) {
+				log.debug("Saved user role is invalid");
+				create = true;
+			} else {
+				log.debug("Saved user role is valid");
+			}
+		}
+		if (create) {
+			return g.createRole().submit().thenAccept(r -> {
+				r.getManager().setName("jikai user").queue();
+				jd.setJikaiUserRole(r.getIdLong());
+				log.debug("Created user role {}", r.getId());
+			});
+		} else {
+			return CompletableFuture.completedFuture(null);
+		}
 	}
 
 	private void noInfoCh() {

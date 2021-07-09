@@ -159,6 +159,7 @@ public class JikaiUserManager {
 		log.debug("Removing user '{}'", id);
 		JikaiUser ju = user.remove(id);
 		if (ju != null) {
+			BotUtils.removeJikaiUserRole(ju);
 			ju.destroy();
 			EpisodeTrackerManager.removeTracker(ju);
 		}

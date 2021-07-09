@@ -31,10 +31,27 @@ public class AnimeListCommand implements GuildCommand {
 		AnimeDB.waitUntilLoaded();
 		MessageChannel mc = event.getChannel();
 		boolean isSending = false;
-		for (TitleLanguage lang : TitleLanguage.values()) {
-			ALRHandler h = j.getALRHandler(lang);
-			if (!(isSending = h.isSendingList())) {
-				h.sendList();
+		if (arguments.length == 0) {
+			for (TitleLanguage lang : TitleLanguage.values()) {
+				ALRHandler h = j.getALRHandler(lang);
+				if (!(isSending = h.isSendingList())) {
+					h.sendList();
+				}
+			}
+		} else {
+			if (arguments[0].toLowerCase().equals("adult")) {
+
+			} else {
+				TitleLanguage lang = null;
+				switch (arguments[0].toLowerCase()) {
+					case "romaji" -> lang = TitleLanguage.ROMAJI;
+					case "english" -> lang = TitleLanguage.ENGLISH;
+					case "native" -> lang = TitleLanguage.NATIVE;
+				}
+				ALRHandler h = j.getALRHandler(lang);
+				if (!(isSending = h.isSendingList())) {
+					h.sendList();
+				}
 			}
 		}
 		if (isSending) {
