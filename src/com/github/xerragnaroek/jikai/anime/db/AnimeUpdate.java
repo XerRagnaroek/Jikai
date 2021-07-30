@@ -1,6 +1,7 @@
 package com.github.xerragnaroek.jikai.anime.db;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -10,12 +11,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jasa.AnimeDate;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Pair;
@@ -30,13 +33,23 @@ public class AnimeUpdate {
 	private List<Anime> oldA;
 	private List<Anime> newA;
 	private List<Anime> removed = new LinkedList<>();
+	private List<Anime> removedFiltered;
 	private List<Anime> newAnime;
+	private List<Anime> newAnimeFiltered;
 	private List<Pair<Anime, Long>> changed = new LinkedList<>();
+	private List<Pair<Anime, Long>> changedFiltered;
 	private List<Anime> nextEp = new ArrayList<>();
+	private List<Anime> nextEpFiltered;
 	private List<Anime> removedButStillValid = new LinkedList<>();
+	private List<Anime> removedButStillValidFiltered;
 	private List<Anime> finished = new LinkedList<>();
+	private List<Anime> finishedFiltered;
 	private List<Anime> hiatus = new LinkedList<>();
+	private List<Anime> hiatusFiltered;
 	private List<Anime> cancelled = new LinkedList<>();
+	private List<Anime> cancelledFiltered;
+	private List<Anime> infoChanged = new LinkedList<>();
+	private List<Anime> infoChangedFiltered;
 	private final Logger log = LoggerFactory.getLogger(AnimeUpdate.class);
 	private int size;
 
@@ -51,6 +64,7 @@ public class AnimeUpdate {
 		handleRemoved();
 		handleFinished();
 		handleCancelled();
+		handleInfoChanged();
 		handleHiatus();
 		handleReleaseChanged();
 		handleNextEp();
@@ -80,12 +94,17 @@ public class AnimeUpdate {
 			if (hasChangedReleaseAnime()) {
 				strings.add("Changed Release: " + changed.size());
 			}
-
 			if (hasRemovedButStillValid()) {
 				strings.add("Not in new data but still valid: " + removedButStillValid.size());
 			}
 			if (hasCancelledAnime()) {
 				strings.add("Cancelled: " + cancelled.size());
+			}
+			if (hasHiatusAnime()) {
+				strings.add("Hiatus: " + hiatus.size());
+			}
+			if (hasInfoChangedAnime()) {
+				strings.add("Info Changed: " + infoChanged.size());
 			}
 			if (hasRemovedAnime()) {
 				strings.add("Removed: " + removed.size());
@@ -128,8 +147,10 @@ public class AnimeUpdate {
 					return true;
 				}
 				if (!a.hasDataForNextEpisode() && oldA.contains(a) && (oldAn = oldA.get(oldA.indexOf(a))).hasDataForNextEpisode()) {
-					return oldAn.getNextEpisodeNumber() + 1 == a.getEpisodes();
+					AnimeDate end = a.getEndDate();
+					return (oldAn.getNextEpisodeNumber() + 1 == a.getEpisodes()) || (end.hasAll() && end.toZDT(ZoneId.systemDefault()).toLocalDate().isEqual(LocalDate.now()));
 				}
+
 			}
 			return false;
 		}).peek(a -> log.debug("{},{} has finished!", a.getTitleRomaji(), a.getId())).collect(Collectors.toList());
@@ -186,7 +207,18 @@ public class AnimeUpdate {
 				Anime oldAn = oldA.get(oldA.indexOf(a));
 				if ((!oldAn.hasDataForNextEpisode() && a.hasDataForNextEpisode()) || (oldAn.hasDataForNextEpisode() && a.hasDataForNextEpisode() && a.getNextEpisodeNumber() > oldAn.getNextEpisodeNumber())) {
 					nextEp.add(a);
-					log.debug("{} has a new episode coming up!", a.getTitleRomaji());
+					log.debug("{} has a new episode coming up! Old ep: {}, new ep: {}", a.getTitleRomaji(), oldAn.getNextEpisodeNumber(), a.getNextEpisodeNumber());
+				}
+			}
+		});
+	}
+
+	private void handleInfoChanged() {
+		newA.forEach(a -> {
+			if (oldA.contains(a)) {
+				if (!a.sameInfo(oldA.get(oldA.indexOf(a)))) {
+					infoChanged.add(a);
+					log.debug("{} has changed info!", a.getTitleRomaji());
 				}
 			}
 		});
@@ -196,28 +228,40 @@ public class AnimeUpdate {
 		return Duration.between(old.getNextEpisodeDateTime(ZoneId.systemDefault()).get(), newA.getNextEpisodeDateTime(ZoneId.systemDefault()).get());
 	}
 
+	public void withFilter(Predicate<Anime> filter) {
+		removedFiltered = removed.stream().filter(filter).collect(Collectors.toList());
+		newAnimeFiltered = newAnime.stream().filter(filter).collect(Collectors.toList());
+		changedFiltered = changed.stream().filter(p -> filter.test(p.getLeft())).collect(Collectors.toList());
+		nextEpFiltered = nextEp.stream().filter(filter).collect(Collectors.toList());
+		removedButStillValidFiltered = removedButStillValid.stream().filter(filter).collect(Collectors.toList());
+		finishedFiltered = finished.stream().filter(filter).collect(Collectors.toList());
+		hiatusFiltered = hiatus.stream().filter(filter).collect(Collectors.toList());
+		cancelledFiltered = cancelled.stream().filter(filter).collect(Collectors.toList());
+		infoChangedFiltered = infoChanged.stream().filter(filter).collect(Collectors.toList());
+	}
+
 	public List<Anime> getRemovedAnime() {
-		return removed;
+		return removedFiltered == null ? removed : removedFiltered;
 	}
 
 	public boolean hasRemovedAnime() {
-		return !removed.isEmpty();
+		return removedFiltered == null ? !removed.isEmpty() : !removedFiltered.isEmpty();
 	}
 
 	public List<Anime> getRemovedButStillValid() {
-		return removedButStillValid;
+		return removedButStillValidFiltered == null ? removedButStillValid : removedButStillValidFiltered;
 	}
 
 	public boolean hasRemovedButStillValid() {
-		return !removedButStillValid.isEmpty();
+		return removedButStillValidFiltered == null ? !removedButStillValid.isEmpty() : !removedButStillValidFiltered.isEmpty();
 	}
 
 	public List<Anime> getNewAnime() {
-		return newAnime;
+		return newAnimeFiltered == null ? newAnime : newAnimeFiltered;
 	}
 
 	public boolean hasNewAnime() {
-		return !newAnime.isEmpty();
+		return newAnimeFiltered == null ? !newAnime.isEmpty() : !newAnimeFiltered.isEmpty();
 	}
 
 	/**
@@ -226,48 +270,55 @@ public class AnimeUpdate {
 	 * @return
 	 */
 	public List<Pair<Anime, Long>> getChangedReleaseAnime() {
-		return changed;
-	}
-
-	public List<Anime> getAnimeNextEp() {
-		return nextEp;
-	}
-
-	public boolean hasAnimeNextEp() {
-		return !nextEp.isEmpty();
+		return changedFiltered == null ? changed : changedFiltered;
 	}
 
 	public boolean hasChangedReleaseAnime() {
-		return changed != null && !changed.isEmpty();
+		return changedFiltered == null ? (changed != null && !changed.isEmpty()) : !changedFiltered.isEmpty();
+	}
+
+	public List<Anime> getAnimeNextEp() {
+		return nextEpFiltered == null ? nextEp : nextEpFiltered;
+	}
+
+	public boolean hasAnimeNextEp() {
+		return nextEpFiltered == null ? !nextEp.isEmpty() : !nextEpFiltered.isEmpty();
 	}
 
 	public List<Anime> getFinishedAnime() {
-		return finished;
+		return finishedFiltered == null ? finished : finishedFiltered;
 	}
 
 	public boolean hasFinishedAnime() {
-		return !finished.isEmpty();
+		return finishedFiltered == null ? !finished.isEmpty() : !finishedFiltered.isEmpty();
 	}
 
 	public List<Anime> getCancelledAnime() {
-		return cancelled;
+		return cancelledFiltered == null ? cancelled : cancelledFiltered;
 	}
 
 	public boolean hasCancelledAnime() {
-		return !cancelled.isEmpty();
+		return cancelledFiltered == null ? !cancelled.isEmpty() : !cancelledFiltered.isEmpty();
 	}
 
 	public List<Anime> getHiatusAnime() {
-		return hiatus;
+		return hiatusFiltered == null ? hiatus : hiatusFiltered;
 	}
 
 	public boolean hasHiatusAnime() {
-		return !hiatus.isEmpty();
+		return hiatusFiltered == null ? !hiatus.isEmpty() : !hiatusFiltered.isEmpty();
+	}
 
+	public List<Anime> getInfoChangedAnime() {
+		return infoChangedFiltered == null ? infoChanged : infoChangedFiltered;
+	}
+
+	public boolean hasInfoChangedAnime() {
+		return infoChangedFiltered == null ? !infoChanged.isEmpty() : !infoChangedFiltered.isEmpty();
 	}
 
 	public boolean hasChange() {
-		return hasAnimeNextEp() || hasNewAnime() || hasChangedReleaseAnime() || hasRemovedAnime() || hasFinishedAnime() || hasCancelledAnime() || hasHiatusAnime();
+		return hasAnimeNextEp() || hasNewAnime() || hasChangedReleaseAnime() || hasRemovedAnime() || hasFinishedAnime() || hasCancelledAnime() || hasHiatusAnime() || hasInfoChangedAnime();
 	}
 
 	public static AnimeUpdate categoriseUpdates(List<Anime> oldA, List<Anime> newA) {

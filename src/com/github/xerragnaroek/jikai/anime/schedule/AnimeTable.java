@@ -244,12 +244,12 @@ class Cell implements Comparable<Cell> {
 			BufferedImage img = entry.getValue();
 			Rectangle2D titleBounds = fm.getStringBounds(a.getTitle(TitleLanguage.ROMAJI), g);
 			double titleWidth = titleBounds.getWidth();
-			double imgWidth = img.getWidth();
+			double imgWidth = img == null ? 0 : img.getWidth();
 			// greatest width is the width of the cell
 			double cellWidth = (titleWidth > imgWidth ? titleWidth : imgWidth) + padding * 2;
 			// width of image is width of widest cell
 			width = width > cellWidth ? width : cellWidth;
-			height += titleBounds.getHeight() + padding * 2 + img.getHeight();
+			height += titleBounds.getHeight() + padding * 2 + (img == null ? 0 : img.getHeight());
 		}
 
 		log.debug("Image has dimensions: width={}, height={}", (int) width, (int) height);
@@ -267,15 +267,14 @@ class Cell implements Comparable<Cell> {
 		fm = g.getFontMetrics();
 		// curY += padding;
 		for (Entry<Anime, BufferedImage> entry : ani.entrySet()) {
-			if (entry.getKey().getId() == 115136) {
-				log.debug("debug point :)");
-			}
 			String title = entry.getKey().getTitle(TitleLanguage.ROMAJI);
 			curY += (int) fm.getStringBounds(title, g).getHeight() + padding;
 			g.drawString(title, curX, curY);
 			curY += padding;
-			g.drawImage(entry.getValue(), curX, curY, null);
-			curY += entry.getValue().getHeight();
+			if (entry.getValue() != null) {
+				g.drawImage(entry.getValue(), curX, curY, null);
+				curY += entry.getValue().getHeight();
+			}
 		}
 		log.debug("Image successfully created");
 		return img;

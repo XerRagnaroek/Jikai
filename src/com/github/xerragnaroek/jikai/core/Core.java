@@ -2,6 +2,8 @@
 package com.github.xerragnaroek.jikai.core;
 
 import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -19,6 +21,7 @@ import java.util.stream.Stream;
 import javax.security.auth.login.LoginException;
 
 import org.apache.commons.collections4.IteratorUtils;
+import org.apache.commons.io.output.WriterOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,9 +30,12 @@ import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.jikai.JikaiManager;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.EpisodeTrackerManager;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.user.PrivateList;
 import com.github.xerragnaroek.jikai.user.link.LinkRequest;
+import com.github.xerragnaroek.jikai.user.token.JikaiUserAniTokenManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
+import com.github.xerragnaroek.jikai.util.PMWriter;
 import com.github.xerragnaroek.jikai.util.prop.BooleanProperty;
 import com.github.xerragnaroek.jikai.util.prop.Property;
 
@@ -67,9 +73,11 @@ public class Core {
 		JDABuilder builder = JDABuilder.create(token, GatewayIntent.DIRECT_MESSAGES, GatewayIntent.DIRECT_MESSAGE_REACTIONS, GatewayIntent.GUILD_MESSAGE_REACTIONS, GatewayIntent.GUILD_MESSAGES, GatewayIntent.GUILD_MEMBERS);
 		builder.disableCache(Arrays.asList(CacheFlag.VOICE_STATE, CacheFlag.EMOTE));
 		builder.setEventPool(EXEC, true);
+		builder.setEventManager(new JikaiInterfacedEventManager());
 		builder.addEventListeners((listener = new JikaiEventListener()));
 		JDA = builder.build();
 		JDA.awaitReady();
+		System.setErr(new PrintStream(new WriterOutputStream(new PMWriter(Core.DEV_IDS.get(0)), Charset.defaultCharset(), 1024, true)));
 		init(args);
 		sendOnlineMsg(start);
 		log.info("Initialized, using a total of " + ((mem - Runtime.getRuntime().freeMemory()) / 1024) + " kb of memory");
@@ -88,6 +96,8 @@ public class Core {
 		PrivateList.setListDuration(privateListDuration);
 		// EpisodeTrackerNew.init();
 		EpisodeTrackerManager.init();
+		JikaiUserAniTokenManager.init();
+		JikaiUserManager.getInstance().users().forEach(ju -> AniListSyncer.getInstance().syncAniListsWithSubs(ju));
 	}
 
 	private static void sendOnlineMsg(Instant start) {

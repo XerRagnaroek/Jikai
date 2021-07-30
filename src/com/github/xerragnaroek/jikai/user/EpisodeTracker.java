@@ -15,8 +15,10 @@ import org.slf4j.MDC;
 
 import com.github.xerragnaroek.jasa.AniException;
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jasa.JASA;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+import com.github.xerragnaroek.jikai.user.token.JikaiUserAniTokenManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Pair;
 
@@ -71,11 +73,51 @@ public class EpisodeTracker {
 		idAnime.remove(id);
 		episodes.compute(anime, (a, m) -> {
 			m.computeIfPresent(id, (l, epNum) -> {
-				log.debug("User watched episode {} of {}", epNum, a);
+				boolean lastEp = wasLastEpisode(anime, epNum);
+				log.debug("User watched {} episode {} of {}", lastEp ? "final" : "", epNum, a);
+				if (ju.getAniId() > 0 && JikaiUserAniTokenManager.hasToken(ju)) {
+					try {
+						String token = JikaiUserAniTokenManager.getAniToken(ju.getAniId()).getAccessToken();
+						JASA jasa = AnimeDB.getJASA();
+						int mediaListEntryId = 0;
+						try {
+							mediaListEntryId = jasa.getMediaListEntryIdForUserFromAniId(ju.getAniId(), anime);
+						} catch (AniException e) {
+							if (e.getStatusCode() == 404) {
+								mediaListEntryId = jasa.addToUserWatchingList(token, anime);
+							}
+						}
+						updateAniListProgress(token, mediaListEntryId, anime, epNum);
+						if (lastEp) {
+							jasa.updateMediaListEntryToCompletedList(token, mediaListEntryId);
+							log.debug("Moved {} to completed list!", anime);
+						}
+					} catch (AniException | IOException e) {
+						BotUtils.logAndSendToDev(log, "", e);
+					}
+				}
 				return null;
 			});
 			return m.isEmpty() ? null : m;
 		});
+	}
+
+	private boolean wasLastEpisode(int animeId, int ep) {
+		try {
+			Anime a = AnimeDB.loadAnimeViaId(animeId).get(0);
+			return a.getEpisodes() == ep;
+		} catch (AniException | IOException e) {
+			BotUtils.logAndSendToDev(log, "", e);
+		}
+		return false;
+	}
+
+	private void updateAniListProgress(String token, int mediaListEntryId, int animeId, int ep) throws IOException, AniException {
+		if (ju.getAniId() > 0) {
+			JASA jasa = AnimeDB.getJASA();
+			jasa.updateMediaListEntryProgress(token, mediaListEntryId, ep);
+			log.debug("Updated progress on ani list to ep {} for anime {}", ep, animeId);
+		}
 	}
 
 	public void handleEmojiReacted(PrivateMessageReactionAddEvent event) {

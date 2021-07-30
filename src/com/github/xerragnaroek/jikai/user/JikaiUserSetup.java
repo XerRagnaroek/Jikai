@@ -62,6 +62,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 		stageWeekly();
 		stageNotifyOnRelease();
 		stageNextEpMessage();
+		stageShowAdult();
 		stageReleaseSteps();
 		stageLinkAni();
 		stageDone();
@@ -79,9 +80,10 @@ public class JikaiUserSetup extends ListenerAdapter {
 			case 7 -> meb = weeklyMeb();
 			case 8 -> meb = notifyReleaseMeb();
 			case 9 -> meb = nextEpMeb();
-			case 10 -> meb = makeReleaseStepsEmbed();
-			case 11 -> meb = linkAniMeb();
-			case 12 -> meb = doneMeb();
+			case 10 -> meb = adultMeb();
+			case 11 -> meb = makeReleaseStepsEmbed();
+			case 12 -> meb = linkAniMeb();
+			case 13 -> meb = doneMeb();
 		}
 		setup.editStage(i, meb);
 	}
@@ -221,7 +223,6 @@ public class JikaiUserSetup extends ListenerAdapter {
 	}
 
 	private void stageDaily() {
-
 		setup.addStage(dailyMeb(), Arrays.asList(yesUni, noUni), str -> yesNoOption(str, (b) -> {
 			ju.setUpdateDaily(b);
 			setup.nextStage();
@@ -278,6 +279,17 @@ public class JikaiUserSetup extends ListenerAdapter {
 		eb.setTitle(ju.getLocale().getString("setup_next_ep_msg_eb_title")).setDescription(ju.getLocale().getString("setup_next_ep_msg_eb_desc"));
 		eb.setThumbnail("https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/nextEpMsgExample.jpg");
 		return eb.build();
+	}
+
+	private MessageEmbed adultMeb() {
+		return BotUtils.localedEmbed(ju.getLocale(), "setup_adult_eb", Pair.of(Arrays.asList("adult"), new Object[] { ju.getLocale().getYesOrNo(ju.isShownAdult()) }));
+	}
+
+	private void stageShowAdult() {
+		setup.addStage(adultMeb(), Arrays.asList(yesUni, noUni), str -> yesNoOption(str, b -> {
+			ju.setShowAdult(b);
+			setup.nextStage();
+		}), null, true, false, i -> editCurStage(i));
 	}
 
 	private void stageReleaseSteps() {

@@ -43,6 +43,7 @@ public class JikaiManager extends Manager<Jikai> {
 		JikaiIO.load();
 		jdm.getGuildIds().forEach(this::registerNew);
 		alrhm.init();
+		impls.values().forEach(Jikai::setupBigListHandlers);
 		ScheduleManager.init();
 		Core.CUR_SEASON.onChange((ov, nv) -> updateJikaisSeasonChanged(nv));
 		JikaiUserManager.getInstance().cachePrivateChannels();

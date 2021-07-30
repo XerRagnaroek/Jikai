@@ -12,8 +12,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.list.ALRHandler;
+import com.github.xerragnaroek.jikai.anime.list.BigListHandler;
 import com.github.xerragnaroek.jikai.commands.guild.CommandHandler;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
@@ -31,6 +33,7 @@ public class Jikai {
 	private JikaiData jd;
 	private BotData bd;
 	private Map<TitleLanguage, ALRHandler> alrhs = new HashMap<>();
+	private Map<String, BigListHandler> blhs = new HashMap<>();
 	private CommandHandler ch;
 	private final Logger log;
 	private final static Logger sLog = LoggerFactory.getLogger(Jikai.class);
@@ -312,6 +315,27 @@ public class Jikai {
 		} catch (Exception e) {
 			log.error("Couldn't get guild!", e);
 		}
+	}
+
+	public void setupBigListHandlers() {
+		BigListHandler adult = new BigListHandler(this, jd.getListChannelAdultId(), "adult");
+		blhs.put("adult", adult);
+		adult.setAnimeFilter(Anime::isAdult);
+		adult.bindToChannelProperty(jd.listChannelAdultIdProperty());
+		adult.validateList();
+		BigListHandler big = new BigListHandler(this, jd.getListChannelBigId(), "big");
+		blhs.put("big", big);
+		big.setAnimeFilter(a -> !a.isAdult());
+		big.bindToChannelProperty(jd.listChannelBigIdProperty());
+		big.validateList();
+	}
+
+	public BigListHandler getBigListHandler(String identifier) {
+		return blhs.get(identifier);
+	}
+
+	public Map<String, BigListHandler> getBigListHandlerMap() {
+		return blhs;
 	}
 
 }

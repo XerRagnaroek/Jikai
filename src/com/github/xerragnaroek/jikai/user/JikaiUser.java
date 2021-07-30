@@ -207,7 +207,9 @@ public class JikaiUser {
 			if (!Core.INITIAL_LOAD.get()) {
 				JikaiUser ju = JikaiUserManager.getInstance().getUser(uid);
 				if (subbed) {
-					ju.subscribeLinked(id, ju.getLocale().getStringFormatted("ju_sub_add_cause_linked", Arrays.asList("name"), getUser().getName()));
+					if (ju.isShownAdult() || !AnimeDB.getAnime(id).isAdult()) {
+						ju.subscribeLinked(id, ju.getLocale().getStringFormatted("ju_sub_add_cause_linked", Arrays.asList("name"), getUser().getName()));
+					}
 				}
 			}
 		}

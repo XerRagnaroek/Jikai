@@ -78,7 +78,7 @@ public class Schedule {
 	public AnimeTable makeUserTable(JikaiUser ju) {
 		log.debug("Making table for user {}", ju.getId());
 		AnimeTable at = new AnimeTable(zone);
-		ju.getSubscribedAnime().stream().map(AnimeDB::getAnime).filter(this::airsLaterThisWeek).forEach(at::addAnime);
+		ju.getSubscribedAnime().stream().map(AnimeDB::getAnime).filter(this::airsThisWeek).forEach(at::addAnime);
 		return at;
 	}
 
@@ -95,7 +95,7 @@ public class Schedule {
 		}
 		log.debug("Populating schedule, clearing map");
 		week.clear();
-		mapAnimeToDayOfWeek(zone, anime).forEach((day, set) -> set.stream().filter(this::airsLaterThisWeek).peek(a -> log.debug("{} airs this week", a.getTitle(TitleLanguage.ROMAJI))).forEach(a -> addAnimeToWeek(day, a)));
+		mapAnimeToDayOfWeek(zone, anime).forEach((day, set) -> set.stream().filter(this::airsThisWeek).peek(a -> log.debug("{} airs this week", a.getTitle(TitleLanguage.ROMAJI))).forEach(a -> addAnimeToWeek(day, a)));
 	}
 
 	private void addAnimeToWeek(DayOfWeek day, Anime a) {
@@ -116,6 +116,7 @@ public class Schedule {
 
 	private void update(AnimeUpdate au) {
 		log.debug("Updating schedule");
+		au.withFilter(a -> !a.isAdult());
 		LocalDateTime now = LocalDateTime.now(zone);
 		DayOfWeek today = now.getDayOfWeek();
 		if (today == DayOfWeek.MONDAY && !now.toLocalDate().equals(monDate)) {
@@ -132,6 +133,12 @@ public class Schedule {
 			}
 			if (au.hasRemovedAnime()) {
 				au.getRemovedAnime().forEach(a -> hasChanged.setIfTrue(handleRemoved(now, today, a)));
+			}
+			if (au.hasCancelledAnime()) {
+				au.getCancelledAnime().forEach(a -> hasChanged.setIfTrue(handleRemoved(now, today, a)));
+			}
+			if (au.hasHiatusAnime()) {
+				au.getHiatusAnime().forEach(a -> hasChanged.setIfTrue(handleRemoved(now, today, a)));
 			}
 			if (hasChanged.get()) {
 				log.debug("Schedule has changed!");
@@ -194,7 +201,6 @@ public class Schedule {
 		}
 		LocalDateTime now = LocalDateTime.now(zone);
 		LocalDateTime aLDT = a.getNextEpisodeDateTime(zone).get();
-		log.debug("{} airs on {}", a.getTitleRomaji(), aLDT);
 		return isThisWeek(now.toLocalDate(), aLDT.toLocalDate()) && aLDT.isAfter(now);
 	}
 

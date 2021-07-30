@@ -170,7 +170,7 @@ class ALHandler {
 			}
 		}
 		MDC.remove("id");
-		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).orTimeout(10, TimeUnit.MINUTES).whenComplete((v, e) -> {
+		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).orTimeout(15, TimeUnit.MINUTES).whenComplete((v, e) -> {
 			if (e == null) {
 				log.debug("List sent successfully!");
 				alrh.dataChanged();
@@ -267,7 +267,8 @@ class ALHandler {
 	}
 
 	void update(AnimeUpdate au) {
-		if (au.hasNewAnime() || au.hasRemovedAnime()) {
+		au.withFilter(a -> !a.isAdult());
+		if (au.hasNewAnime() || au.hasRemovedAnime() || au.hasFinishedAnime() || au.hasCancelledAnime()) {
 			log.debug("Updating list");
 			try {
 				alrh.sendList();

@@ -1,6 +1,7 @@
 
 package com.github.xerragnaroek.jikai.user;
 
+import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,6 +20,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -28,8 +30,8 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
+import com.github.xerragnaroek.jasa.AniException;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
@@ -37,6 +39,7 @@ import com.github.xerragnaroek.jikai.anime.schedule.AnimeTable;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
+import com.github.xerragnaroek.jikai.user.token.JikaiUserAniTokenManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.ButtonInteractor;
 import com.github.xerragnaroek.jikai.util.DetailedAnimeMessageBuilder;
@@ -85,22 +88,35 @@ public class JikaiUserUpdater implements ButtonInteractor {
 
 	private void subAdd(JikaiUser ju) {
 		ju.getSubscribedAnime().onAdd(sa -> {
-			MDC.put("id", String.valueOf(ju.getId()));
 			log.debug("subscribed to {}", sa.id());
 			Anime a = AnimeDB.getAnime(sa.id());
 			Message me;
 			if (a.hasDataForNextEpisode()) {
 				animeAddImpl(a, sa.id(), ju);
 			}
-			if (!sa.silent() && !Core.INITIAL_LOAD.get()) {
-				if (a.hasDataForNextEpisode()) {
-					me = subAddMsg(a, ju, sa.cause(), sa.linked());
-				} else {
-					me = subAddNoDataMsg(a, ju, sa.cause(), sa.linked());
+			if (!Core.INITIAL_LOAD.get()) {
+				if (!sa.silent()) {
+					if (a.hasDataForNextEpisode()) {
+						me = subAddMsg(a, ju, sa.cause(), sa.linked());
+					} else {
+						me = subAddNoDataMsg(a, ju, sa.cause(), sa.linked());
+					}
+					ju.sendPM(me);
 				}
-				ju.sendPM(me);
+				if (ju.getAniId() > 0 && JikaiUserAniTokenManager.hasToken(ju)) {
+					String token = JikaiUserAniTokenManager.getAniToken(ju).getAccessToken();
+					try {
+						if (a.isNotYetReleased()) {
+							AnimeDB.getJASA().addToUserPlanningList(token, a.getId());
+						} else if (a.isReleasing()) {
+							AnimeDB.getJASA().addToUserWatchingList(token, a.getId());
+						}
+					} catch (IOException | AniException e) {
+						BotUtils.logAndSendToDev(log, String.format("Failed adding anime %s,%s to ju %s anilist!", a.getTitleRomaji(), a.getId(), ju.getId()), e);
+					}
+				}
 			}
-			MDC.remove("id");
+
 		});
 	}
 
@@ -154,7 +170,6 @@ public class JikaiUserUpdater implements ButtonInteractor {
 
 	private void stepAdd(JikaiUser ju) {
 		ju.preReleaseNotificationStepsProperty().onAdd(step -> {
-			MDC.put("id", String.valueOf(ju.getId()));
 			log.debug("{} added PreReleaseNotificationStep {}", ju.getId(), step);
 			ju.getSubscribedAnime().forEach(id -> {
 				Anime a = AnimeDB.getAnime(id);
@@ -162,7 +177,6 @@ public class JikaiUserUpdater implements ButtonInteractor {
 					addToAnimeStepMap(id, step, a, ju);
 				}
 			});
-			MDC.remove("id");
 		});
 	}
 
@@ -176,9 +190,9 @@ public class JikaiUserUpdater implements ButtonInteractor {
 	private Map<Integer, Set<JikaiUser>> addToStepUserMap(Map<Integer, Set<JikaiUser>> map, int step, Anime a, int id, JikaiUser ju) {
 		map.putIfAbsent(step, Collections.synchronizedSet(new HashSet<>()));
 		map.get(step).add(ju);
-		log.debug("JUser {} has been added to map for {}, step {}", ju.getId(), a.getTitleRomaji(), step);
+		log.debug("JUser {} has been added to map for {}, ep {}, step {}", ju.getId(), a.getTitleRomaji(), a.getNextEpisodeNumber(), step);
 		if (!hasFuture(id, step)) {
-			log.debug("Scheduling new future for {}, step {}", a.getTitleRomaji(), step);
+			log.debug("Scheduling new future for {}, ep {}, step {}", a.getTitleRomaji(), a.getNextEpisodeNumber(), step);
 			scheduleStepUpdate(a, step);
 			log.debug("Scheduled new update future {} minutes before release of {}", step / 60, a.getId());
 		}
@@ -198,6 +212,17 @@ public class JikaiUserUpdater implements ButtonInteractor {
 			Anime a;
 			if ((a = AnimeDB.getAnime(sr.id())) != null && !sr.silent()) {
 				ju.sendPM(subRemMsg(a, ju, sr.cause()));
+			}
+			try {
+				if (ju.getAniId() > 0) {
+					AnimeDB.getJASA().updateMediaListEntryToDroppedList(JikaiUserAniTokenManager.getAniToken(ju).getAccessToken(), AnimeDB.getJASA().getMediaListEntryIdForUserFromAniId(ju.getAniId(), sr.id()));
+				}
+			} catch (IOException e) {
+				BotUtils.logAndSendToDev(log, String.format("Failed adding anime %s to ju %s anilist!", sr.id(), ju.getId()), e);
+			} catch (AniException e) {
+				if (e.getStatusCode() != 404) {
+					BotUtils.logAndSendToDev(log, String.format("Failed adding anime %s to ju %s anilist!", sr.id(), ju.getId()), e);
+				}
 			}
 		});
 
@@ -271,7 +296,7 @@ public class JikaiUserUpdater implements ButtonInteractor {
 			removeFuture(a.getId(), step);
 		}, secsToNotif, TimeUnit.SECONDS);
 		putInFutureMap(a.getId(), step, sf);
-		log.debug("Scheduled future for step {} of {} first running in {} mins", step, a.getTitleRomaji(), secsToNotif / 60);
+		log.debug("Scheduled future for step {} of {}, ep {} first running in {} mins", step, a.getTitleRomaji(), a.getNextEpisodeNumber(), secsToNotif / 60);
 	}
 
 	private void putInFutureMap(int id, int step, ScheduledFuture<?> sf) {
@@ -332,12 +357,14 @@ public class JikaiUserUpdater implements ButtonInteractor {
 		if (au.hasFinishedAnime()) {
 			List<Anime> finished = au.getFinishedAnime();
 			Map<Integer, Anime> finA = finished.stream().collect(Collectors.toMap(Anime::getId, a -> a));
+			Set<Integer> fin = finished.stream().map(Anime::getId).collect(Collectors.toSet());
+			log.debug("Handling {} finished anime", finished.size());
 			jum.users().forEach(ju -> {
-				Set<Integer> fin = finished.stream().map(Anime::getId).collect(Collectors.toSet());
-				fin.retainAll(ju.getSubscribedAnime());
-				if (!fin.isEmpty()) {
-					fin.forEach(id -> {
-						ju.unsubscribeAnime(finA.get(id), "it finished!");
+				Set<Integer> set = new TreeSet<>(fin);
+				set.retainAll(ju.getSubscribedAnime());
+				if (!set.isEmpty()) {
+					set.forEach(id -> {
+						ju.unsubscribeAnime(finA.get(id), ju.getLocale().getString("ju_sub_rem_cause_finished"));
 					});
 				}
 			});
@@ -345,16 +372,56 @@ public class JikaiUserUpdater implements ButtonInteractor {
 	}
 
 	private void updateCancelled(AnimeUpdate au) {
-
+		if (au.hasCancelledAnime()) {
+			List<Anime> cancelled = au.getCancelledAnime();
+			Map<Integer, Anime> canA = cancelled.stream().collect(Collectors.toMap(Anime::getId, a -> a));
+			Set<Integer> can = cancelled.stream().map(Anime::getId).collect(Collectors.toSet());
+			log.debug("Handling {} cancelled anime", cancelled.size());
+			jum.users().forEach(ju -> {
+				Set<Integer> set = new TreeSet<>(can);
+				set.retainAll(ju.getSubscribedAnime());
+				if (!set.isEmpty()) {
+					set.forEach(id -> {
+						ju.unsubscribeAnime(canA.get(id), ju.getLocale().getString("ju_eb_cause_cancelled"));
+					});
+				}
+			});
+		}
 	}
 
 	private void updateHiatus(AnimeUpdate au) {
+		if (au.hasHiatusAnime()) {
+			List<Anime> hiatus = au.getHiatusAnime();
+			Map<Integer, Anime> hiaA = hiatus.stream().collect(Collectors.toMap(Anime::getId, a -> a));
+			Set<Integer> hia = hiatus.stream().map(Anime::getId).collect(Collectors.toSet());
+			log.debug("Handling {} hiatus anime", hiatus.size());
+			jum.users().forEach(ju -> {
+				Set<Integer> set = new TreeSet<>(hia);
+				set.retainAll(ju.getSubscribedAnime());
+				if (!set.isEmpty()) {
+					set.forEach(id -> {
+						Anime a = hiaA.get(id);
+						ju.sendPM(makeHiatusMessage(a, ju));
+						log.debug("Sent hiatus message to {} for {}", ju.getId(), a.getTitleRomaji());
+					});
+				}
+			});
+		}
+	}
 
+	private MessageEmbed makeHiatusMessage(Anime a, JikaiUser ju) {
+		DetailedAnimeMessageBuilder damb = new DetailedAnimeMessageBuilder(a, ju.getTimeZone(), ju.getLocale());
+		damb.ignoreEmptyFields();
+		damb.withAll(false);
+		damb.setDescription(ju.getLocale().getString("ju_sub_hiatus"));
+		return damb.build();
 	}
 
 	private void updateRem(AnimeUpdate au) {
 		if (au.hasRemovedAnime()) {
-			au.getRemovedAnime().stream().forEach(a -> jum.getJUSubscribedToAnime(a).forEach(ju -> ju.unsubscribeAnime(a, ju.getLocale().getStringFormatted("ju_sub_rem_cause_unknown", Arrays.asList("links"), BotUtils.formatExternalSites(a)))));
+			List<Anime> removed = au.getRemovedAnime();
+			log.debug("Handling {} removed anime", removed.size());
+			removed.stream().forEach(a -> jum.getJUSubscribedToAnime(a).forEach(ju -> ju.unsubscribeAnime(a, ju.getLocale().getString("ju_sub_rem_cause_unknown"))));
 		}
 
 		/*
@@ -450,7 +517,7 @@ public class JikaiUserUpdater implements ButtonInteractor {
 		if (au.hasAnimeNextEp()) {
 			log.debug("Handling next eps");
 			au.getAnimeNextEp().forEach(a -> {
-				log.debug("Handling next ep for {}", a.getTitleRomaji());
+				log.debug("Handling next ep {} for {}", a.getNextEpisodeNumber(), a.getTitleRomaji());
 				jum.getJUSubscribedToAnime(a).forEach(ju -> {
 					animeAddImpl(a, a.getId(), ju);
 					log.debug("Checking if user is sent next ep msg");
@@ -463,7 +530,6 @@ public class JikaiUserUpdater implements ButtonInteractor {
 	}
 
 	private void sendNextEpMsg(JikaiUser ju, Anime a) {
-		MDC.put("id", ju.getId() + "");
 		log.debug("Sending next episode message for {}, {}", a.getTitleRomaji(), a.getId());
 		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		JikaiLocale loc = ju.getLocale();
@@ -475,7 +541,6 @@ public class JikaiUserUpdater implements ButtonInteractor {
 		}
 		ju.sendPM(eb.build());
 		log.debug("Message sent");
-		MDC.remove("id");
 	}
 
 	private void cancelAnime(Anime a) {

@@ -76,10 +76,14 @@ public class JikaiLocale implements Comparable<JikaiLocale> {
 		return content.get("u_lang_name");
 	}
 
+	public String getYesOrNo(boolean yes) {
+		return getString(yes ? "u_yes" : "u_no");
+	}
+
 	public boolean isFormattedString(String key) {
 		String tmp;
 		if ((tmp = getString(key)) != null) {
-			return Pattern.matches(".*%\\S+?%.*", tmp);
+			return Pattern.compile(".*%\\S+?%.*").matcher(tmp).find();
 		}
 		return false;
 	}

@@ -74,6 +74,7 @@ public class ALRHManager {
 	}
 
 	private void update(AnimeUpdate au) {
+		au.withFilter(a -> !a.isAdult());
 		if (au.hasChange()) {
 			mapAnimesToStartingLetter();
 			makeListMessages();
@@ -135,7 +136,7 @@ public class ALRHManager {
 	}
 
 	private void sendChangedReleaseAnime(AnimeUpdate au) {
-		List<Pair<Anime, Long>> changed = au.getChangedReleaseAnime();
+		List<Pair<Anime, Long>> changed = au.getChangedReleaseAnime().stream().filter(p -> !p.getLeft().isAdult()).collect(Collectors.toList());
 		log.debug("Sending {} changed releaseanime embeds to anime channels", changed.size());
 		JikaiLocale loc = JikaiLocaleManager.getEN();
 		changed.forEach(p -> {
@@ -260,7 +261,7 @@ public class ALRHManager {
 	 */
 	private void mapAnimesToStartingLetter() {
 		log.debug("Mapping animes to starting letter");
-		Set<Anime> data = AnimeDB.getAiringOrUpcomingAnime().stream().collect(Collectors.toSet());
+		Set<Anime> data = AnimeDB.getAiringOrUpcomingAnime().stream().filter(a -> !a.isAdult()).collect(Collectors.toSet());
 		for (TitleLanguage lang : TitleLanguage.values()) {
 			aniAlph.put(lang, checkReactionLimit(data.stream().map(a -> a.getTitle(lang)).sorted(String.CASE_INSENSITIVE_ORDER).collect(Collectors.groupingBy(a -> "" + a.toUpperCase().charAt(0)))));
 		}

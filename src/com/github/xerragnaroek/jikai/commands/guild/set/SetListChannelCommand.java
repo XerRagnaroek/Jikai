@@ -32,10 +32,17 @@ public class SetListChannelCommand implements GuildCommand {
 		Jikai j = Core.JM.get(g);
 		TextChannel textC = event.getChannel();
 		if (arguments.length >= 2) {
-			if (arguments[0].equals("adult")) {
-				setAdult(g, j, textC, arguments);
-			} else {
-				setLang(g, j, textC, arguments);
+			switch (arguments[0]) {
+				case "adult": {
+					setAdult(g, j, textC, arguments);
+					break;
+				}
+				case "big": {
+					setBig(g, j, textC, arguments);
+					break;
+				}
+				default:
+					setLang(g, j, textC, arguments);
 			}
 		}
 	}
@@ -45,10 +52,20 @@ public class SetListChannelCommand implements GuildCommand {
 		if (textC == null) {
 			return;
 		}
-		boolean firstTimeSet = !j.hasListChannelAdultSet();
 		j.getJikaiData().setListChannelAdultId(textC.getIdLong());
 		try {
 			j.getInfoChannel().sendMessage(j.getLocale().getStringFormatted("com_g_set_list_success", Arrays.asList("channel", "name"), textC.getAsMention(), "ADULT")).queue();
+		} catch (Exception e) {}
+	}
+
+	private void setBig(Guild g, Jikai j, TextChannel textC, String[] arguments) {
+		textC = validateChannel(g, arguments[1], textC, j);
+		if (textC == null) {
+			return;
+		}
+		j.getJikaiData().setListChannelBigId(textC.getIdLong());
+		try {
+			j.getInfoChannel().sendMessage(j.getLocale().getStringFormatted("com_g_set_list_success", Arrays.asList("channel", "name"), textC.getAsMention(), "BIG")).queue();
 		} catch (Exception e) {}
 	}
 

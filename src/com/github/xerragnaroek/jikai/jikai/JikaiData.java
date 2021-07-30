@@ -21,16 +21,20 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.list.ALRHData;
 import com.github.xerragnaroek.jikai.anime.list.ALRHandler;
+import com.github.xerragnaroek.jikai.anime.list.BigListHandler;
+import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
@@ -72,6 +76,8 @@ public class JikaiData {
 	private LongProperty listChEnglishId = new LongProperty(0l);
 	@JsonProperty("list_channel_adult_id")
 	private LongProperty listChAdultId = new LongProperty(0l);
+	@JsonProperty("list_channel_big_id")
+	private LongProperty listChBigId = new LongProperty(0l);
 	@JsonProperty("command_channel_id")
 	private LongProperty commandChId = new LongProperty(0l);
 	@JsonIgnore
@@ -244,6 +250,10 @@ public class JikaiData {
 		return listChAdultId.get();
 	}
 
+	public long getListChannelBigId() {
+		return listChBigId.get();
+	}
+
 	// @JsonProperty("schedule_channel_id")
 	public long getScheduleChannelId() {
 		return schedChId.get();
@@ -329,6 +339,10 @@ public class JikaiData {
 		return listChAdultId;
 	}
 
+	public LongProperty listChannelBigIdProperty() {
+		return listChBigId;
+	}
+
 	public LongProperty scheduleChannelIdProperty() {
 		return schedChId;
 	}
@@ -360,9 +374,11 @@ public class JikaiData {
 	}
 
 	public long setListChannelAdultId(long id) {
-		long old = listChAdultId.get();
-		setData(listChAdultId, id, "list_channel_adult_id");
-		return old;
+		return setData(listChAdultId, id, "list_channel_adult_id");
+	}
+
+	public long setListChannelBigId(long id) {
+		return setData(listChBigId, id, "list_channel_big_id");
 	}
 
 	public long setScheduleChannelId(long id) {
@@ -551,4 +567,18 @@ public class JikaiData {
 		}
 	}
 
+	@JsonGetter("big_list_handlers")
+	private Map<String, Map<Integer, Long>> getBigListHandlers() {
+		Map<String, BigListHandler> blhs = Core.JM.get(gId).getBigListHandlerMap();
+		Map<String, Map<Integer, Long>> data = new HashMap<>();
+		blhs.forEach((s, blh) -> {
+			data.put(s, blh.getMessageData());
+		});
+		return data;
+	}
+
+	@JsonSetter
+	private void setBigListHandlers(Map<String, Map<Integer, Long>> data) {
+		BigListHandler.addLoadedData(gId, data);
+	}
 }

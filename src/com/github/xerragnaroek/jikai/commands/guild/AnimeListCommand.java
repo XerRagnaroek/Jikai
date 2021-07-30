@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.list.ALRHandler;
+import com.github.xerragnaroek.jikai.anime.list.BigListHandler;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
@@ -38,9 +39,11 @@ public class AnimeListCommand implements GuildCommand {
 					h.sendList();
 				}
 			}
+			j.getBigListHandlerMap().values().forEach(BigListHandler::sendList);
 		} else {
-			if (arguments[0].toLowerCase().equals("adult")) {
-
+			BigListHandler blh = j.getBigListHandler(arguments[0]);
+			if (blh != null) {
+				blh.sendList();
 			} else {
 				TitleLanguage lang = null;
 				switch (arguments[0].toLowerCase()) {

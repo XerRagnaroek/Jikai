@@ -1,5 +1,6 @@
 package com.github.xerragnaroek.jikai.anime.ani;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -7,6 +8,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -14,11 +16,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import com.github.xerragnaroek.jasa.AniException;
 import com.github.xerragnaroek.jasa.UserListEntry;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
+import com.github.xerragnaroek.jikai.user.token.JikaiUserAniTokenManager;
+import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.IntegerProperty;
 
 /**
@@ -94,6 +99,38 @@ public class AniListSyncer {
 		log.debug("Handling UserListEntry: userId: {}; mediaId: {}", ule.getUserId(), ule.getMediaId());
 		if (AnimeDB.getAnime(ule.getMediaId()) != null) {
 			userMap.get(ule.getUserId()).forEach(ju -> ju.subscribeAnime(ule.getMediaId(), ju.getLocale().getString("ju_sub_add_cause_ani")));
+		}
+	}
+
+	public void syncAniListsWithSubs(JikaiUser ju) {
+		if (ju.getAniId() > 0 && JikaiUserAniTokenManager.hasToken(ju)) {
+			log.debug("Syncing subs with ani for {}", ju.getId());
+			String token = JikaiUserAniTokenManager.getAniToken(ju).getAccessToken();
+			ju.getSubscribedAnime().stream().map(AnimeDB::getAnime).filter(Objects::nonNull).forEach(a -> {
+				try {
+					try {
+						// epic multi try blocks pog
+						AnimeDB.getJASA().getMediaListEntryIdForUserFromAniId(ju.getAniId(), a.getId());
+					} catch (AniException e) {
+						// 404 means it's not part of any lists, thus add them. Otherwise rethrow the exception and do
+						// nothing
+						if (e.getStatusCode() == 404) {
+							log.debug("{} isn't in any list yet for {}", a.getTitleRomaji(), ju.getId());
+							if (a.isNotYetReleased()) {
+								AnimeDB.getJASA().addToUserPlanningList(token, a.getId());
+								log.debug("{} added to planning list for {}", a.getTitleRomaji(), ju.getId());
+							} else if (a.isReleasing()) {
+								AnimeDB.getJASA().addToUserWatchingList(token, a.getId());
+								log.debug("{} added to watching list for {}", a.getTitleRomaji(), ju.getId());
+							}
+						} else {
+							throw e;
+						}
+					}
+				} catch (IOException | AniException e) {
+					BotUtils.logAndSendToDev(log, String.format("Failed adding anime %s,%s to ju %s anilist!", a.getTitleRomaji(), a.getId(), ju.getId()), e);
+				}
+			});
 		}
 	}
 

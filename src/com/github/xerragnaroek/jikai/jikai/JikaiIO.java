@@ -11,6 +11,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -27,21 +28,27 @@ import com.github.xerragnaroek.jikai.user.EpisodeTrackerManager;
 import com.github.xerragnaroek.jikai.user.ExportKeyHandler;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
+import com.github.xerragnaroek.jikai.user.token.JikaiUserAniToken;
+import com.github.xerragnaroek.jikai.user.token.JikaiUserAniTokenManager;
+import com.github.xerragnaroek.jikai.util.Crypto;
+import com.github.xerragnaroek.jikai.util.CryptoException;
 
 public class JikaiIO {
 	private final static Logger log = LoggerFactory.getLogger(JikaiIO.class);
+	private final static Crypto crypto = new Crypto();
 
 	public static void save(boolean now) {
-		JM.getJDM().save(now);
 		try {
+			JM.getJDM().save(now);
+			crypto.setToEncryption();
 			saveJikaiUsers();
-			JikaiUserManager.getInstance().save();
 			ScheduleManager.saveSchedule();
 			// saveReleaseMessageIds();
 			// saveAnimeReleaseTracker();
 			saveExportKeyHandler();
 			saveEpisodeTrackerManager();
-		} catch (IOException e) {
+			saveJikaiUserAniTokenManager();
+		} catch (IOException | CryptoException e) {
 			Core.ERROR_LOG.error("Failed saving", e);
 		}
 	}
@@ -51,6 +58,7 @@ public class JikaiIO {
 		Path loc = Core.DATA_LOC;
 		try {
 			if (Files.exists(loc)) {
+				crypto.setToDecryption();
 				Files.list(loc).forEach(path -> {
 					log.info("Found file {}", path.toAbsolutePath());
 					String fileName = path.getFileName().toString();
@@ -62,6 +70,7 @@ public class JikaiIO {
 						case "schedules.json" -> ScheduleManager.loadSchedules(path);
 						case "guilds" -> loadGuilds(path);
 						case "keys.json" -> loadExportKeyHandler(path);
+						case "token.json" -> loadJikaiUserAniTokenManager(path);
 						// case "art.json" -> loadAnimeReleaseTracker(path);
 					}
 				});
@@ -73,7 +82,7 @@ public class JikaiIO {
 
 				Files.createDirectory(loc);
 			}
-		} catch (IOException e) {
+		} catch (IOException | CryptoException e) {
 			Core.ERROR_LOG.error("Failed loading the data!", e);
 		}
 	}
@@ -173,6 +182,28 @@ public class JikaiIO {
 			jum.setUpLinks();
 		} catch (IOException e) {
 			log.error("Failed reading users", e);
+		}
+	}
+
+	private static void saveJikaiUserAniTokenManager() throws IOException, CryptoException {
+		Map<Integer, JikaiUserAniToken> map = JikaiUserAniTokenManager.getMap();
+		if (!map.isEmpty()) {
+			String json = new ObjectMapper().writeValueAsString(JikaiUserAniTokenManager.getMap());
+			Path loc = Path.of(Core.DATA_LOC.toString(), "/token.json");
+			Files.writeString(loc, crypto.encrypt(json), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+			log.debug("Saved {} token to {}", map.size(), loc.toString());
+		}
+	}
+
+	private static void loadJikaiUserAniTokenManager(Path loc) {
+		try {
+			TypeReference<ConcurrentHashMap<Integer, JikaiUserAniToken>> ref = new TypeReference<ConcurrentHashMap<Integer, JikaiUserAniToken>>() {};
+			String str = Files.readString(loc);
+			Map<Integer, JikaiUserAniToken> map = new ObjectMapper().readValue(crypto.decrypt(str), ref);
+			JikaiUserAniTokenManager.setMap(map);
+			log.debug("Loaded {} tokens", map.size());
+		} catch (IOException | CryptoException e) {
+			log.error("Failed loading tokens!", e);
 		}
 	}
 	/*
