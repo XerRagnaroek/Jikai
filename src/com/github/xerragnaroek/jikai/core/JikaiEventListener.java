@@ -10,6 +10,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jikai.anime.list.ALRHandler;
 import com.github.xerragnaroek.jikai.commands.TestCommand;
 import com.github.xerragnaroek.jikai.commands.user.JUCommandHandler;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
@@ -76,7 +77,11 @@ public class JikaiEventListener extends ListenerAdapter {
 		if (!event.getUser().isBot()) {
 			Jikai j = JM.get(event.getGuild());
 			if (j.hasCompletedSetup() && JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
-				j.getALRHandler(event.getChannel().getIdLong()).handleReactionAdded(event);
+				ALRHandler alrh = j.getALRHandler(event.getChannel().getIdLong());
+				if (alrh != null) {
+					// reaction was added in a list channel
+					alrh.handleReactionAdded(event);
+				}
 			}
 		}
 	}
@@ -85,7 +90,11 @@ public class JikaiEventListener extends ListenerAdapter {
 	public void onGuildMessageReactionRemove(GuildMessageReactionRemoveEvent event) {
 		Jikai j = JM.get(event.getGuild());
 		if (j.hasCompletedSetup() && JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
-			j.getALRHandler(event.getChannel().getIdLong()).handleReactionRemoved(event);
+			ALRHandler alrh = j.getALRHandler(event.getChannel().getIdLong());
+			if (alrh != null) {
+				// reaction was added in a list channel
+				alrh.handleReactionRemoved(event);
+			}
 		}
 	}
 
