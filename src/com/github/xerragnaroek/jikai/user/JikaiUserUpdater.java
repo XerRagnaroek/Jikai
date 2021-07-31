@@ -214,7 +214,7 @@ public class JikaiUserUpdater implements ButtonInteractor {
 				ju.sendPM(subRemMsg(a, ju, sr.cause()));
 			}
 			try {
-				if (ju.getAniId() > 0) {
+				if (ju.getAniId() > 0 && JikaiUserAniTokenManager.hasToken(ju)) {
 					AnimeDB.getJASA().updateMediaListEntryToDroppedList(JikaiUserAniTokenManager.getAniToken(ju).getAccessToken(), AnimeDB.getJASA().getMediaListEntryIdForUserFromAniId(ju.getAniId(), sr.id()));
 				}
 			} catch (IOException e) {
