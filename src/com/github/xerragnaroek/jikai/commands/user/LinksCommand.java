@@ -49,15 +49,15 @@ public class LinksCommand implements JUCommand {
 				String uni = UnicodeUtils.getNumberCodePoints(count[0]++);
 				uniIdMap.put(uni, u.getIdLong());
 			});
-			EmbedBuilder eb = buildEmbed(uniIdMap, ju);
-			eb.setTitle(ju.getLocale().getString("com_ju_links_eb_title") + (size == 1 ? "" : "[" + (c + 1) + "/" + size + "]"));
+			String title = ju.getLocale().getString("com_ju_links_eb_title") + (size == 1 ? "" : "[" + (c + 1) + "/" + size + "]");
+			EmbedBuilder eb = buildEmbed(uniIdMap, ju, title);
 			page.addStage(eb.build(), new ArrayList<>(uniIdMap.keySet()), str -> {
-				if (ju.linkToUser(uniIdMap.get(str))) {
-					page.editCurrentMessage(buildEmbed(uniIdMap, ju).build());
+				if (JikaiUserManager.getInstance().getUser(uniIdMap.get(str)).linkUser(ju)) {
+					page.editCurrentMessage(buildEmbed(uniIdMap, ju, title).build());
 				}
 			}, str -> {
-				if (ju.unlinkFromUser(uniIdMap.get(str))) {
-					page.editCurrentMessage(buildEmbed(uniIdMap, ju).build());
+				if (JikaiUserManager.getInstance().getUser(uniIdMap.get(str)).unlinkUser(ju)) {
+					page.editCurrentMessage(buildEmbed(uniIdMap, ju, title).build());
 				}
 			});
 		}
@@ -68,9 +68,9 @@ public class LinksCommand implements JUCommand {
 
 	}
 
-	private EmbedBuilder buildEmbed(Map<String, Long> uniUserMap, JikaiUser ju) {
+	private EmbedBuilder buildEmbed(Map<String, Long> uniUserMap, JikaiUser ju, String title) {
 		EmbedBuilder eb = BotUtils.embedBuilder();
-		uniUserMap.forEach((uni, u) -> eb.appendDescription(String.format("%s: %s %s\n", BotUtils.processUnicode(uni), ju.isLinkedToUser(u) ? UnicodeUtils.YES_EMOJI : UnicodeUtils.NO_EMOJI, Core.JDA.getUserById(u).getName())));
+		uniUserMap.forEach((uni, u) -> eb.setTitle(title).appendDescription(String.format("%s: %s %s\n", BotUtils.processUnicode(uni), ju.isLinkedToUser(u) ? UnicodeUtils.YES_EMOJI : UnicodeUtils.NO_EMOJI, Core.JDA.getUserById(u).getName())));
 		return eb;
 	}
 

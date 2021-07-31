@@ -337,17 +337,17 @@ public class JikaiUser {
 	/**
 	 * Link a user to this user. user -> this
 	 */
-	public void linkUser(JikaiUser ju) {
+	public boolean linkUser(JikaiUser ju) {
 		linkedUsers.add(ju.getId());
-		ju.linkToUser(id);
+		return ju.linkToUser(id);
 	}
 
 	/**
 	 * Link a user to this user. user -> this
 	 * Preferred to use {@link #linkUser(JikaiUser)}
 	 */
-	public void linkUser(long id) {
-		linkedUsers.add(id);
+	public boolean linkUser(long id) {
+		return linkedUsers.add(id);
 	}
 
 	/**
