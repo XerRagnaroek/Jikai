@@ -199,9 +199,11 @@ public class JikaiIO {
 		try {
 			TypeReference<ConcurrentHashMap<Integer, JikaiUserAniToken>> ref = new TypeReference<ConcurrentHashMap<Integer, JikaiUserAniToken>>() {};
 			String str = Files.readString(loc);
-			Map<Integer, JikaiUserAniToken> map = new ObjectMapper().readValue(crypto.decrypt(str), ref);
-			JikaiUserAniTokenManager.setMap(map);
-			log.debug("Loaded {} tokens", map.size());
+			if (!str.isBlank()) {
+				Map<Integer, JikaiUserAniToken> map = new ObjectMapper().readValue(crypto.decrypt(str), ref);
+				JikaiUserAniTokenManager.setMap(map);
+				log.debug("Loaded {} tokens", map.size());
+			}
 		} catch (IOException | CryptoException e) {
 			log.error("Failed loading tokens!", e);
 		}
