@@ -138,6 +138,7 @@ public class JikaiUserUpdater implements ButtonInteractor {
 		JikaiLocale loc = ju.getLocale();
 		DetailedAnimeMessageBuilder damb = new DetailedAnimeMessageBuilder(a, ju.getTimeZone(), loc);
 		damb.ignoreEmptyFields();
+		damb.withAll(false);
 		damb.setTitle(ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()), a.getAniUrl());
 		damb.setDescription(loc.getStringFormatted("ju_eb_sub_add_no_data_desc", Arrays.asList("cause"), cause));
 		MessageBuilder mb = new MessageBuilder(damb.build());

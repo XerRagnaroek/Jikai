@@ -14,14 +14,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jikai.anime.GeneralSubHandler;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.db.AnimeUpdate;
-import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
-import com.github.xerragnaroek.jikai.user.JikaiUser;
-import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
-import com.github.xerragnaroek.jikai.util.ButtonInteractor;
 import com.github.xerragnaroek.jikai.util.DetailedAnimeMessageBuilder;
 import com.github.xerragnaroek.jikai.util.prop.LongProperty;
 
@@ -29,14 +26,13 @@ import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Emoji;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
 
 /**
  * 
  */
-public class BigListHandler implements ButtonInteractor {
+public class BigListHandler {
 
 	private static Map<Long, Map<String, Map<Integer, Long>>> loadedData = new HashMap<>();
 	private Jikai j;
@@ -50,7 +46,6 @@ public class BigListHandler implements ButtonInteractor {
 		this.j = j;
 		this.identifier = identifier;
 		log = LoggerFactory.getLogger(BigListHandler.class + "#" + j.getJikaiData().getGuildId() + "#" + identifier);
-		Core.getEventListener().registerButtonInteractor(this);
 		AnimeDB.runOnDBUpdate(this::update);
 	}
 
@@ -83,7 +78,7 @@ public class BigListHandler implements ButtonInteractor {
 		damb.ignoreEmptyFields().withAll(false);
 		MessageBuilder bob = new MessageBuilder(damb.build());
 		if (addBtn) {
-			bob.setActionRows(ActionRow.of(Button.secondary(getIdentifier() + ":" + a.getId(), Emoji.fromUnicode("U+1F514"))));
+			bob.setActionRows(ActionRow.of(Button.secondary(GeneralSubHandler.IDENTIFIER + ":" + a.getId(), Emoji.fromUnicode("U+1F514"))));
 		}
 		return bob.build();
 	}
@@ -238,28 +233,6 @@ public class BigListHandler implements ButtonInteractor {
 	private void handleNew(List<Anime> list, TextChannel tc) {
 		log.debug("Handling {} new animes", list.size());
 		list.stream().sorted(Anime.SORT_BY_RELEASE_DATE).forEach(a -> sendMessage(a, tc));
-	}
-
-	@Override
-	public String getIdentifier() {
-		return "blh_" + identifier;
-	}
-
-	@Override
-	public void handleButtonClick(String[] data, ButtonClickEvent event) {
-		event.deferEdit().queue();
-		int id = Integer.parseInt(data[0]);
-		Anime a = AnimeDB.getAnime(id);
-		if (a != null) {
-			JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getUser().getIdLong());
-			if (ju != null) {
-				if (ju.isSubscribedTo(id)) {
-					ju.unsubscribeAnime(id, ju.getLocale().getString("ju_sub_rem_cause_user"));
-				} else {
-					ju.subscribeAnime(id, ju.getLocale().getString("ju_sub_add_cause_user"));
-				}
-			}
-		}
 	}
 
 	public static void addLoadedData(long gId, Map<String, Map<Integer, Long>> data) {

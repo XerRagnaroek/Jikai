@@ -74,6 +74,7 @@ public class JikaiEventListener extends ListenerAdapter {
 
 	@Override
 	public void onGuildMessageReactionAdd(GuildMessageReactionAddEvent event) {
+		log.debug(event.getReactionEmote().getName());
 		if (!event.getUser().isBot()) {
 			Jikai j = JM.get(event.getGuild());
 			if (j.hasCompletedSetup() && JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {

@@ -605,9 +605,11 @@ public class BotUtils {
 
 	}
 
-	public static <T> Collection<List<T>> partitionCollection(Collection<T> col, int chunkSize) {
+	public static <T> List<List<T>> partitionCollection(Collection<T> col, int chunkSize) {
 		AtomicInteger counter = new AtomicInteger();
-		return col.stream().collect(Collectors.groupingBy(e -> counter.getAndIncrement() / chunkSize)).values();
+		List<List<T>> list = new LinkedList<>();
+		list.addAll(col.stream().collect(Collectors.groupingBy(e -> counter.getAndIncrement() / chunkSize)).values());
+		return list;
 	}
 
 	public static String processUnicode(String codePoints) {

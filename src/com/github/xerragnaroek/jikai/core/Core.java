@@ -25,6 +25,7 @@ import org.apache.commons.io.output.WriterOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.xerragnaroek.jikai.anime.GeneralSubHandler;
 import com.github.xerragnaroek.jikai.anime.ani.AniListSyncer;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.jikai.JikaiManager;
@@ -98,6 +99,7 @@ public class Core {
 		EpisodeTrackerManager.init();
 		JikaiUserAniTokenManager.init();
 		JikaiUserManager.getInstance().users().forEach(ju -> AniListSyncer.getInstance().syncAniListsWithSubs(ju));
+		getEventListener().registerButtonInteractor(new GeneralSubHandler());
 	}
 
 	private static void sendOnlineMsg(Instant start) {

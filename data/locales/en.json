@@ -239,7 +239,7 @@
     "ju_step_rem": "You won't be notifed at %time% to a release!",
     "ju_sub_add_cause_ani": "I synced your lists on AniList with your subscriptions!",
     "ju_sub_add_cause_linked": "Linked user **%name%** subscribed to it.",
-    "ju_sub_add_cause_user": "You subscribed via the list.",
+    "ju_sub_add_cause_user": "You subscribed using a button.",
     "ju_sub_list_dupe_eb_desc": "It's **[here!](%link%)**",
     "ju_sub_list_dupe_eb_title": "You already have an active sub list!",
     "ju_sub_rem_cause_finished": "It finished airing.",
