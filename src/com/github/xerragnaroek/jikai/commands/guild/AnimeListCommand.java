@@ -5,8 +5,8 @@ import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
-import com.github.xerragnaroek.jikai.anime.list.ALRHandler;
 import com.github.xerragnaroek.jikai.anime.list.BigListHandler;
+import com.github.xerragnaroek.jikai.anime.list.btn.AnimeListHandler;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
@@ -34,9 +34,9 @@ public class AnimeListCommand implements GuildCommand {
 		boolean isSending = false;
 		if (arguments.length == 0) {
 			for (TitleLanguage lang : TitleLanguage.values()) {
-				ALRHandler h = j.getALRHandler(lang);
+				AnimeListHandler h = j.getAnimeListHandler(lang);
 				if (!(isSending = h.isSendingList())) {
-					h.sendList();
+					h.sendList(AnimeDB.getLoadedAnime());
 				}
 			}
 			j.getBigListHandlerMap().values().forEach(BigListHandler::sendList);
@@ -51,9 +51,9 @@ public class AnimeListCommand implements GuildCommand {
 					case "english" -> lang = TitleLanguage.ENGLISH;
 					case "native" -> lang = TitleLanguage.NATIVE;
 				}
-				ALRHandler h = j.getALRHandler(lang);
+				AnimeListHandler h = j.getAnimeListHandler(lang);
 				if (!(isSending = h.isSendingList())) {
-					h.sendList();
+					h.sendList(AnimeDB.getLoadedAnime());
 				}
 			}
 		}

@@ -296,9 +296,7 @@ public class JikaiSetup extends ListenerAdapter {
 		JikaiData jd = j.getJikaiData();
 		jd.setSetupCompleted(true);
 		jd.save(true);
-		for (TitleLanguage lang : TitleLanguage.values()) {
-			j.setALRHandler(Core.JM.getALHRM().makeNew(j, lang), lang);
-		}
+		j.setupAnimeListHandlers();
 		log.info("Setup completed");
 		/*
 		 * if (j.hasListChannelSet()) {

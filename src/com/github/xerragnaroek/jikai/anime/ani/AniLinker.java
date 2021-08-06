@@ -22,6 +22,7 @@ import com.github.xerragnaroek.jasa.User;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
+import com.github.xerragnaroek.jikai.user.token.JikaiUserAniTokenManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -75,6 +76,7 @@ public class AniLinker {
 			} else {
 				ju.sendPM(loc.getString("ju_link_ani_no_user"));
 				linker.future = CompletableFuture.completedFuture(false);
+				linkerMap.remove(ju.getId());
 			}
 		} else {
 			linker.future = CompletableFuture.completedFuture(false);
@@ -181,8 +183,8 @@ class UserChecker extends ListenerAdapter {
 	private void correctUser(User u) {
 		log.debug("Correct user!");
 		ju.setAniId(u.getId());
-		ju.sendPM(ju.getLocale().getString("ju_link_ani_done"));
 		ju.sendPM(makeUserEmbed(u));
+		ju.sendPM(BotUtils.makeSimpleEmbed(ju.getLocale().getStringFormatted("ju_link_ani_done", Arrays.asList("authLink"), JikaiUserAniTokenManager.getOAuthUrl())));
 		stop(false);
 	}
 

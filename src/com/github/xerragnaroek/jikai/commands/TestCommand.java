@@ -86,7 +86,7 @@ public class TestCommand implements JUCommand, GuildCommand {
 		 * bob.setActionRows(arow);
 		 * event.getChannel().sendMessage(bob.build()).queue();
 		 */
-		AnimeListHandler alh = new AnimeListHandler(event.getChannel());
+		AnimeListHandler alh = new AnimeListHandler(event.getGuild().getIdLong(), event.getChannel());
 		AtomicInteger counter = new AtomicInteger();
 		List<Anime> ani = AnimeDB.getLoadedAnime().stream().filter(a -> !a.isAdult() && (a.isReleasing() || a.isNotYetReleased() || a.isOnHiatus() || a.hasDataForNextEpisode())).collect(Collectors.toList());
 		alh.groupingBy(e -> String.format("%02d", (counter.getAndIncrement() / 25) + 1));

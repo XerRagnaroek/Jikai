@@ -10,7 +10,6 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.xerragnaroek.jikai.anime.list.ALRHandler;
 import com.github.xerragnaroek.jikai.commands.TestCommand;
 import com.github.xerragnaroek.jikai.commands.user.JUCommandHandler;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
@@ -30,9 +29,6 @@ import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
-import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
-import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionRemoveAllEvent;
-import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionRemoveEvent;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.priv.react.PrivateMessageReactionAddEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -72,40 +68,42 @@ public class JikaiEventListener extends ListenerAdapter {
 		}
 	}
 
-	@Override
-	public void onGuildMessageReactionAdd(GuildMessageReactionAddEvent event) {
-		log.debug(event.getReactionEmote().getName());
-		if (!event.getUser().isBot()) {
-			Jikai j = JM.get(event.getGuild());
-			if (j.hasCompletedSetup() && JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
-				ALRHandler alrh = j.getALRHandler(event.getChannel().getIdLong());
-				if (alrh != null) {
-					// reaction was added in a list channel
-					alrh.handleReactionAdded(event);
-				}
-			}
-		}
-	}
-
-	@Override
-	public void onGuildMessageReactionRemove(GuildMessageReactionRemoveEvent event) {
-		Jikai j = JM.get(event.getGuild());
-		if (j.hasCompletedSetup() && JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
-			ALRHandler alrh = j.getALRHandler(event.getChannel().getIdLong());
-			if (alrh != null) {
-				// reaction was added in a list channel
-				alrh.handleReactionRemoved(event);
-			}
-		}
-	}
-
-	@Override
-	public void onGuildMessageReactionRemoveAll(GuildMessageReactionRemoveAllEvent event) {
-		Jikai j = JM.get(event.getGuild());
-		if (j.hasCompletedSetup()) {
-			j.getALRHandler(event.getChannel().getIdLong()).handleReactionRemovedAll(event);
-		}
-	}
+	/*
+	 * @Override
+	 * public void onGuildMessageReactionAdd(GuildMessageReactionAddEvent event) {
+	 * log.debug(event.getReactionEmote().getName());
+	 * if (!event.getUser().isBot()) {
+	 * Jikai j = JM.get(event.getGuild());
+	 * if (j.hasCompletedSetup() &&
+	 * JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
+	 * ALRHandler alrh = j.geAnimeListHandler(event.getChannel().getIdLong());
+	 * if (alrh != null) {
+	 * // reaction was added in a list channel
+	 * alrh.handleReactionAdded(event);
+	 * }
+	 * }
+	 * }
+	 * }
+	 * @Override
+	 * public void onGuildMessageReactionRemove(GuildMessageReactionRemoveEvent event) {
+	 * Jikai j = JM.get(event.getGuild());
+	 * if (j.hasCompletedSetup() &&
+	 * JikaiUserManager.getInstance().isKnownJikaiUser(event.getUserIdLong())) {
+	 * ALRHandler alrh = j.geAnimeListHandler(event.getChannel().getIdLong());
+	 * if (alrh != null) {
+	 * // reaction was added in a list channel
+	 * alrh.handleReactionRemoved(event);
+	 * }
+	 * }
+	 * }
+	 * @Override
+	 * public void onGuildMessageReactionRemoveAll(GuildMessageReactionRemoveAllEvent event) {
+	 * Jikai j = JM.get(event.getGuild());
+	 * if (j.hasCompletedSetup()) {
+	 * j.geAnimeListHandler(event.getChannel().getIdLong()).handleReactionRemovedAll(event);
+	 * }
+	 * }
+	 */
 
 	@Override
 	public void onPrivateMessageReactionAdd(PrivateMessageReactionAddEvent event) {

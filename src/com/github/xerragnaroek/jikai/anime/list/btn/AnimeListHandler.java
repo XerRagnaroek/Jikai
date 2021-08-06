@@ -11,6 +11,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
@@ -20,7 +21,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
+import com.github.xerragnaroek.jasa.TitleLanguage;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Pair;
 import com.github.xerragnaroek.jikai.util.UnicodeUtils;
@@ -37,6 +40,8 @@ import net.dv8tion.jda.api.interactions.components.Button;
  */
 public class AnimeListHandler {
 
+	private static Map<Long, Map<TitleLanguage, Map<Long, List<Integer>>>> initMap = new ConcurrentHashMap<>();
+
 	private Map<Long, List<Integer>> msgAniMap = new ConcurrentHashMap<>();
 	private Map<Integer, Long> aniMsgMap = new ConcurrentHashMap<>();
 	private Collector<Anime, ?, Map<String, List<Anime>>> groupingBy;
@@ -46,14 +51,32 @@ public class AnimeListHandler {
 	private TextChannel tc;
 	private long tcId;
 	private final Logger log;
+	private long gId;
+	private Runnable afterGrouping;
+	private AtomicBoolean isSending = new AtomicBoolean(false);
 
-	public AnimeListHandler(TextChannel tc) {
+	public AnimeListHandler(long gId, TextChannel tc) {
 		setTextChannel(tc);
+		this.gId = gId;
 		log = LoggerFactory.getLogger(AnimeListHandler.class + "#" + tc.getName());
+		AnimeDB.runOnDBUpdate(au -> {
+			if (au.hasCancelledAnime() || au.hasFinishedAnime() || au.hasNewAnime() || au.hasRemovedAnime()) {
+				log.debug("Updating list!");
+				Set<Anime> anime = AnimeDB.getLoadedAnime();
+				if (au.hasRemovedButStillValid()) {
+					anime.addAll(au.getRemovedButStillValid());
+				}
+				sendList(anime);
+			}
+		});
 	}
 
 	public void groupingBy(Function<Anime, String> function) {
 		groupingBy = Collectors.groupingBy(function, () -> new TreeMap<>(String.CASE_INSENSITIVE_ORDER), Collectors.toList());
+	}
+
+	public void doAfterGroupingBy(Runnable run) {
+		afterGrouping = run;
 	}
 
 	public void setFilter(Predicate<Anime> filter) {
@@ -73,9 +96,34 @@ public class AnimeListHandler {
 		tcId = tc.getIdLong();
 	}
 
+	public void loadInitData(TitleLanguage lang) {
+		initMap.computeIfPresent(gId, (id, m) -> {
+			m.computeIfPresent(lang, (l, map) -> {
+				setMessageIdAnimeIdMap(map);
+				return map;
+			});
+			return m;
+		});
+	}
+
 	public CompletableFuture<Void> sendList(Collection<Anime> animeList) {
+		isSending.set(true);
+		if (!msgAniMap.isEmpty()) {
+			msgAniMap.clear();
+			aniMsgMap.clear();
+			return BotUtils.clearChannel(tc).thenCompose(o -> sendImpl(animeList));
+		} else {
+			return sendImpl(animeList);
+		}
+
+	}
+
+	private CompletableFuture<Void> sendImpl(Collection<Anime> animeList) {
 		log.debug("Sending list");
 		Map<String, List<Anime>> anime = animeList.stream().filter(filter).collect(groupingBy);
+		if (afterGrouping != null) {
+			afterGrouping.run();
+		}
 		List<CompletableFuture<?>> cfs = new LinkedList<>();
 		anime.forEach((str, l) -> {
 			makeMessage(str, l).forEach(p -> {
@@ -91,7 +139,7 @@ public class AnimeListHandler {
 				}));
 			});
 		});
-		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()]));
+		return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()])).thenAccept(v -> isSending.set(false));
 	}
 
 	private List<Pair<Message, List<Anime>>> makeMessage(String title, List<Anime> anime) {
@@ -108,7 +156,7 @@ public class AnimeListHandler {
 			for (int i = 0; i < an.size(); i++) {
 				Anime a = an.get(i);
 				strings.add(String.format("%s: %s", BotUtils.processUnicode(UnicodeUtils.getNumberCodePoints(i + 1)), animeTitleFunction.apply(a)));
-				btns.add(Button.primary("gsh:" + a.getId(), "" + (i + 1)));
+				btns.add(Button.secondary("gsh:" + a.getId(), "" + (i + 1)));
 			}
 			eb.setDescription(String.join("\n", strings));
 			MessageBuilder mb = new MessageBuilder(eb.build());
@@ -120,17 +168,23 @@ public class AnimeListHandler {
 	}
 
 	public void validateList() {
-		log.debug("Validating list...");
-		Set<Long> msgIds = new TreeSet<>();
-		msgIds.addAll(msgAniMap.keySet());
-		for (long id : msgIds) {
-			if (tc.retrieveMessageById(id).mapToResult().complete().isFailure()) {
-				log.debug("Data doesn't match messages in channel, resending the list");
-				BotUtils.clearChannel(tc).thenAccept(v -> sendList(AnimeDB.getLoadedAnime()));
-				return;
+		Core.EXEC.execute(() -> {
+			log.debug("Validating list...");
+			Set<Long> msgIds = new TreeSet<>();
+			msgIds.addAll(msgAniMap.keySet());
+			boolean resend = false;
+			for (long id : msgIds) {
+				if (tc.retrieveMessageById(id).mapToResult().complete().isFailure()) {
+					resend = true;
+					break;
+				}
 			}
-		}
-		log.debug("List is valid!");
+			if (resend || AnimeDB.getLoadedAnime().stream().filter(filter).count() != aniMsgMap.size()) {
+				log.debug("Data doesn't match messages in channel, resending the list");
+				sendList(AnimeDB.getLoadedAnime());
+			}
+			log.debug("List is valid!");
+		});
 	}
 
 	public Map<Long, List<Integer>> getMessageIdAnimeIdMap() {
@@ -142,5 +196,23 @@ public class AnimeListHandler {
 		msgAniMap.forEach((id, list) -> {
 			list.forEach(aniId -> aniMsgMap.put(aniId, id));
 		});
+	}
+
+	public static void addToInitMap(long gId, Map<TitleLanguage, Map<Long, List<Integer>>> map) {
+		initMap.put(gId, map);
+	}
+
+	public static AnimeListHandler makeDefault(long gId, TextChannel tc, TitleLanguage lang) {
+		AnimeListHandler alh = new AnimeListHandler(gId, tc);
+		alh.setAnimeTitleFunction(a -> String.format("**[%s](%s)**", a.getTitle(lang), a.getAniUrl()));
+		alh.setFilter(a -> !a.isAdult() && (a.isReleasing() || a.isNotYetReleased() || a.isOnHiatus() || a.hasDataForNextEpisode()));
+		alh.sortingBy(Anime.IGNORE_TITLE_CASE);
+		alh.groupingBy(a -> (a.getTitle(lang).charAt(0) + "").toUpperCase());
+		alh.loadInitData(lang);
+		return alh;
+	}
+
+	public boolean isSendingList() {
+		return isSending.get();
 	}
 }

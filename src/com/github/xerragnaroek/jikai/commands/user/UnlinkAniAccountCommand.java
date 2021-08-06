@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.user.JikaiUser;
+import com.github.xerragnaroek.jikai.user.token.JikaiUserAniTokenManager;
 
 /**
  * 
@@ -19,6 +20,7 @@ public class UnlinkAniAccountCommand implements JUCommand {
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		log.debug("{} unlinking ani account", ju.getId());
+		JikaiUserAniTokenManager.removeToken(ju);
 		ju.setAniId(0);
 		ju.sendPM(ju.getLocale().getString("com_ju_unlink_ani_msg"));
 	}

@@ -3,7 +3,9 @@ package com.github.xerragnaroek.jikai.jikai.locale;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -87,7 +89,12 @@ public class JikaiLocaleManager {
 
 	public static void loadLocales() {
 		getInstance().loadLocalesImpl();
+	}
 
+	public static Map<String, Map<String, List<String>>> validateLocales() {
+		Map<String, Map<String, List<String>>> map = new HashMap<>();
+		getInstance().locales.forEach((ident, loc) -> map.put(ident, loc.validate()));
+		return map;
 	}
 
 }

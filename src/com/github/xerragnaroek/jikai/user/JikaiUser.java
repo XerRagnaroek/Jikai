@@ -27,6 +27,7 @@ import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
+import com.github.xerragnaroek.jikai.user.token.JikaiUserAniTokenManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.BooleanProperty;
 import com.github.xerragnaroek.jikai.util.prop.IntegerProperty;
@@ -500,10 +501,11 @@ public class JikaiUser {
 		String title = titleLanguage.toString();
 		String steps = getPreReleaseNotifcationSteps().stream().map(i -> i / 60).sorted().map(String::valueOf).collect(Collectors.joining(", "));
 		String aniId = (aniId = this.aniId.toString()).equals("0") ? "/" : aniId;
+		String aniAuth = JikaiUserAniTokenManager.hasToken(this) ? yes : no;
 		String users = linkedToUsers.stream().map(juId -> JikaiUserManager.getInstance().getUser(juId)).map(ju -> ju.getUser().getName()).sorted().collect(Collectors.joining(", "));
 		String adult = isShownAdult() ? yes : no;
 		users = users.isEmpty() ? "/" : users;
-		return loc.getStringFormatted("ju_config", Arrays.asList("lang", "zone", "daily", "nextEpMsg", "release", "schedule", "showAdult", "title", "steps", "aniId", "users", "anime", "hiddenAnime", "customT"), loc.getString("u_lang_name"), zone, daily, nextEpMsg, release, schedule, adult, title, steps, aniId, users, subscribedAnime.size(), hiddenAnime.size(), customTitles.size());
+		return loc.getStringFormatted("ju_config", Arrays.asList("lang", "zone", "daily", "nextEpMsg", "release", "schedule", "showAdult", "title", "steps", "aniId", "aniAuth", "users", "anime", "hiddenAnime", "customT"), loc.getString("u_lang_name"), zone, daily, nextEpMsg, release, schedule, adult, title, steps, aniId, aniAuth, users, subscribedAnime.size(), hiddenAnime.size(), customTitles.size());
 	}
 
 	public IntegerProperty aniIdProperty() {

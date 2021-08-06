@@ -1,5 +1,7 @@
 package com.github.xerragnaroek.jikai.jikai.locale;
 
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -90,6 +92,17 @@ public class JikaiLocale implements Comparable<JikaiLocale> {
 
 	void registerKey(String key, String str) {
 		content.put(key, str);
+	}
+
+	public Map<String, List<String>> validate() {
+		Map<String, List<String>> map = new HashMap<>();
+		List<String> missing = new LinkedList<>();
+		if (!this.identifier.equalsIgnoreCase("en")) {
+			JikaiLocale en = JikaiLocaleManager.getEN();
+			missing = en.content.keySet().stream().filter(str -> !content.keySet().contains(str)).toList();
+		}
+		map.put("MISSING", missing);
+		return map;
 	}
 
 	@Override

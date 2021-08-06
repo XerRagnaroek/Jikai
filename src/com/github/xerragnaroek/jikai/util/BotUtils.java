@@ -35,8 +35,6 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 
-import org.apache.commons.collections4.BidiMap;
-import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
@@ -799,29 +797,6 @@ public class BotUtils {
 		return q;
 	}
 
-	public static void validateRolesTMP(Jikai j, JikaiUser ju) {
-		BidiMap<TitleLanguage, Long> tls = new DualHashBidiMap<>(j.getJikaiData().getTitleLanguageRoles());
-		try {
-			Guild g = j.getGuild();
-			Member m = g.getMember(ju.getUser());
-			long wantedRole = tls.get(ju.getTitleLanguage());
-			boolean roleFound = false;
-			for (Role r : m.getRoles()) {
-				if (r.getIdLong() != wantedRole && tls.containsValue(r.getIdLong())) {
-					g.removeRoleFromMember(m, r);
-				}
-				if (r.getIdLong() == wantedRole) {
-					roleFound = true;
-				}
-			}
-			if (!roleFound) {
-				g.addRoleToMember(m, g.getRoleById(tls.get(ju.getTitleLanguage()))).queue();
-			}
-		} catch (Exception e) {
-			Core.ERROR_LOG.error("couldn't get guild!", e);
-		}
-	}
-
 	public static void validateRoles(Jikai j, JikaiUser ju) {
 		try {
 			Guild g = j.getGuild();
@@ -935,4 +910,27 @@ public class BotUtils {
 		}
 	}
 
+	public static void removeTitleLangRole(JikaiUser ju) {
+		Core.JDA.getMutualGuilds(ju.getUser()).stream().filter(Core.JM::hasManagerFor).map(Core.JM::get).forEach(j -> removeTitleLangRole(ju.getId(), ju.getTitleLanguage(), j));
+	}
+
+	public static void removeTitleLangRole(long id, TitleLanguage lang, Jikai j) {
+		try {
+			Guild g = j.getGuild();
+			Member m = g.getMemberById(id);
+			Role user = g.getRoleById(j.getJikaiData().getTitleLanguageRole(lang));
+			if (m.getRoles().contains(user)) {
+				g.removeRoleFromMember(m, user).queue(v -> log.debug("removed user role from {} on {}", id, g.getId()));
+			}
+		} catch (Exception e) {
+			log.error("Couldn't get guild {}!", j.getJikaiData().getGuildId(), e);
+		}
+	}
+
+	public static void removeRoles(JikaiUser ju) {
+		Core.JDA.getMutualGuilds(ju.getUser()).stream().filter(Core.JM::hasManagerFor).map(Core.JM::get).forEach(j -> {
+			removeJikaiUserRole(ju.getId(), j);
+			removeTitleLangRole(ju.getId(), ju.getTitleLanguage(), j);
+		});
+	}
 }

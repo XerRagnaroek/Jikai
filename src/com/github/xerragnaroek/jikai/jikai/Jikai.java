@@ -7,6 +7,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,8 +15,8 @@ import org.slf4j.MDC;
 
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.TitleLanguage;
-import com.github.xerragnaroek.jikai.anime.list.ALRHandler;
 import com.github.xerragnaroek.jikai.anime.list.BigListHandler;
+import com.github.xerragnaroek.jikai.anime.list.btn.AnimeListHandler;
 import com.github.xerragnaroek.jikai.commands.guild.CommandHandler;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
@@ -32,7 +33,7 @@ import net.dv8tion.jda.api.entities.User;
 public class Jikai {
 	private JikaiData jd;
 	private BotData bd;
-	private Map<TitleLanguage, ALRHandler> alrhs = new HashMap<>();
+	private Map<TitleLanguage, AnimeListHandler> alhs = new HashMap<>();
 	private Map<String, BigListHandler> blhs = new HashMap<>();
 	private CommandHandler ch;
 	private final Logger log;
@@ -148,14 +149,14 @@ public class Jikai {
 		return jd;
 	}
 
-	public ALRHandler getALRHandler(TitleLanguage lang) {
-		return alrhs.get(lang);
+	public AnimeListHandler getAnimeListHandler(TitleLanguage lang) {
+		return alhs.get(lang);
 	}
 
-	public ALRHandler getALRHandler(long channelId) {
+	public AnimeListHandler geAnimeListHandler(long channelId) {
 		for (TitleLanguage lang : TitleLanguage.values()) {
 			if (jd.getListChannelId(lang) == channelId) {
-				return getALRHandler(lang);
+				return getAnimeListHandler(lang);
 			}
 		}
 		return null;
@@ -165,8 +166,8 @@ public class Jikai {
 		return ch;
 	}
 
-	public void setALRHandler(ALRHandler alrh, TitleLanguage lang) {
-		alrhs.put(lang, alrh);
+	public void setAnimeListHandler(AnimeListHandler alh, TitleLanguage lang) {
+		alhs.put(lang, alh);
 	}
 
 	public JikaiLocale getLocale() {
@@ -330,12 +331,55 @@ public class Jikai {
 		big.validateList();
 	}
 
+	public void setupAnimeListHandlers() {
+		try {
+			makeRomajiListHandler(getListChannel(TitleLanguage.ROMAJI)).validateList();
+		} catch (Exception e) {
+			log.error("No romaji list channel!", e);
+		}
+		try {
+			makeEnglishListHandler(getListChannel(TitleLanguage.ENGLISH)).validateList();
+		} catch (Exception e) {
+			log.error("No english list channel!", e);
+		}
+		try {
+			makeNativeListHandler(getListChannel(TitleLanguage.NATIVE)).validateList();
+		} catch (Exception e) {
+			log.error("No native list channel!", e);
+		}
+	}
+
+	public AnimeListHandler makeRomajiListHandler(TextChannel tc) {
+		AnimeListHandler romaji = AnimeListHandler.makeDefault(jd.getGuildId(), tc, TitleLanguage.ROMAJI);
+		alhs.put(TitleLanguage.ROMAJI, romaji);
+		return romaji;
+	}
+
+	public AnimeListHandler makeEnglishListHandler(TextChannel tc) {
+		AnimeListHandler english = AnimeListHandler.makeDefault(jd.getGuildId(), tc, TitleLanguage.ENGLISH);
+		alhs.put(TitleLanguage.ENGLISH, english);
+		return english;
+	}
+
+	public AnimeListHandler makeNativeListHandler(TextChannel tc) {
+		AnimeListHandler nativeALH = AnimeListHandler.makeDefault(jd.getGuildId(), tc, TitleLanguage.NATIVE);
+		AtomicInteger counter = new AtomicInteger();
+		nativeALH.groupingBy(e -> String.format("%02d", (counter.getAndIncrement() / 25) + 1));
+		nativeALH.doAfterGroupingBy(() -> counter.set(0));
+		alhs.put(TitleLanguage.NATIVE, nativeALH);
+		return nativeALH;
+	}
+
 	public BigListHandler getBigListHandler(String identifier) {
 		return blhs.get(identifier);
 	}
 
 	public Map<String, BigListHandler> getBigListHandlerMap() {
 		return blhs;
+	}
+
+	public Map<TitleLanguage, AnimeListHandler> getAnimeListHandlerMap() {
+		return alhs;
 	}
 
 }

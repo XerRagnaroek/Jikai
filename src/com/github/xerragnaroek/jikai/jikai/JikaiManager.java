@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
-import com.github.xerragnaroek.jikai.anime.list.ALRHManager;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
@@ -25,7 +24,6 @@ import net.dv8tion.jda.api.entities.Guild;
 
 public class JikaiManager extends Manager<Jikai> {
 	final JikaiDataManager jdm = new JikaiDataManager();
-	final ALRHManager alrhm = new ALRHManager();
 	private MapProperty<ZoneId, Set<Long>> timeZones = new MapProperty<>();
 	private final Logger log = LoggerFactory.getLogger(JikaiManager.class);
 
@@ -42,8 +40,10 @@ public class JikaiManager extends Manager<Jikai> {
 		JikaiUserManager.init();
 		JikaiIO.load();
 		jdm.getGuildIds().forEach(this::registerNew);
-		alrhm.init();
-		impls.values().forEach(Jikai::setupBigListHandlers);
+		impls.values().forEach(j -> {
+			j.setupBigListHandlers();
+			j.setupAnimeListHandlers();
+		});
 		ScheduleManager.init();
 		Core.CUR_SEASON.onChange((ov, nv) -> updateJikaisSeasonChanged(nv));
 		JikaiUserManager.getInstance().cachePrivateChannels();
@@ -79,10 +79,6 @@ public class JikaiManager extends Manager<Jikai> {
 
 	public JikaiDataManager getJDM() {
 		return jdm;
-	}
-
-	public ALRHManager getALHRM() {
-		return alrhm;
 	}
 
 	public boolean isKnownGuild(long gId) {
@@ -128,6 +124,5 @@ public class JikaiManager extends Manager<Jikai> {
 	public void remove(long id) {
 		super.remove(id);
 		jdm.remove(id);
-		alrhm.remove(id);
 	}
 }

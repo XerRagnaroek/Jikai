@@ -29,6 +29,7 @@ import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
+import com.github.xerragnaroek.jikai.user.token.JikaiUserAniTokenManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.prop.MapProperty;
 
@@ -159,9 +160,10 @@ public class JikaiUserManager {
 		log.debug("Removing user '{}'", id);
 		JikaiUser ju = user.remove(id);
 		if (ju != null) {
-			BotUtils.removeJikaiUserRole(ju);
+			BotUtils.removeRoles(ju);
 			ju.destroy();
 			EpisodeTrackerManager.removeTracker(ju);
+			JikaiUserAniTokenManager.removeToken(ju);
 		}
 	}
 

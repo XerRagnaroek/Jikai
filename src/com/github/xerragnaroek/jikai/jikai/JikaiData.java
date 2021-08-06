@@ -8,11 +8,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
@@ -31,14 +30,12 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.github.xerragnaroek.jasa.TitleLanguage;
-import com.github.xerragnaroek.jikai.anime.list.ALRHData;
-import com.github.xerragnaroek.jikai.anime.list.ALRHandler;
 import com.github.xerragnaroek.jikai.anime.list.BigListHandler;
+import com.github.xerragnaroek.jikai.anime.list.btn.AnimeListHandler;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
-import com.github.xerragnaroek.jikai.util.Pair;
 import com.github.xerragnaroek.jikai.util.prop.IntegerProperty;
 import com.github.xerragnaroek.jikai.util.prop.LongProperty;
 import com.github.xerragnaroek.jikai.util.prop.MapProperty;
@@ -127,81 +124,6 @@ public class JikaiData {
 
 	public Property<Boolean> comsEnabledProperty() {
 		return comsEnabled;
-	}
-
-	@JsonIgnore
-	public Set<ALRHData> getALRHData(TitleLanguage lang) {
-		ALRHandler alrh = JM.get(gId).getALRHandler(lang);
-		if (alrh != null) {
-			return alrh.getData();
-		} else {
-			return Collections.emptySet();
-		}
-	}
-
-	@JsonProperty("alrh_data_romaji")
-	public Set<ALRHData> getALRHDataRomaji() {
-		return getALRHData(TitleLanguage.ROMAJI);
-	}
-
-	@JsonProperty("alrh_data_english")
-	public Set<ALRHData> getALRHDataEnglish() {
-		return getALRHData(TitleLanguage.ENGLISH);
-	}
-
-	@JsonProperty("alrh_data_native")
-	public Set<ALRHData> getALRHDataNative() {
-		return getALRHData(TitleLanguage.NATIVE);
-	}
-
-	@JsonIgnore
-	public Map<Long, String> getMessageIdTitleMap(TitleLanguage lang) {
-		ALRHandler alrh = JM.get(gId).getALRHandler(lang);
-		if (alrh != null) {
-			return alrh.getMessageIdTitleMap();
-		} else {
-			return Collections.emptyMap();
-		}
-	}
-
-	@JsonProperty("msg_id_title_romaji")
-	public Map<Long, String> getMessageIdTitleMapRomaji() {
-		return getMessageIdTitleMap(TitleLanguage.ROMAJI);
-	}
-
-	@JsonProperty("msg_id_title_english")
-	public Map<Long, String> getMessageIdTitleMapEnglish() {
-		return getMessageIdTitleMap(TitleLanguage.ENGLISH);
-	}
-
-	@JsonProperty("msg_id_title_native")
-	public Map<Long, String> getMessageIdTitleMapNative() {
-		return getMessageIdTitleMap(TitleLanguage.NATIVE);
-	}
-
-	@JsonIgnore
-	public Pair<String, Long> getSeasonMsg(TitleLanguage lang) {
-		ALRHandler alrh = JM.get(gId).getALRHandler(lang);
-		if (alrh != null) {
-			return alrh.getSeasonMsg();
-		} else {
-			return null;
-		}
-	}
-
-	@JsonProperty("season_msg_romaji")
-	public Pair<String, Long> getSeasonMsgRomaji() {
-		return getSeasonMsg(TitleLanguage.ROMAJI);
-	}
-
-	@JsonProperty("season_msg_english")
-	public Pair<String, Long> getSeasonMsgEnglish() {
-		return getSeasonMsg(TitleLanguage.ENGLISH);
-	}
-
-	@JsonProperty("season_msg_native")
-	public Pair<String, Long> getSeasonMsgNative() {
-		return getSeasonMsg(TitleLanguage.NATIVE);
 	}
 
 	// @JsonProperty("anime_channel_id")
@@ -450,23 +372,6 @@ public class JikaiData {
 		changed.set(true);
 	}
 
-	private boolean updatesAvailable() {
-		boolean tmp = false;
-		log.debug("Seeing if any data changed:");
-		if (changed.get()) {
-			log.debug("JikaiData changed");
-			tmp = true;
-		}
-		for (TitleLanguage lang : TitleLanguage.values()) {
-			ALRHandler h = JM.get(gId).getALRHandler(lang);
-			if (h != null && h.isInitialized() && h.hasUpdateFlagAndReset()) {
-				log.debug("ALHRData {} changed", lang);
-				tmp = true;
-			}
-		}
-		return tmp;
-	}
-
 	private <T> T setData(Property<T> field, T newData, String name) {
 		T tmp = field.get();
 		field.set(newData);
@@ -526,12 +431,10 @@ public class JikaiData {
 	 */
 
 	@JsonCreator
-	public static JikaiData of(@JsonProperty("language") String lang, @JsonProperty("guild_id") long gId, @JsonProperty("timezone") String zone, @JsonProperty("alrh_data_romaji") Set<ALRHData> dataRomaji, @JsonProperty("alrh_data_english") Set<ALRHData> dataEnglish, @JsonProperty("alrh_data_native") Set<ALRHData> dataNative, @JsonProperty("msg_id_title_romaji") Map<Long, String> msgIdTitleMapRomaji, @JsonProperty("msg_id_title_english") Map<Long, String> msgIdTitleMapEnglish, @JsonProperty("msg_id_title_native") Map<Long, String> msgIdTitleMapNative, @JsonProperty("season_msg_romaji") Pair<String, Long> seasonMsgRomaji, @JsonProperty("season_msg_english") Pair<String, Long> seasonMsgEnglish, @JsonProperty("season_msg_native") Pair<String, Long> seasonMsgNative) {
+	public static JikaiData of(@JsonProperty("language") String lang, @JsonProperty("guild_id") long gId, @JsonProperty("timezone") String zone) {
 		JikaiData jd = new JikaiData(gId, false);
 		setIfNonNull(jd.locale, new Property<>(JikaiLocaleManager.getInstance().getLocale(lang)));
-		JM.getALHRM().addToInitMap(gId, dataRomaji, msgIdTitleMapRomaji, seasonMsgRomaji, TitleLanguage.ROMAJI);
-		JM.getALHRM().addToInitMap(gId, dataEnglish, msgIdTitleMapEnglish, seasonMsgEnglish, TitleLanguage.ENGLISH);
-		JM.getALHRM().addToInitMap(gId, dataNative, msgIdTitleMapNative, seasonMsgNative, TitleLanguage.NATIVE);
+		setIfNonNull(jd.zone, new Property<>(ZoneId.of(zone)));
 		return jd;
 	}
 
@@ -546,7 +449,7 @@ public class JikaiData {
 	}
 
 	public synchronized boolean save(boolean now) {
-		if (updatesAvailable() || now) {
+		if (now) {
 			ObjectMapper mapper = new ObjectMapper();
 			mapper.enable(SerializationFeature.INDENT_OUTPUT);
 			try {
@@ -571,14 +474,25 @@ public class JikaiData {
 	private Map<String, Map<Integer, Long>> getBigListHandlers() {
 		Map<String, BigListHandler> blhs = Core.JM.get(gId).getBigListHandlerMap();
 		Map<String, Map<Integer, Long>> data = new HashMap<>();
-		blhs.forEach((s, blh) -> {
-			data.put(s, blh.getMessageData());
-		});
+		blhs.forEach((s, blh) -> data.put(s, blh.getMessageData()));
 		return data;
 	}
 
-	@JsonSetter
+	@JsonSetter("big_list_handlers")
 	private void setBigListHandlers(Map<String, Map<Integer, Long>> data) {
 		BigListHandler.addLoadedData(gId, data);
+	}
+
+	@JsonGetter("anime_list_handlers")
+	private Map<TitleLanguage, Map<Long, List<Integer>>> getAnimeListHandlers() {
+		Map<TitleLanguage, AnimeListHandler> alhs = Core.JM.get(gId).getAnimeListHandlerMap();
+		Map<TitleLanguage, Map<Long, List<Integer>>> data = new HashMap<>();
+		alhs.forEach((tl, alh) -> data.put(tl, alh.getMessageIdAnimeIdMap()));
+		return data;
+	}
+
+	@JsonSetter("anime_list_handlers")
+	private void setAnimeListHandlers(Map<TitleLanguage, Map<Long, List<Integer>>> map) {
+		AnimeListHandler.addToInitMap(gId, map);
 	}
 }

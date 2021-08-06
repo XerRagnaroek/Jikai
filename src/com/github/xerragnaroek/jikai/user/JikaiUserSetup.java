@@ -161,6 +161,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 		ju.setTitleLanguage(TitleLanguage.ROMAJI);
 		ju.setUpdateDaily(true);
 		ju.setSendWeeklySchedule(true);
+		ju.setShowAdult(false);
 	}
 
 	private void stageTimeZone() {

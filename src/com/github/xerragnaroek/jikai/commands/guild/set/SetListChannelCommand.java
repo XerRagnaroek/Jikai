@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.github.xerragnaroek.jasa.TitleLanguage;
+import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
+import com.github.xerragnaroek.jikai.anime.list.btn.AnimeListHandler;
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
@@ -83,8 +85,13 @@ public class SetListChannelCommand implements GuildCommand {
 		boolean firstTimeSet = !j.hasListChannelSet(lang);
 		j.getJikaiData().setListChannelId(textC.getIdLong(), lang);
 		if (firstTimeSet) {
-			j.setALRHandler(Core.JM.getALHRM().makeNew(j, lang), lang);
-			j.getALRHandler(lang).sendList();
+			AnimeListHandler alh = null;
+			switch (lang) {
+				case ENGLISH -> alh = j.makeEnglishListHandler(textC);
+				case NATIVE -> alh = j.makeNativeListHandler(textC);
+				case ROMAJI -> alh = j.makeRomajiListHandler(textC);
+			}
+			alh.sendList(AnimeDB.getLoadedAnime());
 		}
 		try {
 			j.getInfoChannel().sendMessage(j.getLocale().getStringFormatted("com_g_set_list_success", Arrays.asList("channel", "name"), textC.getAsMention(), lang.toString())).queue();
