@@ -101,6 +101,7 @@ public class JikaiUser {
 				BotUtils.setAdultRole(this);
 			}
 		});
+		zone.onChange((o, n) -> log("changed zone {}", n == null ? "null" : n.toString()));
 	}
 
 	@JsonIgnore

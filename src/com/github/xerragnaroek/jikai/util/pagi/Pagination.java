@@ -89,7 +89,6 @@ public abstract class Pagination extends ListenerAdapter {
 			ps.onStageChange().accept(stage);
 		}
 		doStageImpl().thenAccept(v -> {
-
 			registerListener();
 		});
 	}

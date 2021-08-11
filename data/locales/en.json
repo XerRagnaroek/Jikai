@@ -295,6 +295,7 @@
     "setup_title_lang_eb_title": "How do you want titles to be displayed?",
     "setup_weekly_eb_desc": "This sends you your weekly schedule.",
     "setup_weekly_eb_title": "Weekly schedule",
+	"setup_timed_out": "The setup has been automatically cancelled, as it timed out. To restart it, type `!register` in the commands channel.",
     "u_day": "day",
     "u_days": "days",
     "u_flag_uni": "U+1F1ECU+1F1E7",

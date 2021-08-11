@@ -6,6 +6,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -41,6 +43,7 @@ public class JikaiUserSetup extends ListenerAdapter {
 	private final Logger log;
 	private AtomicBoolean ignoreMsgs = new AtomicBoolean(true);
 	private AniLinker aniLinker;
+	private ScheduledFuture<?> timeOut;
 
 	private JikaiUserSetup(JikaiUser ju, Jikai j) {
 		this.ju = ju;
@@ -211,10 +214,10 @@ public class JikaiUserSetup extends ListenerAdapter {
 						setup.nextStage();
 					} catch (Exception e) {}
 				}
-				case 10 -> {
+				case 11 -> {
 					addStep(event.getMessage().getContentStripped());
 				}
-				case 11 -> {
+				case 12 -> {
 					ignoreMsgs.set(true);
 					aniLinker = AniLinker.linkAniAccount(ju, event.getMessage().getContentStripped());
 					aniLinker.getFuture().thenAccept(b -> setup.nextStage());
@@ -351,9 +354,11 @@ public class JikaiUserSetup extends ListenerAdapter {
 		log.debug("Running setup");
 		ju.getUser().openPrivateChannel().submit().thenAccept(setup::send);
 		Core.JDA.addEventListener(this);
+		timeOut = Core.EXEC.schedule(() -> timeOut(), 1, TimeUnit.HOURS);
 	}
 
 	private void endSetup(boolean skip) {
+		timeOut.cancel(true);
 		Core.JDA.removeEventListener(this);
 		ju.setSetupCompleted(true);
 		if (skip) {
@@ -364,6 +369,15 @@ public class JikaiUserSetup extends ListenerAdapter {
 	}
 
 	private void cancelSetup() {
+		setup.end();
+		JikaiUserManager.getInstance().removeUser(ju.getId());
+		timeOut.cancel(true);
+	}
+
+	private void timeOut() {
+		log.debug("Setup timed out!");
+		setup.addStage(BotUtils.makeSimpleEmbed(ju.getLocale().getString("setup_timed_out")), Collections.emptyList(), null, null, true, true);
+		setup.skipToStage(setup.getStages() - 1);
 		setup.end();
 		JikaiUserManager.getInstance().removeUser(ju.getId());
 	}
