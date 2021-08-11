@@ -51,7 +51,6 @@ public class JikaiUserAniTokenManager {
 	}
 
 	public static boolean hasToken(JikaiUser ju) {
-		validateUserIsLinked(ju);
 		return token.containsKey(ju.getAniId());
 	}
 

@@ -822,7 +822,6 @@ public class BotUtils {
 			setAdultImpl(g, j, m, ju);
 			addJikaiUserRole(ju, j);
 			g.getMembersWithRoles(g.getRoleById(j.getJikaiData().getJikaiUserRole())).stream().filter(mem -> !JikaiUserManager.getInstance().isKnownJikaiUser(mem.getIdLong())).forEach(mem -> removeJikaiUserRole(m.getIdLong(), j));
-			;
 		} catch (Exception e) {
 			Core.ERROR_LOG.error("couldn't get guild!", e);
 		}
