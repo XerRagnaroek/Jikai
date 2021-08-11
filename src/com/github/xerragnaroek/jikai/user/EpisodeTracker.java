@@ -84,7 +84,7 @@ public class EpisodeTracker {
 							mediaListEntryId = jasa.getMediaListEntryIdForUserFromAniId(ju.getAniId(), anime);
 						} catch (AniException e) {
 							if (e.getStatusCode() == 404) {
-								mediaListEntryId = jasa.addToUserWatchingList(token, anime);
+								mediaListEntryId = jasa.addToUserCurrentList(token, anime);
 							}
 						}
 						updateAniListProgress(token, mediaListEntryId, anime, epNum);

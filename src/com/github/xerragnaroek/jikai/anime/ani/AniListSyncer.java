@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import com.github.xerragnaroek.jasa.AniException;
+import com.github.xerragnaroek.jasa.MediaListStatus;
 import com.github.xerragnaroek.jasa.UserListEntry;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
@@ -91,7 +92,11 @@ public class AniListSyncer {
 	private void syncLists() {
 		if (!userMap.isEmpty()) {
 			log.debug("Syncing {} lists", userMap.size());
-			AnimeDB.getJASA().fetchUserListEntries(new ArrayList<Integer>(userMap.keySet())).filter(ule -> ule.getMediaStatus() != null && !ule.getMediaStatus().equals("FINISHED")).forEach(this::handleUserListEntry);
+			try {
+				AnimeDB.getJASA().fetchUserListEntries(new ArrayList<Integer>(userMap.keySet()), MediaListStatus.PLANNING, MediaListStatus.CURRENT).filter(ule -> ule.getMediaStatus() != null && !ule.getMediaStatus().equals("FINISHED")).forEach(this::handleUserListEntry);
+			} catch (AniException | IOException e) {
+				BotUtils.logAndSendToDev(log, "Exception syncing lists!", e);
+			}
 		}
 	}
 
@@ -120,7 +125,7 @@ public class AniListSyncer {
 								AnimeDB.getJASA().addToUserPlanningList(token, a.getId());
 								log.debug("{} added to planning list for {}", a.getTitleRomaji(), ju.getId());
 							} else if (a.isReleasing()) {
-								AnimeDB.getJASA().addToUserWatchingList(token, a.getId());
+								AnimeDB.getJASA().addToUserCurrentList(token, a.getId());
 								log.debug("{} added to watching list for {}", a.getTitleRomaji(), ju.getId());
 							}
 						} else {

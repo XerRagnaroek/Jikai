@@ -109,7 +109,7 @@ public class JikaiUserUpdater implements ButtonInteractor {
 						if (a.isNotYetReleased()) {
 							AnimeDB.getJASA().addToUserPlanningList(token, a.getId());
 						} else if (a.isReleasing()) {
-							AnimeDB.getJASA().addToUserWatchingList(token, a.getId());
+							AnimeDB.getJASA().addToUserCurrentList(token, a.getId());
 						}
 					} catch (IOException | AniException e) {
 						BotUtils.logAndSendToDev(log, String.format("Failed adding anime %s,%s to ju %s anilist!", a.getTitleRomaji(), a.getId(), ju.getId()), e);

@@ -216,7 +216,7 @@ public class AnimeUpdate {
 	private void handleInfoChanged() {
 		newA.forEach(a -> {
 			if (oldA.contains(a)) {
-				if (!a.sameInfo(oldA.get(oldA.indexOf(a)))) {
+				if (!a.isSameAnime(oldA.get(oldA.indexOf(a)))) {
 					infoChanged.add(a);
 					log.debug("{} has changed info!", a.getTitleRomaji());
 				}
