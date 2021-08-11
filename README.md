@@ -1,12 +1,12 @@
 # Jikai (次回)
 Jikai is a discord bot made using [JDA](https://github.com/DV8FromTheWorld/JDA) and parsing all its anime data from [AniList](https://anilist.co/) (*not affiliated in any way!*) using my own api wrapper (probably on github soon).  
-Her main purpose is to allow users to subscribe to currently airing anime and be notified when a new episode releases or anything changes, while also syncing you AniList account!
+Her main purpose is to allow users to subscribe to currently airing anime and be notified when a new episode releases or anything changes, while also syncing your AniList account!
 
-Join [here!](https://discord.gg/Q42Aesn)
-
+Join [here!](https://discord.gg/Q42Aesn)  
+Jikai will start a short setup process with you, after which you'll be set to use her service.
 ## Features
 ### Centralised lists for the three title languages
-You can change you subscriptions here, simply by reacting with the respective emoji!
+You can change you subscriptions here, simply by clicking the respective button!
 
 **Romaji**
 
@@ -18,7 +18,9 @@ ___
 ___
 **Native**
 
-![List example Native](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/listNativeExample.jpg)
+![List example Native](https://raw.githubusercontent.com/XerRagnaroek/Jikai/dev/doc/listNativeExample.jpg)  
+
+I'm slowly moving away from reactions and towards using buttons to handle user input, which is why these images are outdated.
 
 ### Notifications at configurable times
 Exemplary notifications:
