@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 import com.github.xerragnaroek.jasa.AniException;
 import com.github.xerragnaroek.jasa.MediaListStatus;
@@ -51,7 +50,6 @@ public class AniListSyncer {
 	}
 
 	public void registerUser(JikaiUser ju) {
-		MDC.put("id", String.valueOf(ju.getId()));
 		IntegerProperty idP = ju.aniIdProperty();
 		int id = idP.get();
 		if (id > 0) {
@@ -59,16 +57,13 @@ public class AniListSyncer {
 		}
 		idP.onChange((o, n) -> {
 			if (n > 0) {
-				MDC.put("id", String.valueOf(ju.getId()));
 				addUserToMap(ju, id);
 				if (o > 0) {
 					removeOldId(ju, o);
 				}
 				log.debug("Updated aniId");
-				MDC.remove("id");
 			}
 		});
-		MDC.remove("id");
 	}
 
 	private void addUserToMap(JikaiUser ju, int id) {
