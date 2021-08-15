@@ -180,8 +180,8 @@ public class JikaiUserAniTokenManager {
 	}
 
 	private static void syncLists(List<Integer> aniIds) {
-		Map<Integer, JikaiUser> mapped = JikaiUserManager.getInstance().users().stream().filter(ju -> ju.getAniId() > 0).peek(ju -> ju.sendPM(BotUtils.makeSimpleEmbed(ju.getLocale().getString("ju_link_ani_authed")))).collect(Collectors.toMap(JikaiUser::getAniId, ju -> ju));
-		aniIds.stream().map(id -> mapped.get(id)).filter(Objects::nonNull).forEach(AniListSyncer.getInstance()::syncAniListsWithSubs);
+		Map<Integer, JikaiUser> mapped = JikaiUserManager.getInstance().users().stream().filter(ju -> ju.getAniId() > 0).collect(Collectors.toMap(JikaiUser::getAniId, ju -> ju));
+		aniIds.stream().map(id -> mapped.get(id)).filter(Objects::nonNull).peek(ju -> ju.sendPM(BotUtils.makeSimpleEmbed(ju.getLocale().getString("ju_link_ani_authed")))).forEach(AniListSyncer.getInstance()::syncAniListsWithSubs);
 	}
 
 	public static void removeToken(JikaiUser ju) {
