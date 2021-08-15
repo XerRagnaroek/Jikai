@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -41,6 +42,7 @@ public class BigListHandler {
 	private long tc;
 	private String identifier;
 	private final Logger log;
+	private Queue<Anime> missingMessage = new LinkedList<>();
 
 	public BigListHandler(Jikai j, String identifier) {
 		this.j = j;
@@ -222,7 +224,14 @@ public class BigListHandler {
 
 	private void handleInfoChange(List<Anime> list, TextChannel tc) {
 		log.debug("Handling {} info changed animes", list.size());
-		list.forEach(a -> tc.editMessageById(messages.get(a.getId()), makeMessage(a, true)).queue(v -> log.debug("Successfully edited message {} for {},{}", v.getIdLong(), a.getId(), a.getTitleRomaji())));
+		list.forEach(a -> {
+			if (messages.containsKey(a.getId())) {
+				tc.editMessageById(messages.get(a.getId()), makeMessage(a, true)).queue(v -> log.debug("Successfully edited message {} for {},{}", v.getIdLong(), a.getId(), a.getTitleRomaji()));
+			} else {
+				log.debug("{},{} is missing a message, sending it with the new anime!", a.getTitleRomaji(), a.getId());
+				missingMessage.add(a);
+			}
+		});
 	}
 
 	private void handleObsolete(List<Anime> list, TextChannel tc) {
@@ -231,8 +240,11 @@ public class BigListHandler {
 	}
 
 	private void handleNew(List<Anime> list, TextChannel tc) {
-		log.debug("Handling {} new animes", list.size());
-		list.stream().sorted(Anime.SORT_BY_RELEASE_DATE).forEach(a -> sendMessage(a, tc));
+		log.debug("Handling {} new animes and {} missing a message", list.size());
+		List<Anime> newAnime = new LinkedList<>();
+		newAnime.addAll(list);
+		newAnime.addAll(missingMessage);
+		newAnime.stream().sorted(Anime.SORT_BY_RELEASE_DATE).forEach(a -> sendMessage(a, tc));
 	}
 
 	public static void addLoadedData(long gId, Map<String, Map<Integer, Long>> data) {
