@@ -1,7 +1,6 @@
 package com.github.xerragnaroek.jikai.anime.db;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -18,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jasa.Anime;
-import com.github.xerragnaroek.jasa.AnimeDate;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocaleManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
 import com.github.xerragnaroek.jikai.util.Pair;
@@ -146,10 +144,14 @@ public class AnimeUpdate {
 				if (!oldAn.isFinished() & a.isFinished()) {
 					return true;
 				}
-				if (!a.hasDataForNextEpisode() && oldA.contains(a) && (oldAn = oldA.get(oldA.indexOf(a))).hasDataForNextEpisode()) {
-					AnimeDate end = a.getEndDate();
-					return (oldAn.getNextEpisodeNumber() + 1 == a.getEpisodes()) || (end.hasAll() && end.toZDT(ZoneId.systemDefault()).toLocalDate().isEqual(LocalDate.now()));
-				}
+				/*
+				 * if (!a.hasDataForNextEpisode() && oldA.contains(a) && (oldAn =
+				 * oldA.get(oldA.indexOf(a))).hasDataForNextEpisode()) {
+				 * AnimeDate end = a.getEndDate();
+				 * return (oldAn.getNextEpisodeNumber() + 1 == a.getEpisodes()) || (end.hasAll() &&
+				 * end.toZDT(ZoneId.systemDefault()).toLocalDate().isEqual(LocalDate.now()));
+				 * }
+				 */
 
 			}
 			return false;

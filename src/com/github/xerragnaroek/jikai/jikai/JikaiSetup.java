@@ -150,7 +150,7 @@ public class JikaiSetup extends ListenerAdapter {
 		BotUtils.addJikaiMark(eb);
 		eb.setTitle(title);
 		eb.setDescription(desc);
-		setTc.sendMessage(eb.build()).submit().get();
+		setTc.sendMessageEmbeds(eb.build()).submit().get();
 		listen = true;
 	}
 

@@ -28,7 +28,7 @@ public class EpisodesCommand implements JUCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		EpisodeTrackerManager.getTracker(ju).makeEpisodeList().forEach(eb -> ju.sendPM(eb.build()));
+		EpisodeTrackerManager.getTracker(ju).makeEpisodeList().forEach(msg -> ju.sendPM(msg));
 	}
 
 }

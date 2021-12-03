@@ -96,6 +96,9 @@ public class EpisodeTracker {
 						BotUtils.logAndSendToDev(log, "", e);
 					}
 				}
+				if (lastEp) {
+					ju.unsubscribeAnime(anime, ju.getLocale().getString("ju_sub_rem_cause_finished"));
+				}
 				return null;
 			});
 			return m.isEmpty() ? null : m;
@@ -133,7 +136,7 @@ public class EpisodeTracker {
 					MessageEmbed me = m.getEmbeds().get(0);
 					EmbedBuilder bob = new EmbedBuilder(me);
 					bob.setDescription(me.getDescription() + "\n" + jLoc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"), BotUtils.getTodayDateForJUserFormatted(ju)));
-					return m.editMessage(bob.build());
+					return m.editMessageEmbeds(bob.build());
 				}).submit().thenAccept(m -> {
 					log.debug("Successfully edited msg: {}", m.getId());
 					episodeWatched(msgId);
@@ -144,10 +147,10 @@ public class EpisodeTracker {
 		}
 	}
 
-	public List<EmbedBuilder> makeEpisodeList() {
+	public List<Message> makeEpisodeList() {
 		long pcId = ju.getUser().openPrivateChannel().complete().getIdLong();
 		List<Pair<Anime, List<String>>> aniStrings = episodes.keySet().stream().map(id -> formatAnimeEpisodes(pcId, id)).sorted((p1, p2) -> Anime.IGNORE_TITLE_CASE.compare(p1.getLeft(), p2.getLeft())).collect(Collectors.toList());
-		List<EmbedBuilder> ebs = new ArrayList<>(aniStrings.size());
+		List<Message> msgs = new ArrayList<>(aniStrings.size());
 		aniStrings.forEach(p -> {
 			List<String> eps = p.getRight();
 			List<List<String>> chunked = new ArrayList<>(BotUtils.partitionCollection(eps, 25));
@@ -157,55 +160,12 @@ public class EpisodeTracker {
 				eb.setTitle("**" + (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())) + (chunked.size() == 1 ? "" : " [" + (i + 1) + "/" + chunked.size() + "]") + "**", p.getLeft().getAniUrl());
 				eb.setThumbnail(p.getLeft().getBiggestAvailableCoverImage());
 				chunked.get(i).forEach(s -> eb.addField("", s, true));
-				ebs.add(eb);
+				MessageBuilder mb = new MessageBuilder(eb.build());
+				mb.setActionRows(ActionRow.of(Button.secondary("ept:del:" + a.getId(), Emoji.fromUnicode("U+274C"))));
+				msgs.add(mb.build());
 			}
 		});
-		return ebs;
-		/*
-		 * List<List<String>> splitMsgs = new ArrayList<>();
-		 * List<String> msg = new ArrayList<>();
-		 * Iterator<String> it = aniStrings.iterator();
-		 * while (it.hasNext()) {
-		 * String cur = it.next();
-		 * charC += cur.length();
-		 * splitMsgs.add(msg);
-		 * msg = new ArrayList<>();
-		 * charC = 0;
-		 * }
-		 * msg.add(cur);
-		 * }
-		 * splitMsgs.add(msg);
-		 * List<EmbedBuilder> ebs = new ArrayList<>();
-		 * for (int c = 0; c < splitMsgs.size(); c++) {
-		 * msg = splitMsgs.get(c);
-		 * EmbedBuilder eb = BotUtils.embedBuilder();
-		 * eb.setTitle(loc.getString("ju_ep_tracker_title") + (splitMsgs.size() > 1 ? " " + c + "/" +
-		 * splitMsgs.size() : ""));
-		 * String desc = String.join("\n", msg);
-		 * log.debug("Desc length {}", desc.length());
-		 * eb.setDescription(desc);
-		 * ebs.add(eb);
-		 * }
-		 * EmbedBuilder eb = BotUtils.embedBuilder();
-		 * if (!aniStrings.isEmpty()) {
-		 * eb.appendDescription(aniStrings.get(0));
-		 * for (int i = 1; i < aniStrings.size(); i++) {
-		 * String s = aniStrings.get(i);
-		 * if (eb.getDescriptionBuilder().length() + s.length() <= 2048) {
-		 * eb.appendDescription("\n" + s);
-		 * } else {
-		 * ebs.add(eb);
-		 * eb = BotUtils.embedBuilder();
-		 * }
-		 * }
-		 * ebs.add(eb);
-		 * for (int i = 0; i < ebs.size(); i++) {
-		 * ebs.get(i).setTitle(loc.getString("ju_ep_tracker_title") + (ebs.size() > 1 ? " " + (i + 1) + "/"
-		 * + ebs.size() : ""));
-		 * }
-		 * }
-		 * return ebs;
-		 */
+		return msgs;
 	}
 
 	private Pair<Anime, List<String>> formatAnimeEpisodes(long pcId, int anime) {
@@ -232,15 +192,24 @@ public class EpisodeTracker {
 	public void handleButtonClick(String[] data, ButtonClickEvent event) {
 		MDC.put("id", event.getMessageId());
 		log.debug("Handling button click");
-		// so far nothing happens besides the msg being edited
-		JikaiLocale loc = ju.getLocale();
-		MessageEmbed me = event.getMessage().getEmbeds().get(0);
-		EmbedBuilder bob = new EmbedBuilder(me);
-		bob.setDescription(me.getDescription() + "\n" + loc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"), BotUtils.getTodayDateForJUserFormatted(ju)));
-		event.editMessage(new MessageBuilder(bob.build()).build()).queue(v -> {
-			log.debug("Message edited!");
-			episodeWatched(event.getMessageIdLong());
-		});
+		if (data[0].equals("del")) {
+			episodes.compute(Integer.parseInt(data[1]), (id, map) -> {
+				map.keySet().forEach(idAnime::remove);
+				log.debug("Removed mapping for anime {}", id);
+				return null;
+			});
+			event.deferEdit().queue();
+			event.getChannel().deleteMessageById(event.getMessageId()).queue();
+		} else {
+			JikaiLocale loc = ju.getLocale();
+			MessageEmbed me = event.getMessage().getEmbeds().get(0);
+			EmbedBuilder bob = new EmbedBuilder(me);
+			bob.setDescription(me.getDescription() + "\n" + loc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"), BotUtils.getTodayDateForJUserFormatted(ju)));
+			event.editMessage(new MessageBuilder(bob.build()).build()).queue(v -> {
+				log.debug("Message edited!");
+				episodeWatched(event.getMessageIdLong());
+			});
+		}
 		MDC.remove("id");
 	}
 

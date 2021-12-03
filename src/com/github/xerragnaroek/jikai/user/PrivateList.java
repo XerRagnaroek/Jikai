@@ -77,7 +77,7 @@ public class PrivateList extends ListenerAdapter {
 				Map<String, Anime> map = cpToAnime.get(i);
 				EmbedBuilder eb = buildEmbed(map);
 				eb.setTitle(title + (cpToAnime.size() > 1 ? " " + (i + 1) + "/" + cpToAnime.size() : ""));
-				sync.add(pc.sendMessage(eb.build()).submit().thenAccept(m -> {
+				sync.add(pc.sendMessageEmbeds(eb.build()).submit().thenAccept(m -> {
 					if (first) {
 						firstMsgId = m.getIdLong();
 					}
@@ -131,7 +131,7 @@ public class PrivateList extends ListenerAdapter {
 		pc.retrieveMessageById(msgReactionMap.lastKey()).flatMap(m -> {
 			EmbedBuilder eb = new EmbedBuilder(m.getEmbeds().get(0));
 			eb.appendDescription(ju.getLocale().getStringFormatted("ju_eb_private_list_timed", Arrays.asList("time"), BotUtils.formatMinutes(listDuration, ju.getLocale())));
-			return m.editMessage(eb.build());
+			return m.editMessageEmbeds(eb.build());
 		}).submit();
 	}
 
@@ -142,7 +142,7 @@ public class PrivateList extends ListenerAdapter {
 			MessageEmbed me = m.getEmbeds().get(0);
 			String[] content = me.getDescription().split("\n");
 			content[content.length - 1] = ju.getLocale().getString("ju_eb_private_list_exp");
-			return m.editMessage(new EmbedBuilder(me).setDescription(String.join("\n", content)).build());
+			return m.editMessageEmbeds(new EmbedBuilder(me).setDescription(String.join("\n", content)).build());
 		}).submit().thenAccept(m -> log.debug("last list message edited"));
 		log.debug("Running {} runOnExpire runnables", runOnExpire.size());
 		if (runOnExpireRunnables) {
@@ -202,7 +202,7 @@ public class PrivateList extends ListenerAdapter {
 			MessageEmbed me = m.getEmbeds().get(0);
 			EmbedBuilder eb = new EmbedBuilder(me);
 			eb.setDescription(me.getDescription().replace(String.format("%s: [**%s**]", subscribed ? notSubbed : subbed, (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()))), String.format("%s: [**%s**]", subscribed ? subbed : notSubbed, (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage())))));
-			m.editMessage(eb.build()).submit();
+			m.editMessageEmbeds(eb.build()).submit();
 		}
 
 	}

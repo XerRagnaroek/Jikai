@@ -20,7 +20,7 @@ public class PrivatePagination extends Pagination {
 		if (msgId != 0) {
 			channel.deleteMessageById(msgId).submit();
 		}
-		return channel.sendMessage(pStage.embed()).submit().thenCompose(m -> {
+		return channel.sendMessageEmbeds(pStage.embed()).submit().thenCompose(m -> {
 			setMsgId(m.getIdLong());
 			return addReactions(m);
 		});

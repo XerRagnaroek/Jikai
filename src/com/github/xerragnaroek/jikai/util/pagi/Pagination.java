@@ -79,7 +79,7 @@ public abstract class Pagination extends ListenerAdapter {
 	}
 
 	public CompletableFuture<Message> editCurrentMessage(MessageEmbed meb) {
-		return channel.editMessageById(msgId, meb).submit();
+		return channel.editMessageEmbedsById(msgId, meb).submit();
 	}
 
 	void doStage() {

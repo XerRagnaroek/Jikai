@@ -164,7 +164,7 @@ public class BotUtils {
 	public static CompletableFuture<Message> sendPM(User u, MessageEmbed msg) {
 		Logger log = LoggerFactory.getLogger(BotUtils.class.getCanonicalName() + "#" + u.getId());
 		log.debug("sending pm");
-		CompletableFuture<Message> cf = u.openPrivateChannel().flatMap(pc -> pc.sendMessage(msg)).submit().whenComplete((m, t) -> {
+		CompletableFuture<Message> cf = u.openPrivateChannel().flatMap(pc -> pc.sendMessageEmbeds(msg)).submit().whenComplete((m, t) -> {
 			if (t != null) {
 				log.error("Failed sending pm!", t);
 			} else {
@@ -239,12 +239,33 @@ public class BotUtils {
 		}
 	}
 
-	public static CompletableFuture<Boolean> sendPMsEmbed(User u, Queue<MessageEmbed> msgs) {
+	/*
+	 * public static CompletableFuture<Boolean> sendPMsEmbed(User u, Queue<MessageEmbed> msgs) {
+	 * Logger log = LoggerFactory.getLogger(BotUtils.class.getCanonicalName() + "#" + u.getId());
+	 * log.debug("Sending {} embeds", msgs.size());
+	 * return u.openPrivateChannel().submit().thenApply(pc -> {
+	 * List<CompletableFuture<?>> cfs = new ArrayList<>();
+	 * msgs.forEach(m -> cfs.add(pc.sendMessage(m).submit().thenApply(msg -> {
+	 * log.debug("message sent");
+	 * return msg;
+	 * })));
+	 * try {
+	 * return CompletableFuture.allOf(cfs.toArray(new CompletableFuture<?>[cfs.size()])).handle((v, e)
+	 * -> CompletableFuture.completedFuture(evalSent(e))).get().get();
+	 * } catch (InterruptedException | ExecutionException e) {
+	 * return false;
+	 * }
+	 * });
+	 * }
+	 */
+
+	public static CompletableFuture<Boolean> sendPMsEmbed(User u, Collection<MessageEmbed> msgs) {
 		Logger log = LoggerFactory.getLogger(BotUtils.class.getCanonicalName() + "#" + u.getId());
 		log.debug("Sending {} embeds", msgs.size());
+		List<List<MessageEmbed>> partitioned = partitionCollection(msgs, 10);
 		return u.openPrivateChannel().submit().thenApply(pc -> {
 			List<CompletableFuture<?>> cfs = new ArrayList<>();
-			msgs.forEach(m -> cfs.add(pc.sendMessage(m).submit().thenApply(msg -> {
+			partitioned.forEach(l -> cfs.add(pc.sendMessageEmbeds(l).submit().thenApply(msg -> {
 				log.debug("message sent");
 				return msg;
 			})));
@@ -344,7 +365,7 @@ public class BotUtils {
 				} else {
 					MessageAction ma = null;
 					if (isEmbed) {
-						ma = tc.sendMessage(new EmbedBuilder().setDescription(content).build());
+						ma = tc.sendMessageEmbeds(new EmbedBuilder().setDescription(content).build());
 					} else {
 						ma = tc.sendMessage(content);
 					}
@@ -369,7 +390,7 @@ public class BotUtils {
 				if (channel == 0) {
 					for (TitleLanguage lang : TitleLanguage.values()) {
 						tc = j.getListChannel(lang);
-						MessageAction mA = (msg == null) ? tc.sendMessage(me) : tc.sendMessage(msg);
+						MessageAction mA = (msg == null) ? tc.sendMessageEmbeds(me) : tc.sendMessage(msg);
 						cf.add(mA.submit());
 					}
 				} else {
@@ -378,7 +399,7 @@ public class BotUtils {
 						case 2 -> tc = j.getAnimeChannel();
 						case 3 -> tc = j.getInfoChannel();
 					}
-					MessageAction mA = (msg == null) ? tc.sendMessage(me) : tc.sendMessage(msg);
+					MessageAction mA = (msg == null) ? tc.sendMessageEmbeds(me) : tc.sendMessage(msg);
 					cf.add(mA.submit());
 				}
 			} catch (Exception e) {

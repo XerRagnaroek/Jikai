@@ -148,7 +148,7 @@ public class AnimeListHandler {
 		List<Pair<Message, List<Anime>>> messages = new LinkedList<>();
 		for (int p = 0; p < partitioned.size(); p++) {
 			EmbedBuilder eb = BotUtils.embedBuilder();
-			String msgTitle = title + (partitioned.size() == 1 ? "" : (p + 1) + "/" + p);
+			String msgTitle = title + (partitioned.size() == 1 ? "" : (p + 1) + "/" + partitioned.size());
 			eb.setTitle(msgTitle);
 			List<Anime> an = partitioned.get(p);
 			List<Button> btns = new ArrayList<>(an.size());

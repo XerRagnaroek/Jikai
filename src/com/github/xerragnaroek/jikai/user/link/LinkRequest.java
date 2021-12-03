@@ -99,7 +99,7 @@ public class LinkRequest extends ListenerAdapter {
 		eb.setTitle(loc.getString("ju_link_req_tgt_exp_eb_title")).setDescription(loc.getStringFormatted("ju_link_req_tgt_exp", Arrays.asList("name", "date"), initiator.getUser().getName(), BotUtils.formatTime(LocalDateTime.now(), "eeee, dd.MM.yyyy, HH:mm", loc.getLocale()))).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
 		MessageEmbed me = eb.build();
 		log.debug(me.getDescription());
-		m.editMessage(me).submit().thenAccept(msg -> log.debug("message edited"));
+		m.editMessageEmbeds(me).submit().thenAccept(msg -> log.debug("message edited"));
 		m.unpin().submit().thenAccept(v -> log.debug("message unpinned"));
 		loc = initiator.getLocale();
 		eb = BotUtils.embedBuilder();
@@ -132,7 +132,7 @@ public class LinkRequest extends ListenerAdapter {
 		eb = BotUtils.embedBuilder();
 		loc = target.getLocale();
 		eb.setTitle(loc.getString("ju_link_req_eb_suc_title")).setDescription(loc.getStringFormatted("ju_link_req_bidi_suc", Arrays.asList("name"), initiator.getUser().getName())).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
-		msg.editMessage(eb.build()).submit().thenAccept(m -> log.debug("messsage edited"));
+		msg.editMessageEmbeds(eb.build()).submit().thenAccept(m -> log.debug("messsage edited"));
 		log.debug("users linked bidrectionally");
 	}
 
@@ -147,7 +147,7 @@ public class LinkRequest extends ListenerAdapter {
 		initiator.sendPM(eb.build());
 		eb = BotUtils.embedBuilder();
 		eb.setTitle(target.getLocale().getStringFormatted("ju_link_req_bidi_tgt_dec", Arrays.asList("name"), initiator.getUser().getName())).setThumbnail(initiator.getUser().getEffectiveAvatarUrl());
-		msg.editMessage(eb.build()).submit().thenAccept(m -> log.debug("message edited"));
+		msg.editMessageEmbeds(eb.build()).submit().thenAccept(m -> log.debug("message edited"));
 	}
 
 	static void handleLinkRequest(JikaiUser src, JikaiUser target, int direction, String msg) {

@@ -27,9 +27,7 @@ public class TestEpisodeTrackerCommand implements JUCommand {
 	public void executeCommand(JikaiUser ju, String[] arguments) {
 		ju.getSubscribedAnime().stream().map(AnimeDB::getAnime).forEach(a -> {
 			EpisodeTracker et = EpisodeTrackerManager.getTracker(ju);
-			for (int i = 1; i <= a.getEpisodes(); i++) {
-				et.registerEpisodeDetailed(a.getId(), Math.abs(new Random().nextLong()), i);
-			}
+			et.registerEpisodeDetailed(a.getId(), Math.abs(new Random().nextLong()), 1);
 		});
 	}
 

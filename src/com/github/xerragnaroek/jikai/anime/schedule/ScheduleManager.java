@@ -72,7 +72,7 @@ public class ScheduleManager {
 	private static void sendScheduleImpl(Jikai j, Schedule sched, LocalDateTime now, byte[] data) {
 		try {
 			String fileName = "Schedule_" + dtf.format(now) + "-" + dtf.format(now.with(TemporalAdjusters.next(DayOfWeek.MONDAY))) + ".png";
-			j.getScheduleChannel().sendFile(data, fileName).embed(BotUtils.addJikaiMark(new EmbedBuilder()).setDescription(j.getLocale().getString("g_sched_update")).setImage("attachment://" + fileName).build()).queue();
+			j.getScheduleChannel().sendFile(data, fileName).setEmbeds(BotUtils.addJikaiMark(new EmbedBuilder()).setDescription(j.getLocale().getString("g_sched_update")).setImage("attachment://" + fileName).build()).queue();
 			// j.getScheduleChannel().sendMessage().addFile(data, "Schedule_" + dtf.format(now) +
 			// ".png").queue();
 		} catch (Exception e) {

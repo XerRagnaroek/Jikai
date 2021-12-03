@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -215,7 +216,7 @@ public class JikaiUserUpdater implements ButtonInteractor {
 				ju.sendPM(subRemMsg(a, ju, sr.cause()));
 			}
 			try {
-				if (ju.getAniId() > 0 && JikaiUserAniTokenManager.hasToken(ju)) {
+				if (ju.getAniId() > 0 && JikaiUserAniTokenManager.hasToken(ju) && !a.isFinished()) {
 					AnimeDB.getJASA().updateMediaListEntryToDroppedList(JikaiUserAniTokenManager.getAniToken(ju).getAccessToken(), AnimeDB.getJASA().getMediaListEntryIdForUserFromAniId(ju.getAniId(), sr.id()));
 				}
 			} catch (IOException e) {
@@ -336,7 +337,13 @@ public class JikaiUserUpdater implements ButtonInteractor {
 		// + 1 cause end is excluded and +10 so it's at 00:00:10, which guarantees than any LocalDate.now()
 		// calls is actually the next day and not still the last one
 		long untilMidnight = now.until(now.plusDays(1).withHour(0).truncatedTo(ChronoUnit.HOURS), ChronoUnit.SECONDS) + 11;
-		ScheduledFuture<?> cf = Core.EXEC.scheduleAtFixedRate(() -> jum.getJikaiUsersWithTimeZone(z).forEach(this::sendDailyUpdate), untilMidnight, TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS);
+		ScheduledFuture<?> cf = Core.EXEC.scheduleAtFixedRate(() -> {
+			try {
+				jum.getJikaiUsersWithTimeZone(z).forEach(this::sendDailyUpdate);
+			} catch (Exception e) {
+				BotUtils.logAndSendToDev(LoggerFactory.getLogger(JikaiUserUpdater.class), "Exception in daily update thread of tz " + z.getId(), e);
+			}
+		}, untilMidnight, TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS);
 		dailyFutures.put(z, cf);
 		long mins = TimeUnit.SECONDS.toMinutes(untilMidnight);
 		untilMidnight -= TimeUnit.MINUTES.toSeconds(mins);
@@ -348,7 +355,7 @@ public class JikaiUserUpdater implements ButtonInteractor {
 			updateRem(au);
 			updateReleaseChanged(au);
 			updateNextEp(au);
-			updateFinished(au);
+			// updateFinished(au);
 			updateCancelled(au);
 			updateHiatus(au);
 		}
@@ -652,20 +659,23 @@ public class JikaiUserUpdater implements ButtonInteractor {
 	}
 
 	private void sendDailyUpdate(JikaiUser ju) {
+		Logger log = LoggerFactory.getLogger("DailyUpdater");
 		log.debug("Sending daily update to JUser '{}'", ju.getId());
 		ZoneId zone = ju.getTimeZone();
 		LocalDate ld = ZonedDateTime.now(zone).toLocalDate();
 		DayOfWeek today = ld.getDayOfWeek();
 		AnimeTable at = ScheduleManager.getSchedule(zone).makeUserTable(ju);
+		CompletableFuture<Boolean> cf = CompletableFuture.completedFuture(false);
 		if (today == DayOfWeek.MONDAY) {
 			if (ju.isSentWeeklySchedule()) {
-				BotUtils.sendPMsEmbed(ju.getUser(), BotUtils.createWeeklySchedule(ju, at));
+				cf = BotUtils.sendPMsEmbed(ju.getUser(), BotUtils.createWeeklySchedule(ju, at));
 			} else if (ju.isUpdatedDaily()) {
-				BotUtils.sendPMsEmbed(ju.getUser(), createDailyMessage(ju, at, today));
+				cf = BotUtils.sendPMsEmbed(ju.getUser(), createDailyMessage(ju, at, today));
 			}
 		} else if (ju.isUpdatedDaily()) {
-			BotUtils.sendPMsEmbed(ju.getUser(), createDailyMessage(ju, at, today));
+			cf = BotUtils.sendPMsEmbed(ju.getUser(), createDailyMessage(ju, at, today));
 		}
+		cf.thenAccept(b -> log.debug(b ? "Successfully sent daily update" : "Failed sending daily update"));
 	}
 
 	@Override

@@ -1,5 +1,6 @@
 package com.github.xerragnaroek.jikai.anime.list;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -142,21 +143,39 @@ public class BigListHandler {
 				tc.getIterableHistory().submit().thenAccept(l -> {
 					log.debug("Validating list via messages in channel");
 					// validate via message ids
-					List<Message> delMsgs = new LinkedList<>();
+					List<String> delMsgs = new LinkedList<>();
 					l.forEach(m -> {
 						if (!messages.containsValue(m.getIdLong())) {
 							log.debug("Found invalid msg {} because it's not in the loaded ones", m.getIdLong());
-							delMsgs.add(m);
+							delMsgs.add(m.getId());
 						} else {
 							Anime a = AnimeDB.getAnime(messages.getKey(m.getIdLong()));
 							if (a == null) {
 								log.debug("Found invalid msg {} because it's anime is null", m.getIdLong());
-								delMsgs.add(m);
+								delMsgs.add(m.getId());
 								messages.removeValue(m.getIdLong());
 							}
 						}
 					});
-					tc.deleteMessages(delMsgs).queue(v -> log.debug("Deleted {} messages", delMsgs.size()));
+
+					log.debug("Deleting {} invalid messages", delMsgs.size());
+					long minAge = (long) ((Instant.now().getEpochSecond() - 14 * 24 * 60 * 60) * 1000.0 - 1420070400000L) << 22;
+					Map<Boolean, List<String>> allowedIds = delMsgs.stream().collect(Collectors.partitioningBy(id -> Long.parseLong(id) > minAge));
+					log.debug("{} messages older than 2 weeks, {} more recent", allowedIds.get(false).size(), allowedIds.get(true).size());
+					List<String> older = allowedIds.get(false);
+					List<String> recent = allowedIds.get(true);
+					if (recent.size() > 1) {
+						if (recent.size() <= 100) {
+							tc.deleteMessagesByIds(recent).queue(v -> log.debug("Deleted {} messages", recent.size()), t -> BotUtils.logAndSendToDev(log, "Failed deleting " + recent.size() + " messages", t));
+						} else {
+							BotUtils.partitionCollection(recent, 100).forEach(list -> tc.deleteMessagesByIds(list).queue(v -> log.debug("Deleted {} messages", list.size()), t -> BotUtils.logAndSendToDev(log, "Failed deleting " + list.size() + " messages", t)));
+						}
+					} else {
+						if (!recent.isEmpty()) {
+							older.add(recent.get(0));
+						}
+					}
+					older.forEach(id -> tc.deleteMessageById(id).queue(v -> log.debug("successfully deleted msg {}", id), t -> log.error("failed deleting msg {}", id, t)));
 					List<Long> ids = l.stream().map(Message::getIdLong).collect(Collectors.toList());
 					List<Long> loadedIds = messages.values().stream().collect(Collectors.toList());
 					loadedIds.stream().filter(id -> !ids.contains(id)).peek(id -> log.debug("Removing invalid mapping for {}", id)).forEach(id -> messages.removeValue(id));
