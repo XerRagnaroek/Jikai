@@ -1,29 +1,32 @@
-package com.github.xerragnaroek.jikai.commands.user.dev;
+package com.github.xerragnaroek.jikai.commands.dev;
+
+import java.util.Random;
 
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.commands.user.JUCommand;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
+import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 
 /**
- * 
+ * @author XerRagnaroek
  */
-public class CancelUpdateThreadCommand implements JUCommand {
+public class TestPostponeCommand implements JUCommand {
 
 	@Override
 	public String getName() {
-		return "cancel_update_thread";
+		return "test_postpone";
 	}
 
 	@Override
 	public String getDescription(JikaiLocale loc) {
-		return "Cancels the update thread.";
+		return "Sends the postpone embeds";
 	}
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		ju.sendPM("Cancelling update thread...");
-		ju.sendPM("Thread cancelled: " + AnimeDB.cancelUpdateFuture());
+		long delay = new Random().nextInt(10080) + 1;
+		ju.getSubscribedAnime().stream().map(AnimeDB::getAnime).forEach(a -> ju.sendPM(JikaiUserManager.getInstance().getUserUpdater().testPostpone(a, delay, ju)));
 	}
 
 	@Override
@@ -35,5 +38,4 @@ public class CancelUpdateThreadCommand implements JUCommand {
 	public String getLocaleKey() {
 		return "";
 	}
-
 }

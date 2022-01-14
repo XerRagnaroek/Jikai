@@ -60,6 +60,7 @@ class AnimeDBImpl {
 		log.info("Initializing AnimeBase");
 		startSeparatelyLoadedClear();
 		loadAnime();
+		jasa.setMaxConcurrentRequests(Core.MAX_REQUESTS);
 		initialized.set(true);
 	}
 
@@ -165,10 +166,12 @@ class AnimeDBImpl {
 				return false;
 			}
 		}).toArray();
-		jasa.fetchAnimeViaId(array).forEach(an -> {
-			a.add(an);
-			separatelyLoaded.put(an.getId(), an);
-		});
+		if (array.length > 0) {
+			jasa.fetchAnimeViaId(array).forEach(an -> {
+				a.add(an);
+				separatelyLoaded.put(an.getId(), an);
+			});
+		}
 		return a;
 	}
 

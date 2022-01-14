@@ -189,7 +189,7 @@ public class BotUtils {
 		}
 	}
 
-	public static List<CompletableFuture<Message>> sendPMs(User u, Queue<Message> msgs) {
+	public static List<CompletableFuture<Message>> sendPMs(User u, Collection<Message> msgs) {
 		Logger log = LoggerFactory.getLogger(BotUtils.class.getCanonicalName() + "#" + u.getId());
 		log.debug("Sending {} messages", msgs.size());
 		List<CompletableFuture<Message>> futures;

@@ -1,4 +1,4 @@
-package com.github.xerragnaroek.jikai.commands.user.dev;
+package com.github.xerragnaroek.jikai.commands.dev;
 
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.commands.user.JUCommand;
@@ -7,11 +7,11 @@ import com.github.xerragnaroek.jikai.user.JikaiUser;
 /**
  * 
  */
-public class SubAllCommand implements JUCommand {
+public class UnhideAllCommand implements JUCommand {
 
 	@Override
 	public String getName() {
-		return "sub_all";
+		return "unhide_all";
 	}
 
 	@Override
@@ -21,7 +21,7 @@ public class SubAllCommand implements JUCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		AnimeDB.getAiringOrUpcomingAnime().stream().forEach(a -> ju.subscribeAnime(a.getId(), "Sub all command"));
+		AnimeDB.getLoadedAnime().forEach(a -> ju.unhideAnimeFromLists(a.getId()));
 	}
 
 	@Override

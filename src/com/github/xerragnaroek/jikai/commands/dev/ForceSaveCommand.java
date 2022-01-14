@@ -1,5 +1,5 @@
 
-package com.github.xerragnaroek.jikai.commands;
+package com.github.xerragnaroek.jikai.commands.dev;
 
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
 import com.github.xerragnaroek.jikai.commands.user.JUCommand;

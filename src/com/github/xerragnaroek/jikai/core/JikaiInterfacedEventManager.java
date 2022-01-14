@@ -194,9 +194,7 @@ import net.dv8tion.jda.internal.utils.JDALogger;
 public class JikaiInterfacedEventManager implements IEventManager {
 	private final CopyOnWriteArrayList<EventListener> listeners = new CopyOnWriteArrayList<>();
 
-	public JikaiInterfacedEventManager() {
-
-	}
+	public JikaiInterfacedEventManager() {}
 
 	@Override
 	public void register(@Nonnull Object listener) {

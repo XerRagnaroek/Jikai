@@ -11,28 +11,29 @@ import org.slf4j.LoggerFactory;
 
 import com.github.xerragnaroek.jikai.commands.BugCommand;
 import com.github.xerragnaroek.jikai.commands.ComUtils;
-import com.github.xerragnaroek.jikai.commands.ForceSaveCommand;
 import com.github.xerragnaroek.jikai.commands.HelpCommand;
-import com.github.xerragnaroek.jikai.commands.ReloadLocalesCommand;
-import com.github.xerragnaroek.jikai.commands.StopCommand;
-import com.github.xerragnaroek.jikai.commands.TestCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.CancelUpdateThreadCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.CodePointTestCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.ForceDBUpdateCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.HideAllCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.SendPMCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.SetActivityCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.SubAllCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.TestDailyUpdateCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.TestEpisodeTrackerCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.TestNextEpMessageCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.TestNotifyCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.TestPeriodChangeCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.TestPostponeCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.TestReactionCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.UnhideAllCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.UnsubAllCommand;
-import com.github.xerragnaroek.jikai.commands.user.dev.UpdateThreadStatusCommand;
+import com.github.xerragnaroek.jikai.commands.dev.CancelUpdateThreadCommand;
+import com.github.xerragnaroek.jikai.commands.dev.CodePointTestCommand;
+import com.github.xerragnaroek.jikai.commands.dev.ForceDBUpdateCommand;
+import com.github.xerragnaroek.jikai.commands.dev.ForceSaveCommand;
+import com.github.xerragnaroek.jikai.commands.dev.HideAllCommand;
+import com.github.xerragnaroek.jikai.commands.dev.MaxRequestsCommand;
+import com.github.xerragnaroek.jikai.commands.dev.ReloadLocalesCommand;
+import com.github.xerragnaroek.jikai.commands.dev.SendPMCommand;
+import com.github.xerragnaroek.jikai.commands.dev.SetActivityCommand;
+import com.github.xerragnaroek.jikai.commands.dev.StopCommand;
+import com.github.xerragnaroek.jikai.commands.dev.SubAllCommand;
+import com.github.xerragnaroek.jikai.commands.dev.TestCommand;
+import com.github.xerragnaroek.jikai.commands.dev.TestDailyUpdateCommand;
+import com.github.xerragnaroek.jikai.commands.dev.TestEpisodeTrackerCommand;
+import com.github.xerragnaroek.jikai.commands.dev.TestNextEpMessageCommand;
+import com.github.xerragnaroek.jikai.commands.dev.TestNotifyCommand;
+import com.github.xerragnaroek.jikai.commands.dev.TestPeriodChangeCommand;
+import com.github.xerragnaroek.jikai.commands.dev.TestPostponeCommand;
+import com.github.xerragnaroek.jikai.commands.dev.TestReactionCommand;
+import com.github.xerragnaroek.jikai.commands.dev.UnhideAllCommand;
+import com.github.xerragnaroek.jikai.commands.dev.UnsubAllCommand;
+import com.github.xerragnaroek.jikai.commands.dev.UpdateThreadStatusCommand;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 
@@ -42,7 +43,7 @@ public class JUCommandHandler {
 	private static final Logger log = LoggerFactory.getLogger(JUCommandHandler.class);
 	private static String prefix = "!";
 	static {
-		JUCommand coms[] = new JUCommand[] { new AniAuthCommand(), new ShowAdultCommand(), new HideAllCommand(), new UnhideAllCommand(), new CustomTitleCommand(), new HideAnimeCommand(), new LinksCommand(), new ChangeLocaleCommand(), new NextEpisodeMsgCommand(), new TestCommand(), new TestEpisodeTrackerCommand(), new ForceSaveCommand(), new EpisodesCommand(), new SubAllCommand(), new UnsubAllCommand(), new UnlinkUserCommand(), new LinkUserCommand(), new SetActivityCommand(), new CodePointTestCommand(), new ImportSubscriptionsCommand(), new ExportSubscriptionsCommand(), new SendPMCommand(), new TestNextEpMessageCommand(), new TestPeriodChangeCommand(), new CancelUpdateThreadCommand(), new UpdateThreadStatusCommand(), new TestReactionCommand(), new UnlinkAniAccountCommand(), new LinkAniAccountCommand(), new ReloadLocalesCommand(), new BugCommand(), new UnregisterCommand(), new WeeklyScheduleCommand(), new ForceDBUpdateCommand(), new TestDailyUpdateCommand(), new TestPostponeCommand(), new SubscriptionsCommand(), new ForceDBUpdateCommand(), new TestNotifyCommand(), new StopCommand(), new HelpCommand(), new ConfigCommand(), new DailyUpdateCommand(), new NotifyReleaseCommand(), new NotificationTimeCommand(), new TimeZoneCommand(), new TitleLanguageCommand() };
+		JUCommand coms[] = new JUCommand[] { new MaxRequestsCommand(), new AniAuthCommand(), new ShowAdultCommand(), new HideAllCommand(), new UnhideAllCommand(), new CustomTitleCommand(), new HideAnimeCommand(), new LinksCommand(), new ChangeLocaleCommand(), new NextEpisodeMsgCommand(), new TestCommand(), new TestEpisodeTrackerCommand(), new ForceSaveCommand(), new EpisodesCommand(), new SubAllCommand(), new UnsubAllCommand(), new UnlinkUserCommand(), new LinkUserCommand(), new SetActivityCommand(), new CodePointTestCommand(), new ImportSubscriptionsCommand(), new ExportSubscriptionsCommand(), new SendPMCommand(), new TestNextEpMessageCommand(), new TestPeriodChangeCommand(), new CancelUpdateThreadCommand(), new UpdateThreadStatusCommand(), new TestReactionCommand(), new UnlinkAniAccountCommand(), new LinkAniAccountCommand(), new ReloadLocalesCommand(), new BugCommand(), new UnregisterCommand(), new WeeklyScheduleCommand(), new ForceDBUpdateCommand(), new TestDailyUpdateCommand(), new TestPostponeCommand(), new SubscriptionsCommand(), new ForceDBUpdateCommand(), new TestNotifyCommand(), new StopCommand(), new HelpCommand(), new ConfigCommand(), new DailyUpdateCommand(), new NotifyReleaseCommand(), new NotificationTimeCommand(), new TimeZoneCommand(), new TitleLanguageCommand() };
 		commands.addAll(Arrays.asList(coms));
 	}
 

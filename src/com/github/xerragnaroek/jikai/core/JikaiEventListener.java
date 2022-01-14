@@ -10,7 +10,6 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.xerragnaroek.jikai.commands.TestCommand;
 import com.github.xerragnaroek.jikai.commands.user.JUCommandHandler;
 import com.github.xerragnaroek.jikai.jikai.Jikai;
 import com.github.xerragnaroek.jikai.jikai.JikaiSetup;
@@ -167,13 +166,9 @@ public class JikaiEventListener extends ListenerAdapter {
 	public void onButtonClick(ButtonClickEvent event) {
 		log.debug("Button clicked: {}", event.getId());
 		String id = event.getButton().getId();
-		if (id.equals("test")) {
-			TestCommand.testButton(event);
-		} else {
-			String[] split = id.split(":");
-			if (btnInteractors.containsKey(split[0])) {
-				btnInteractors.get(split[0]).handleButtonClick(ArrayUtils.subarray(split, 1, split.length), event);
-			}
+		String[] split = id.split(":");
+		if (btnInteractors.containsKey(split[0])) {
+			btnInteractors.get(split[0]).handleButtonClick(ArrayUtils.subarray(split, 1, split.length), event);
 		}
 	}
 }

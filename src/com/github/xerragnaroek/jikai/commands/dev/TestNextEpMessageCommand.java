@@ -1,4 +1,4 @@
-package com.github.xerragnaroek.jikai.commands.user.dev;
+package com.github.xerragnaroek.jikai.commands.dev;
 
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;

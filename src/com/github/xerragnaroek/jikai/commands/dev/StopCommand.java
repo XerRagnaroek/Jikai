@@ -1,5 +1,5 @@
 
-package com.github.xerragnaroek.jikai.commands;
+package com.github.xerragnaroek.jikai.commands.dev;
 
 import java.util.concurrent.CompletableFuture;
 

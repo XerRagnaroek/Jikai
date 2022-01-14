@@ -1,4 +1,4 @@
-package com.github.xerragnaroek.jikai.commands.user.dev;
+package com.github.xerragnaroek.jikai.commands.dev;
 
 import org.apache.commons.lang3.ArrayUtils;
 

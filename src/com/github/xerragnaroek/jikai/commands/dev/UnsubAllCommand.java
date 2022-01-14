@@ -1,7 +1,6 @@
-package com.github.xerragnaroek.jikai.commands.user.dev;
+package com.github.xerragnaroek.jikai.commands.dev;
 
-import java.util.Arrays;
-import java.util.stream.Collectors;
+import java.util.TreeSet;
 
 import com.github.xerragnaroek.jikai.commands.user.JUCommand;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
@@ -9,11 +8,11 @@ import com.github.xerragnaroek.jikai.user.JikaiUser;
 /**
  * 
  */
-public class CodePointTestCommand implements JUCommand {
+public class UnsubAllCommand implements JUCommand {
 
 	@Override
 	public String getName() {
-		return "code_point";
+		return "unsub_all";
 	}
 
 	@Override
@@ -23,8 +22,7 @@ public class CodePointTestCommand implements JUCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		String text = Arrays.stream(arguments[0].split("U+")).filter(s -> !s.isEmpty()).map(s -> Integer.parseInt(s, 16)).map(Character::toString).collect(Collectors.joining());
-		ju.sendPM(text);
+		new TreeSet<>(ju.getSubscribedAnime()).forEach(id -> ju.unsubscribeAnime(id, "Unsub all command"));
 	}
 
 	@Override

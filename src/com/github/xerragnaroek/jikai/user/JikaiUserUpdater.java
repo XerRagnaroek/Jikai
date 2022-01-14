@@ -339,6 +339,8 @@ public class JikaiUserUpdater implements ButtonInteractor {
 		long untilMidnight = now.until(now.plusDays(1).withHour(0).truncatedTo(ChronoUnit.HOURS), ChronoUnit.SECONDS) + 11;
 		ScheduledFuture<?> cf = Core.EXEC.scheduleAtFixedRate(() -> {
 			try {
+				// preload Anime
+				AnimeDB.loadAnimeViaId(jum.subscriptionMap().keySet().stream().mapToInt(Integer::intValue).toArray());
 				jum.getJikaiUsersWithTimeZone(z).forEach(this::sendDailyUpdate);
 			} catch (Exception e) {
 				BotUtils.logAndSendToDev(LoggerFactory.getLogger(JikaiUserUpdater.class), "Exception in daily update thread of tz " + z.getId(), e);
@@ -619,6 +621,11 @@ public class JikaiUserUpdater implements ButtonInteractor {
 	}
 
 	public void testDailyUpdate(JikaiUser ju) {
+		try {
+			AnimeDB.loadAnimeViaId(ju.getSubscribedAnime().stream().mapToInt(Integer::intValue).toArray());
+		} catch (AniException | IOException e) {
+			BotUtils.logAndSendToDev(log, "", e);
+		}
 		sendDailyUpdate(ju);
 	}
 

@@ -1,8 +1,7 @@
-package com.github.xerragnaroek.jikai.commands;
+package com.github.xerragnaroek.jikai.commands.dev;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -15,12 +14,9 @@ import com.github.xerragnaroek.jikai.anime.list.btn.AnimeListHandler;
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
 import com.github.xerragnaroek.jikai.commands.user.JUCommand;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
-import com.github.xerragnaroek.jikai.util.BotUtils;
-import com.github.xerragnaroek.jikai.util.btn.ButtonedMessage;
+import com.github.xerragnaroek.jikai.user.SubListHandlerBtn;
 
-import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
-import net.dv8tion.jda.api.interactions.components.Button;
 
 /**
  * 
@@ -41,14 +37,7 @@ public class TestCommand implements JUCommand, GuildCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		ButtonedMessage mes = new ButtonedMessage();
-		mes.setMessageEmbeds(BotUtils.makeSimpleEmbed("Two Embeds, 5 rows"), BotUtils.makeSimpleEmbed("2nd embed"));
-		for (int r = 0; r < 5; r++) {
-			for (int b = 0; b <= r; b++) {
-				mes.addButton(r, Button.danger(new Random().nextInt() + "", (r + b + 2) + ""));
-			}
-		}
-		ju.sendPM(mes.toMessage());
+		SubListHandlerBtn.sendSubList(ju);
 	}
 
 	@Override
@@ -106,9 +95,5 @@ public class TestCommand implements JUCommand, GuildCommand {
 		alh.sendList(ani).thenAccept(v -> System.out.println(alh.getMessageIdAnimeIdMap())).join();
 		alh.setMessageIdAnimeIdMap(Map.of(255l, List.of()));
 		alh.validateList();
-	}
-
-	public static void testButton(ButtonClickEvent event) {
-		event.deferEdit().queue();
 	}
 }

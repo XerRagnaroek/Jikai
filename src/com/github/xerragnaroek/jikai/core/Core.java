@@ -64,6 +64,7 @@ public class Core {
 	public static BooleanProperty INITIAL_LOAD = new BooleanProperty(true);
 	public static final JikaiManager JM = new JikaiManager();
 	public static boolean IGNORE_LIST = false;
+	public static int MAX_REQUESTS = 2;
 	private static JikaiEventListener listener;
 
 	public static void main(String[] args) throws LoginException, InterruptedException, ExecutionException, ClassNotFoundException, IOException {
@@ -161,6 +162,9 @@ public class Core {
 					IGNORE_LIST = true;
 					log.info("Ignoring list for now");
 					break;
+				case "-max_requests":
+					MAX_REQUESTS = Integer.parseInt(it.next());
+					log.info("Set max_requests to {}", MAX_REQUESTS);
 				default:
 					ERROR_LOG.error("Unrecognized option '" + arg + "'");
 					throw new IllegalArgumentException("Unrecognized option '" + arg + "'");
