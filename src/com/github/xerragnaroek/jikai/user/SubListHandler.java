@@ -15,6 +15,7 @@ import com.github.xerragnaroek.jikai.util.Pair;
 /**
  * 
  */
+@Deprecated
 public class SubListHandler {
 
 	private static Map<Long, Pair<Integer, PrivateList>> map = Collections.synchronizedMap(new HashMap<>());

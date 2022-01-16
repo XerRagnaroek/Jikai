@@ -63,6 +63,8 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.Component;
 import net.dv8tion.jda.api.requests.RestAction;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
 
@@ -952,5 +954,11 @@ public class BotUtils {
 			removeJikaiUserRole(ju.getId(), j);
 			removeTitleLangRole(ju.getId(), ju.getTitleLanguage(), j);
 		});
+	}
+
+	public static List<ActionRow> makeActionRows(Collection<Component> comps) {
+		List<ActionRow> newRows = new LinkedList<>();
+		BotUtils.partitionCollection(comps, 5).forEach(l -> newRows.add(ActionRow.of(l)));
+		return newRows;
 	}
 }

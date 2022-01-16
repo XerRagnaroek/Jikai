@@ -7,6 +7,9 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
@@ -26,11 +29,13 @@ import net.dv8tion.jda.api.interactions.components.ButtonStyle;
 public class SubListHandlerBtn implements ButtonInteractor {
 
 	private static String identifier = "slh";
-	private static SubListHandlerBtn instance = new SubListHandlerBtn();
+	private final Logger log = LoggerFactory.getLogger(SubListHandlerBtn.class);
 
-	private SubListHandlerBtn() {
-		Core.getEventListener().registerButtonInteractor(this);
+	static {
+		Core.getEventListener().registerButtonInteractor(new SubListHandlerBtn());
 	}
+
+	private SubListHandlerBtn() {}
 
 	@Override
 	public String getIdentifier() {
@@ -40,7 +45,13 @@ public class SubListHandlerBtn implements ButtonInteractor {
 	@Override
 	public void handleButtonClick(String[] data, ButtonClickEvent event) {
 		event.deferEdit().queue();
-		JikaiUser ju = JikaiUserManager.getInstance().getUser(event.getUser().getIdLong());
+		long juId = event.getUser().getIdLong();
+		log.debug("Handling sublist click for user {}", juId);
+		if (!JikaiUserManager.getInstance().isKnownJikaiUser(juId)) {
+			log.debug("non JikaiUser clicked on a sub list!");
+			return;
+		}
+		JikaiUser ju = JikaiUserManager.getInstance().getUser(juId);
 		int id = Integer.parseInt(data[0]);
 		if (ju.isSubscribedTo(id)) {
 			ju.unsubscribeAnime(id, ju.getLocale().getString("ju_private_list_unsub_cause"));
@@ -65,7 +76,6 @@ public class SubListHandlerBtn implements ButtonInteractor {
 			List<Anime> l = partitioned.get(partition);
 			EmbedBuilder eb = BotUtils.embedBuilder();
 			eb.setTitle(title + (partitioned.size() > 1 ? " " + (partition + 1) + "/" + partitioned.size() : ""));
-			// TODO Buttons are the wrong way!
 			for (int i = 0; i < l.size(); i++) {
 				Anime a = l.get(i);
 				eb.appendDescription(String.format("**%02d**: [**%s**](%s)%n", i + 1, a.getTitle(ju.getTitleLanguage()), a.getAniUrl()));
