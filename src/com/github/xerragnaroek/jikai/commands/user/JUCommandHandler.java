@@ -65,11 +65,8 @@ public class JUCommandHandler {
 				try {
 					com.executeCommand(ju, tmp);
 				} catch (IllegalArgumentException e) {
-					if (!e.getMessage().isEmpty()) {
-						Core.ERROR_LOG.error("", e);
-					} else {
-						ju.getLocale().getStringFormatted("com_ju_invalid", Arrays.asList("input"), String.join(" ", tmp));
-					}
+					Core.ERROR_LOG.error("", e);
+					ju.sendPM(ju.getLocale().getStringFormatted("com_ju_invalid", Arrays.asList("input", "usage"), String.join(" ", tmp), com.getUsage(ju.getLocale())));
 				}
 			}
 		}

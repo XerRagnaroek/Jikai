@@ -23,6 +23,9 @@ public class NotificationTimeCommand implements JUCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
+		if (arguments.length < 2) {
+			throw new IllegalArgumentException("Too few arguments!");
+		}
 		String tmp = arguments[1];
 		if (!tmp.contains("d") && !tmp.contains("h") && !tmp.contains("m")) {
 			ju.sendPMFormat(ju.getLocale().getStringFormatted("com_ju_notif_time_invalid", Arrays.asList("input"), tmp));

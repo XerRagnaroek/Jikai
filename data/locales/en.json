@@ -130,7 +130,7 @@
 	"com_ju_show_adult_use": "nothing or <true|false>",
 	"com_ju_show_adult_true": "You can now see anime marked as adult!",
 	"com_ju_show_adult_false": "Adult anime will be hidden from you!",
-	"com_ju_invalid": "Invalid input: \"%input%\"",
+	"com_ju_invalid": "Invalid input: \"%input%\"\nCommand usage: %usage%",
     "g_eb_new_anime_desc": "is the latest addition to the list.",
 	"g_eb_cancelled_anime_desc": "has been cancelled!",
 	"g_eb_changed_rel_anime_desc": "has a changed release!\n",

@@ -1,5 +1,6 @@
 package com.github.xerragnaroek.jikai.commands.dev;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -14,9 +15,14 @@ import com.github.xerragnaroek.jikai.anime.list.btn.AnimeListHandler;
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
 import com.github.xerragnaroek.jikai.commands.user.JUCommand;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
-import com.github.xerragnaroek.jikai.user.SubListHandlerBtn;
+import com.github.xerragnaroek.jikai.util.BotUtils;
+import com.github.xerragnaroek.jikai.util.pagi.PaginationTmp;
 
+import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.interactions.components.Button;
+import net.dv8tion.jda.api.interactions.components.ButtonStyle;
+import net.dv8tion.jda.api.interactions.components.Component;
 
 /**
  * 
@@ -37,7 +43,18 @@ public class TestCommand implements JUCommand, GuildCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		SubListHandlerBtn.sendSubList(ju);
+		PaginationTmp test = new PaginationTmp("testPagi");
+		test.setArrowButtonStyle(ButtonStyle.DANGER);
+		for (int i = 0; i < 23; i++) {
+			MessageBuilder mb = new MessageBuilder("Page " + (i + 1));
+			List<Component> btns = new LinkedList<>();
+			for (int n = 0; n <= i; n++) {
+				btns.add(Button.primary("test" + n, "" + (n + 1)));
+			}
+			mb.setActionRows(BotUtils.makeActionRows(btns));
+			test.addPage(mb.build());
+		}
+		ju.getUser().openPrivateChannel().queue(pc -> test.sendPagination(pc));
 	}
 
 	@Override
