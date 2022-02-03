@@ -53,6 +53,7 @@ public class JikaiUser {
 	private BooleanProperty sendNextEpMessage = new BooleanProperty();
 	private SetProperty<Integer> notifBeforeRelease = new SetProperty<>();
 	private BooleanProperty showAdult = new BooleanProperty();
+
 	// set of users that are linked to this user
 	private SetProperty<Long> linkedUsers = new SetProperty<>();
 	private MapProperty<Integer, String> customTitles = new MapProperty<>();

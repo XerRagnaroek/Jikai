@@ -13,6 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.xerragnaroek.jasa.AniException;
 import com.github.xerragnaroek.jasa.Anime;
 import com.github.xerragnaroek.jasa.JASA;
@@ -37,11 +40,13 @@ import net.dv8tion.jda.internal.utils.EncodingUtil;
 /**
  * 
  */
+@JsonAutoDetect(fieldVisibility = Visibility.NONE)
 public class EpisodeTracker {
 
 	public static final String WATCHED_EMOJI_UNICODE = "U+1f440";
 	public static final String WATCHED_EMOJI_CP = EncodingUtil.encodeCodepoints(WATCHED_EMOJI_UNICODE);
 	private JikaiUser ju;
+	private Map<Integer, Long> lastWatched = new TreeMap<>();
 	Map<Integer, Map<Long, Integer>> episodes = Collections.synchronizedMap(new TreeMap<>());
 	private Map<Long, Integer> idAnime = new TreeMap<>();
 
@@ -91,6 +96,8 @@ public class EpisodeTracker {
 						if (lastEp) {
 							jasa.updateMediaListEntryToCompletedList(token, mediaListEntryId);
 							log.debug("Moved {} to completed list!", anime);
+						} else {
+							jasa.updateMediaListEntryToCurrentList(token, mediaListEntryId);
 						}
 					} catch (AniException | IOException e) {
 						BotUtils.logAndSendToDev(log, "", e);
@@ -193,13 +200,15 @@ public class EpisodeTracker {
 		MDC.put("id", event.getMessageId());
 		log.debug("Handling button click");
 		if (data[0].equals("del")) {
-			episodes.compute(Integer.parseInt(data[1]), (id, map) -> {
+			int aid = Integer.parseInt(data[1]);
+			episodes.compute(aid, (id, map) -> {
 				map.keySet().forEach(idAnime::remove);
 				log.debug("Removed mapping for anime {}", id);
 				return null;
 			});
 			event.deferEdit().queue();
 			event.getChannel().deleteMessageById(event.getMessageId()).queue();
+			dropAnime(0);
 		} else {
 			JikaiLocale loc = ju.getLocale();
 			MessageEmbed me = event.getMessage().getEmbeds().get(0);
@@ -213,10 +222,40 @@ public class EpisodeTracker {
 		MDC.remove("id");
 	}
 
+	private void dropAnime(int id) {
+		if (ju.getAniId() > 0 && JikaiUserAniTokenManager.hasToken(ju)) {
+			JASA jasa = AnimeDB.getJASA();
+			try {
+				jasa.updateMediaListEntryToDroppedList(JikaiUserAniTokenManager.getAniToken(ju).getAccessToken(), jasa.getMediaListEntryIdForUserFromAniId(ju.getAniId(), id));
+			} catch (AniException | IOException e) {
+				BotUtils.logAndSendToDev(log, "Failed dropping anime", e);
+			}
+		}
+	}
+
 	public static Message addButton(Anime a, MessageEmbed m, boolean test) {
 		MessageBuilder mb = new MessageBuilder(m);
 		mb.setActionRows(ActionRow.of(Button.secondary("ept:" + a.getId() + ":" + a.getNextEpisodeNumber() + (test ? ":t" : ""), Emoji.fromUnicode(WATCHED_EMOJI_UNICODE))));
 		return mb.build();
+	}
+
+	@JsonProperty("juId")
+	public long getJikaiUserId() {
+		return ju.getId();
+	}
+
+	@JsonProperty("episodeMessageData")
+	public Map<Integer, Map<Long, Integer>> getEpisodeMessageData() {
+		return episodes;
+	}
+
+	@JsonProperty("lastWatched")
+	public Map<Integer, Long> getLastWatchedMap() {
+		return lastWatched;
+	}
+
+	public long getLastWatchedTimeStamp(int animeId) {
+		return lastWatched.getOrDefault(animeId, 0l);
 	}
 
 }

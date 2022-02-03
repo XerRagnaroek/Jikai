@@ -116,17 +116,20 @@ public class JikaiIO {
 	 */
 	private static void loadEpisodeTrackerManager() throws IOException {
 		Path rmids = Path.of(Core.DATA_LOC.toString(), "/rmids.txt");
-		if (Files.exists(rmids)) {
-			EpisodeTrackerManager.loadOld(Files.lines(rmids).map(Long::parseLong).collect(Collectors.toSet()));
-			Files.delete(rmids);
-		} else {
-			Path ets = Path.of(Core.DATA_LOC.toString(), "/et.json");
-			if (Files.exists(ets)) {
-				TypeReference<Map<Long, Map<Integer, Map<Long, Integer>>>> ref = new TypeReference<>() {};
-				Map<Long, Map<Integer, Map<Long, Integer>>> map = new ObjectMapper().readValue(Files.readString(ets), ref);
-				EpisodeTrackerManager.load(map);
-			}
+		/*
+		 * if (Files.exists(rmids)) {
+		 * EpisodeTrackerManager.loadOld(Files.lines(rmids).map(Long::parseLong).collect(Collectors.toSet())
+		 * );
+		 * Files.delete(rmids);
+		 */
+		// } else {
+		Path ets = Path.of(Core.DATA_LOC.toString(), "/et.json");
+		if (Files.exists(ets)) {
+			TypeReference<Map<Long, Map<Integer, Map<Long, Integer>>>> ref = new TypeReference<>() {};
+			Map<Long, Map<Integer, Map<Long, Integer>>> map = new ObjectMapper().readValue(Files.readString(ets), ref);
+			EpisodeTrackerManager.load(map);
 		}
+		// }
 	}
 
 	public static void startSaveThread(long delay, TimeUnit unit) {
