@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -24,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.github.xerragnaroek.jikai.anime.schedule.ScheduleManager;
 import com.github.xerragnaroek.jikai.core.Core;
+import com.github.xerragnaroek.jikai.user.EpisodeTracker;
 import com.github.xerragnaroek.jikai.user.EpisodeTrackerManager;
 import com.github.xerragnaroek.jikai.user.ExportKeyHandler;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
@@ -36,6 +39,7 @@ import com.github.xerragnaroek.jikai.util.CryptoException;
 public class JikaiIO {
 	private final static Logger log = LoggerFactory.getLogger(JikaiIO.class);
 	private final static Crypto crypto = new Crypto();
+	private final static ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
 	public static void save(boolean now) {
 		try {
@@ -115,8 +119,8 @@ public class JikaiIO {
 	 * }
 	 */
 	private static void loadEpisodeTrackerManager() throws IOException {
-		Path rmids = Path.of(Core.DATA_LOC.toString(), "/rmids.txt");
 		/*
+		 * Path rmids = Path.of(Core.DATA_LOC.toString(), "/rmids.txt");
 		 * if (Files.exists(rmids)) {
 		 * EpisodeTrackerManager.loadOld(Files.lines(rmids).map(Long::parseLong).collect(Collectors.toSet())
 		 * );
@@ -125,9 +129,14 @@ public class JikaiIO {
 		// } else {
 		Path ets = Path.of(Core.DATA_LOC.toString(), "/et.json");
 		if (Files.exists(ets)) {
-			TypeReference<Map<Long, Map<Integer, Map<Long, Integer>>>> ref = new TypeReference<>() {};
-			Map<Long, Map<Integer, Map<Long, Integer>>> map = new ObjectMapper().readValue(Files.readString(ets), ref);
-			EpisodeTrackerManager.load(map);
+
+			/*
+			 * TypeReference<Map<Long, Map<Integer, Map<Long, Integer>>>> ref = new TypeReference<>() {};
+			 * Map<Long, Map<Integer, Map<Long, Integer>>> map = mapper.readValue(Files.readString(ets), ref);
+			 * EpisodeTrackerManager.loadOld(map);
+			 */
+
+			EpisodeTrackerManager.load(mapper.readValue(Files.readString(ets), mapper.getTypeFactory().constructParametricType(List.class, EpisodeTracker.class)));
 		}
 		// }
 	}
@@ -137,11 +146,18 @@ public class JikaiIO {
 	}
 
 	private static void saveEpisodeTrackerManager() throws JsonProcessingException, IOException {
-		Map<Long, Map<Integer, Map<Long, Integer>>> ets = EpisodeTrackerManager.getSavableMap();
+		/*
+		 * Map<Long, Map<Integer, Map<Long, Integer>>> ets = EpisodeTrackerManager.getSavableMap();
+		 * Path loc = Paths.get(Core.DATA_LOC.toString(), "/et.json");
+		 * log.debug("Saving EpisodeTrackerManager, size {}, to {}", ets.size(), loc.toAbsolutePath());
+		 * ObjectMapper mapper = new ObjectMapper();
+		 * mapper.enable(SerializationFeature.INDENT_OUTPUT);
+		 * Files.writeString(loc, mapper.writeValueAsString(ets), StandardOpenOption.TRUNCATE_EXISTING,
+		 * StandardOpenOption.CREATE);
+		 */
 		Path loc = Paths.get(Core.DATA_LOC.toString(), "/et.json");
+		Set<EpisodeTracker> ets = new HashSet<>(EpisodeTrackerManager.getEpisodeTracker().values());
 		log.debug("Saving EpisodeTrackerManager, size {}, to {}", ets.size(), loc.toAbsolutePath());
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.enable(SerializationFeature.INDENT_OUTPUT);
 		Files.writeString(loc, mapper.writeValueAsString(ets), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
 	}
 
@@ -149,8 +165,6 @@ public class JikaiIO {
 		Map<Long, String> map = ExportKeyHandler.getInstance().getKeyMap();
 		Path loc = Path.of(Core.DATA_LOC.toString(), "/keys.json");
 		log.debug("Saving SubscriptionExportHandler, size {}, to {}", map.size(), loc.toAbsolutePath());
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.enable(SerializationFeature.INDENT_OUTPUT);
 		// mapper.activateDefaultTyping(BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(),
 		// DefaultTyping.OBJECT_AND_NON_CONCRETE);
 		Files.writeString(loc, mapper.writeValueAsString(map), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
@@ -159,7 +173,7 @@ public class JikaiIO {
 	private static void loadExportKeyHandler(Path path) {
 		TypeReference<TreeMap<Long, String>> ref = new TypeReference<TreeMap<Long, String>>() {};
 		try {
-			Map<Long, String> map = new ObjectMapper().readValue(Files.readString(path), ref);
+			Map<Long, String> map = mapper.readValue(Files.readString(path), ref);
 			log.debug("Loaded map(size {}) for subscription export handler", map.size());
 			ExportKeyHandler.loadMap(map);
 		} catch (IOException e) {
@@ -170,8 +184,6 @@ public class JikaiIO {
 	private static void saveJikaiUsers() throws JsonProcessingException, IOException {
 		Path loc = Path.of(Core.DATA_LOC.toString(), "/users.json");
 		Set<JikaiUser> user = JikaiUserManager.getInstance().users().stream().filter(JikaiUser::isSetupCompleted).collect(Collectors.toSet());
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.enable(SerializationFeature.INDENT_OUTPUT);
 		Files.writeString(loc, mapper.writeValueAsString(user), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 		log.debug("Saved {} users to {}", user.size(), loc.toString());
 	}
@@ -191,7 +203,7 @@ public class JikaiIO {
 	private static void saveJikaiUserAniTokenManager() throws IOException, CryptoException {
 		Map<Integer, JikaiUserAniToken> map = JikaiUserAniTokenManager.getMap();
 		if (!map.isEmpty()) {
-			String json = new ObjectMapper().writeValueAsString(JikaiUserAniTokenManager.getMap());
+			String json = mapper.writeValueAsString(JikaiUserAniTokenManager.getMap());
 			Path loc = Path.of(Core.DATA_LOC.toString(), "/token.json");
 			Files.writeString(loc, crypto.encrypt(json), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 			log.debug("Saved {} token to {}", map.size(), loc.toString());
@@ -203,7 +215,7 @@ public class JikaiIO {
 			TypeReference<ConcurrentHashMap<Integer, JikaiUserAniToken>> ref = new TypeReference<ConcurrentHashMap<Integer, JikaiUserAniToken>>() {};
 			String str = Files.readString(loc);
 			if (!str.isBlank()) {
-				Map<Integer, JikaiUserAniToken> map = new ObjectMapper().readValue(crypto.decrypt(str), ref);
+				Map<Integer, JikaiUserAniToken> map = mapper.readValue(crypto.decrypt(str), ref);
 				JikaiUserAniTokenManager.setMap(map);
 				log.debug("Loaded {} tokens", map.size());
 			}

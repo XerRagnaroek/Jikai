@@ -1,7 +1,9 @@
 package com.github.xerragnaroek.jikai.user;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 
 import com.github.xerragnaroek.jikai.core.Core;
@@ -72,14 +74,24 @@ public class EpisodeTrackerManager implements ButtonInteractor {
 		return map;
 	}
 
-	public static void load(Map<Long, Map<Integer, Map<Long, Integer>>> map) {
+	public static void loadOld(Map<Long, Map<Integer, Map<Long, Integer>>> map) {
 		map.forEach((l, m) -> {
 			JikaiUser ju = JikaiUserManager.getInstance().getUser(l);
-			EpisodeTracker et = getTracker(ju);
-			m.forEach((aniId, idEpMap) -> {
-				idEpMap.forEach((msgId, epNum) -> et.registerEpisodeDetailed(aniId, msgId, epNum));
-			});
+			if (ju != null) {
+				EpisodeTracker et = getTracker(ju);
+				m.forEach((aniId, idEpMap) -> {
+					idEpMap.forEach((msgId, epNum) -> et.registerEpisodeDetailed(aniId, msgId, epNum));
+				});
+			}
 		});
+	}
+
+	public static void load(Collection<EpisodeTracker> ets) {
+		ets.stream().filter(Objects::nonNull).forEach(et -> tracker.put(et.getJikaiUserId(), et));
+	}
+
+	public static Map<Long, EpisodeTracker> getEpisodeTracker() {
+		return tracker;
 	}
 
 	public static int size() {

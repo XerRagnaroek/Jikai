@@ -1,6 +1,7 @@
 package com.github.xerragnaroek.jikai.user;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -15,6 +16,7 @@ import org.slf4j.MDC;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.xerragnaroek.jasa.AniException;
 import com.github.xerragnaroek.jasa.Anime;
@@ -30,9 +32,7 @@ import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Emoji;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
-import net.dv8tion.jda.api.events.message.priv.react.PrivateMessageReactionAddEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
 import net.dv8tion.jda.internal.utils.EncodingUtil;
@@ -57,6 +57,10 @@ public class EpisodeTracker {
 		log = LoggerFactory.getLogger(EpisodeTracker.class.getCanonicalName() + "#" + ju.getId());
 	}
 
+	private EpisodeTracker(long id) {
+		log = LoggerFactory.getLogger(EpisodeTracker.class.getCanonicalName() + "#" + id);
+	}
+
 	public void registerEpisode(Anime a, long id) {
 		registerEpisodeDetailed(a.getId(), id, a.getNextEpisodeNumber());
 	}
@@ -79,30 +83,10 @@ public class EpisodeTracker {
 		episodes.compute(anime, (a, m) -> {
 			m.computeIfPresent(id, (l, epNum) -> {
 				boolean lastEp = wasLastEpisode(anime, epNum);
+				boolean firstWatch = getLastWatchedTimeStamp(anime) == 0;
+				lastWatched.put(a, Instant.now().getEpochSecond());
 				log.debug("User watched {} episode {} of {}", lastEp ? "final" : "", epNum, a);
-				if (ju.getAniId() > 0 && JikaiUserAniTokenManager.hasToken(ju)) {
-					try {
-						String token = JikaiUserAniTokenManager.getAniToken(ju.getAniId()).getAccessToken();
-						JASA jasa = AnimeDB.getJASA();
-						int mediaListEntryId = 0;
-						try {
-							mediaListEntryId = jasa.getMediaListEntryIdForUserFromAniId(ju.getAniId(), anime);
-						} catch (AniException e) {
-							if (e.getStatusCode() == 404) {
-								mediaListEntryId = jasa.addToUserCurrentList(token, anime);
-							}
-						}
-						updateAniListProgress(token, mediaListEntryId, anime, epNum);
-						if (lastEp) {
-							jasa.updateMediaListEntryToCompletedList(token, mediaListEntryId);
-							log.debug("Moved {} to completed list!", anime);
-						} else {
-							jasa.updateMediaListEntryToCurrentList(token, mediaListEntryId);
-						}
-					} catch (AniException | IOException e) {
-						BotUtils.logAndSendToDev(log, "", e);
-					}
-				}
+				updateAniList(anime, epNum, firstWatch, lastEp);
 				if (lastEp) {
 					ju.unsubscribeAnime(anime, ju.getLocale().getString("ju_sub_rem_cause_finished"));
 				}
@@ -110,6 +94,42 @@ public class EpisodeTracker {
 			});
 			return m.isEmpty() ? null : m;
 		});
+	}
+
+	private void updateAniList(int anime, int epNum, boolean firstWatch, boolean lastEp) {
+		if (ju.getAniId() > 0 && JikaiUserAniTokenManager.hasToken(ju)) {
+			try {
+				String token = JikaiUserAniTokenManager.getAniToken(ju.getAniId()).getAccessToken();
+				JASA jasa = AnimeDB.getJASA();
+				int mediaListEntryId = 0;
+				boolean exceptionAdd = false;
+				try {
+					mediaListEntryId = jasa.getMediaListEntryIdForUserFromAniId(ju.getAniId(), anime);
+				} catch (AniException e) {
+					if (e.getStatusCode() == 404) {
+						if (lastEp) {
+							mediaListEntryId = jasa.addToUserCompletedList(token, anime);
+							log.debug("Moved {} to completed list!", anime);
+							return;
+						}
+						mediaListEntryId = jasa.addToUserCurrentList(token, anime);
+						exceptionAdd = true;
+					}
+				}
+				if (lastEp) {
+					jasa.updateMediaListEntryToCompletedList(token, mediaListEntryId);
+					return;
+				} else {
+					if (firstWatch && !exceptionAdd) {
+						jasa.updateMediaListEntryToCurrentList(token, mediaListEntryId);
+					}
+					updateAniListProgress(token, mediaListEntryId, anime, epNum);
+				}
+
+			} catch (AniException | IOException e) {
+				BotUtils.logAndSendToDev(log, "", e);
+			}
+		}
 	}
 
 	private boolean wasLastEpisode(int animeId, int ep) {
@@ -127,30 +147,6 @@ public class EpisodeTracker {
 			JASA jasa = AnimeDB.getJASA();
 			jasa.updateMediaListEntryProgress(token, mediaListEntryId, ep);
 			log.debug("Updated progress on ani list to ep {} for anime {}", ep, animeId);
-		}
-	}
-
-	public void handleEmojiReacted(PrivateMessageReactionAddEvent event) {
-		User u = event.getUser();
-		if (!u.isBot()) {
-			long msgId = event.getMessageIdLong();
-			log.debug("Handling emoji reacted for msg {}", msgId);
-			if (idAnime.containsKey(msgId)) {
-				JikaiUser ju = JikaiUserManager.getInstance().getUser(u.getIdLong());
-				JikaiLocale jLoc = ju.getLocale();
-				event.getChannel().retrieveMessageById(msgId).flatMap(m -> {
-					log.debug("Editing release notify message to show that user watched it!");
-					MessageEmbed me = m.getEmbeds().get(0);
-					EmbedBuilder bob = new EmbedBuilder(me);
-					bob.setDescription(me.getDescription() + "\n" + jLoc.getStringFormatted("ju_eb_notify_release_watched", Arrays.asList("date"), BotUtils.getTodayDateForJUserFormatted(ju)));
-					return m.editMessageEmbeds(bob.build());
-				}).submit().thenAccept(m -> {
-					log.debug("Successfully edited msg: {}", m.getId());
-					episodeWatched(msgId);
-				});
-			} else {
-				log.debug("Msg isn't a registered release notify message");
-			}
 		}
 	}
 
@@ -256,6 +252,23 @@ public class EpisodeTracker {
 
 	public long getLastWatchedTimeStamp(int animeId) {
 		return lastWatched.getOrDefault(animeId, 0l);
+	}
+
+	@JsonCreator
+	static EpisodeTracker of(@JsonProperty("juId") long id, @JsonProperty("episodeMessageData") Map<Integer, Map<Long, Integer>> data, @JsonProperty("lastWatched") Map<Integer, Long> lastWatched) {
+		EpisodeTracker et = new EpisodeTracker(id);
+		JikaiUserManager jum = JikaiUserManager.getInstance();
+		if (!jum.isKnownJikaiUser(id)) {
+			LoggerFactory.getLogger(EpisodeTracker.class).error("invalid user id '{}', return null", id);
+			return null;
+		} else {
+			et.ju = jum.getUser(id);
+			data.forEach((aid, map) -> {
+				map.forEach((mid, ep) -> et.registerEpisodeDetailed(aid, mid, ep));
+			});
+			et.lastWatched = lastWatched;
+			return et;
+		}
 	}
 
 }
