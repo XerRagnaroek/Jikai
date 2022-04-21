@@ -31,7 +31,6 @@ import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.jikai.JikaiManager;
 import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.EpisodeTrackerManager;
-import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.user.PrivateList;
 import com.github.xerragnaroek.jikai.user.link.LinkRequest;
 import com.github.xerragnaroek.jikai.user.token.JikaiUserAniTokenManager;
@@ -92,14 +91,15 @@ public class Core {
 		JM.startSaveThread(saveDelay);
 		JM.forEach(j -> j.validateMemberRoles());
 		INITIAL_LOAD.set(false);
-		AniListSyncer.init();
-		AniListSyncer.startSyncThread(aniSyncMinutes);
 		LinkRequest.setBidiRequestDuration(linkRequestDuration);
 		PrivateList.setListDuration(privateListDuration);
 		// EpisodeTrackerNew.init();
 		EpisodeTrackerManager.init();
 		JikaiUserAniTokenManager.init();
-		JikaiUserManager.getInstance().users().forEach(ju -> AniListSyncer.getInstance().syncAniListsWithSubs(ju));
+		// JikaiUserManager.getInstance().users().forEach(ju ->
+		// AniListSyncer.getInstance().syncAniListsWithSubs(ju));
+		AniListSyncer.init();
+		AniListSyncer.startSyncThread(aniSyncMinutes);
 		getEventListener().registerButtonInteractor(new GeneralSubHandler());
 	}
 

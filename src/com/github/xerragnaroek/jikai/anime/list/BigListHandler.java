@@ -260,8 +260,7 @@ public class BigListHandler {
 
 	private void handleNew(List<Anime> list, TextChannel tc) {
 		log.debug("Handling {} new animes and {} missing a message", list.size());
-		List<Anime> newAnime = new LinkedList<>();
-		newAnime.addAll(list);
+		List<Anime> newAnime = list.stream().filter(a -> !messages.containsKey(a.getId())).collect(Collectors.toList());
 		newAnime.addAll(missingMessage);
 		newAnime.stream().sorted(Anime.SORT_BY_RELEASE_DATE).forEach(a -> sendMessage(a, tc));
 	}

@@ -3,7 +3,6 @@ package com.github.xerragnaroek.jikai.user;
 
 import java.io.IOException;
 import java.time.DayOfWeek;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -544,8 +543,13 @@ public class JikaiUserUpdater implements ButtonInteractor {
 		EmbedBuilder eb = BotUtils.addJikaiMark(new EmbedBuilder());
 		JikaiLocale loc = ju.getLocale();
 		eb.setTitle(loc.getStringFormatted("ju_eb_next_ep_title", Arrays.asList("title"), (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()))), a.getAniUrl());
-		long minsTillAir = Instant.now().until(Instant.ofEpochSecond(a.getNextEpisodesAirsAt()), ChronoUnit.MINUTES) + 1;
-		eb.setDescription(loc.getStringFormatted("ju_eb_next_ep_desc", Arrays.asList("time", "date"), BotUtils.formatMinutes(minsTillAir, loc), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale())));
+		// long minsTillAir = Instant.now().until(Instant.ofEpochSecond(a.getNextEpisodesAirsAt()),
+		// ChronoUnit.MINUTES) + 1;
+		// eb.setDescription(loc.getStringFormatted("ju_eb_next_ep_desc", Arrays.asList("time", "date"),
+		// BotUtils.formatMinutes(minsTillAir, loc),
+		// formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale())));
+		eb.setDescription(loc.getStringFormatted("ju_eb_next_ep_desc", Arrays.asList("time", "date"), BotUtils.makeDiscordTimeStamp(a.getNextEpisodesAirsAt(), "R"), BotUtils.makeDiscordTimeStamp(a.getNextEpisodesAirsAt(), "F"), loc.getLocale()));
+
 		if (a.hasCoverImageMedium()) {
 			eb.setThumbnail(a.getBiggestAvailableCoverImage());
 		}
@@ -578,7 +582,11 @@ public class JikaiUserUpdater implements ButtonInteractor {
 		eb.setTitle(loc.getStringFormatted("ju_eb_notify_title", Arrays.asList("title"), (ju.hasCustomTitle(a.getId()) ? ju.getCustomTitle(a.getId()) : a.getTitle(ju.getTitleLanguage()))), a.getAniUrl());
 		int eps = a.getEpisodes();
 		String episodes = eps == 0 ? "" : String.format("/%2d", eps);
-		eb.setDescription(loc.getStringFormatted("ju_eb_notify_desc", Arrays.asList("date", "episodes", "time"), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale()), String.format("%2d%s", a.getNextEpisodeNumber(), episodes), BotUtils.formatSeconds(step, loc)));
+		// eb.setDescription(loc.getStringFormatted("ju_eb_notify_desc", Arrays.asList("date", "episodes",
+		// "time"), formatAirDateTime(a.getNextEpisodeDateTime(ju.getTimeZone()).get(), loc.getLocale()),
+		// String.format("%2d%s", a.getNextEpisodeNumber(), episodes), BotUtils.formatSeconds(step, loc)));
+		eb.setDescription(loc.getStringFormatted("ju_eb_notify_desc", Arrays.asList("date", "episodes", "time"), BotUtils.makeDiscordTimeStamp(a.getNextEpisodesAirsAt(), "F"), String.format("%2d%s", a.getNextEpisodeNumber(), episodes), BotUtils.makeDiscordTimeStamp(a.getNextEpisodesAirsAt(), "R")));
+
 		return eb.build();
 	}
 

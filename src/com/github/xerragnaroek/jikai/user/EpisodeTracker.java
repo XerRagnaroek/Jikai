@@ -204,7 +204,7 @@ public class EpisodeTracker {
 			});
 			event.deferEdit().queue();
 			event.getChannel().deleteMessageById(event.getMessageId()).queue();
-			dropAnime(0);
+			dropAnime(aid);
 		} else {
 			JikaiLocale loc = ju.getLocale();
 			MessageEmbed me = event.getMessage().getEmbeds().get(0);
@@ -220,6 +220,8 @@ public class EpisodeTracker {
 
 	private void dropAnime(int id) {
 		if (ju.getAniId() > 0 && JikaiUserAniTokenManager.hasToken(ju)) {
+			log.debug("Dropping {}", id);
+			ju.unsubscribeAnime(id, ju.getLocale().getString("ju_ep_tracker_drop"));
 			JASA jasa = AnimeDB.getJASA();
 			try {
 				jasa.updateMediaListEntryToDroppedList(JikaiUserAniTokenManager.getAniToken(ju).getAccessToken(), jasa.getMediaListEntryIdForUserFromAniId(ju.getAniId(), id));

@@ -209,6 +209,7 @@
     "ju_eb_sub_rem_desc": "Removed subscription!\n",
     "ju_eb_weekly_sched_msg": "Here's your anime schedule for this week",
     "ju_ep_tracker_title": "Unwatched episodes",
+	"ju_ep_tracker_drop": "You dropped it!",
     "ju_link_ani_done": "Your AniList account is now linked!\nSo far this is just one sided, with me pulling data from your profile. To allow me to edit your profile (to add anime to lists, update episode progress, etc.) you need to authenticate me!\n**[Click here to do that!](%authLink%)**",
     "ju_link_ani_error": "Sorry, but something went wrong while I tried to ask the API :(",
     "ju_link_ani_invalid": "Please supply the link to your AniList profile, your username or your user id!",

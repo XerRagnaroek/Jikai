@@ -88,8 +88,9 @@ public class AniListSyncer {
 		if (!userMap.isEmpty()) {
 			log.debug("Syncing {} lists", userMap.size());
 			try {
+				userMap.values().stream().flatMap(Set::stream).forEach(this::syncAniListsWithSubs);
 				AnimeDB.getJASA().fetchUserListEntries(new ArrayList<Integer>(userMap.keySet()), MediaListStatus.PLANNING, MediaListStatus.CURRENT).filter(ule -> ule.getMediaStatus() != null && !ule.getMediaStatus().equals("FINISHED")).forEach(this::handleUserListEntry);
-			} catch (AniException | IOException e) {
+			} catch (Exception e) {
 				BotUtils.logAndSendToDev(log, "Exception syncing lists!", e);
 			}
 		}

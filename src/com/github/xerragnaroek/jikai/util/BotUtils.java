@@ -961,4 +961,8 @@ public class BotUtils {
 		BotUtils.partitionCollection(comps, 5).forEach(l -> newRows.add(ActionRow.of(l)));
 		return newRows;
 	}
+
+	public static String makeDiscordTimeStamp(long unixSeconds, String flag) {
+		return String.format("<t:%d:%s>", unixSeconds, flag);
+	}
 }
