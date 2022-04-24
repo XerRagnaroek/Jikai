@@ -560,7 +560,9 @@ public class JikaiUserUpdater implements ButtonInteractor {
 	private void cancelAnime(Anime a) {
 		stepMap.remove(a.getId());
 		futureMap.compute(a.getId(), (id, map) -> {
-			map.values().forEach(sf -> sf.cancel(true));
+			if (map != null) {
+				map.values().forEach(sf -> sf.cancel(true));
+			}
 			return null;
 		});
 	}
