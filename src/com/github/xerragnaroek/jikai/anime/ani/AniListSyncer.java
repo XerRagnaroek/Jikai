@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,7 +47,7 @@ public class AniListSyncer {
 		getInstance();
 		als.log.info("Initializing...");
 		JikaiUserManager.getInstance().users().forEach(als::registerUser);
-		als.syncLists();
+		Core.EXEC.execute(() -> als.syncLists());
 	}
 
 	public void registerUser(JikaiUser ju) {
@@ -103,6 +104,11 @@ public class AniListSyncer {
 		}
 	}
 
+	public void syncSubsWithAniList(JikaiUser ju) throws AniException, IOException {
+		log.debug("Syncing subs with ani for {}", ju.getId());
+		AnimeDB.getJASA().fetchUserListEntries(Arrays.asList(ju.getAniId()), MediaListStatus.PLANNING, MediaListStatus.CURRENT).filter(ule -> ule.getMediaStatus() != null && !ule.getMediaStatus().equals("FINISHED")).forEach(this::handleUserListEntry);
+	}
+
 	public void syncAniListsWithSubs(JikaiUser ju) {
 		if (ju.getAniId() > 0 && JikaiUserAniTokenManager.hasToken(ju)) {
 			log.debug("Syncing subs with ani for {}", ju.getId());
@@ -144,4 +150,5 @@ public class AniListSyncer {
 		als.log.info("Starting sync thread, first running in {} seconds, running every {} minutes", dif, minutes);
 		Core.EXEC.scheduleAtFixedRate(als::syncLists, dif, minutes * 60, TimeUnit.SECONDS);
 	}
+
 }

@@ -31,7 +31,7 @@ public class AniAuthCommand implements JUCommand {
 				if (ju.getAniId() > 0) {
 					if (JikaiUserAniTokenManager.hasToken(ju)) {
 						JikaiUserAniTokenManager.removeToken(ju);
-						ju.sendPM(BotUtils.localedEmbed(ju.getLocale(), "ju_eb_ani_auth_revoke"));
+						ju.sendPM(BotUtils.localedEmbed(ju.getLocale(), "ju_eb_ani_auth_rev"));
 					} else {
 						ju.sendPM(BotUtils.makeSimpleEmbed(ju.getLocale().getString("ju_eb_ani_auth_rev_fail")));
 					}
