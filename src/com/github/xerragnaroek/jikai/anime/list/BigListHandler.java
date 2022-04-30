@@ -125,6 +125,7 @@ public class BigListHandler {
 	}
 
 	public void validateList() {
+		log.debug("Validating list...");
 		loadedData.compute(j.getJikaiData().getGuildId(), (l, m) -> {
 			if (m != null) {
 				m.compute(identifier, (s, data) -> {
