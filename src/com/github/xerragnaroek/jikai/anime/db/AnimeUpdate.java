@@ -143,6 +143,9 @@ public class AnimeUpdate {
 				Anime oldAn = oldA.get(oldA.indexOf(a));
 				if (!oldAn.isFinished() & a.isFinished()) {
 					return true;
+				} else if (oldAn.getNextEpisodeNumber() == oldAn.getEpisodes() && !a.hasDataForNextEpisode()) {
+					log.debug("OldA next ep = max eps and newA has no data for next ep, assuming finished.");
+					return true;
 				}
 				/*
 				 * if (!a.hasDataForNextEpisode() && oldA.contains(a) && (oldAn =
