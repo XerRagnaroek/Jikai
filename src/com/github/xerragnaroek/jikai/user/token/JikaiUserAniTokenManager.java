@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -80,6 +81,7 @@ public class JikaiUserAniTokenManager {
 			if (juat != null) {
 				int aniId = AnimeDB.getJASA().getAniUserIdFromToken(juat.getAccessToken());
 				token.put(aniId, juat);
+				scheduleRefresh(juat, aniId);
 				return aniId;
 			}
 		} catch (IOException | AniException e) {
@@ -93,6 +95,7 @@ public class JikaiUserAniTokenManager {
 		try {
 			JikaiUserAniToken juat = postToOAuthApi(refreshJson);
 			token.put(aniId, juat);
+			log.debug("Refreshed a token for {}", aniId);
 		} catch (IOException e) {
 			BotUtils.logAndSendToDev(log, "Failed refreshing token!", e);
 		}
@@ -118,6 +121,7 @@ public class JikaiUserAniTokenManager {
 
 	public static void setMap(Map<Integer, JikaiUserAniToken> map) {
 		token = new ConcurrentHashMap<>(map);
+		token.forEach((id, token) -> scheduleRefresh(token, id));
 	}
 
 	public static void startCodeWatchThread() {
@@ -195,5 +199,22 @@ public class JikaiUserAniTokenManager {
 	public static void init() {
 		readCodes();
 		startCodeWatchThread();
+		refreshTokensIfNecessary();
+	}
+
+	public static void refreshTokensIfNecessary() {
+		log.debug("Refreshing tokens if necessary");
+		token.forEach((id, token) -> {
+			if (token.getSecondsUntilExpire() < TimeUnit.DAYS.toSeconds(7) || token.isExpired()) {
+				log.debug("Refreshing expired token");
+				refreshToken(token.getRefreshToken(), id);
+			}
+		});
+	}
+
+	private static void scheduleRefresh(JikaiUserAniToken token, int id) {
+		long secRef = token.getSecondsUntilExpire() - TimeUnit.DAYS.toSeconds(7);
+		log.debug("Scheduling refresh for {}, running in {}", id, secRef);
+		Core.EXEC.schedule(() -> refreshToken(token.getRefreshToken(), id), secRef, TimeUnit.SECONDS);
 	}
 }

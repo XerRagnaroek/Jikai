@@ -210,7 +210,7 @@ public class AnimeUpdate {
 		newA.forEach(a -> {
 			if (oldA.contains(a)) {
 				Anime oldAn = oldA.get(oldA.indexOf(a));
-				if ((!oldAn.hasDataForNextEpisode() && a.hasDataForNextEpisode()) || (oldAn.hasDataForNextEpisode() && a.hasDataForNextEpisode() && a.getNextEpisodeNumber() > oldAn.getNextEpisodeNumber())) {
+				if ((!oldAn.hasDataForNextEpisode() && a.hasDataForNextEpisode()) || (oldAn.hasDataForNextEpisode() && a.hasDataForNextEpisode() && a.getNextEpisodeNumber() > oldAn.getNextEpisodeNumber()) && a.getNextEpisodeNumber() > 0) {
 					nextEp.add(a);
 					log.debug("{} has a new episode coming up! Old ep: {}, new ep: {}", a.getTitleRomaji(), oldAn.getNextEpisodeNumber(), a.getNextEpisodeNumber());
 				}
