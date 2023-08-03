@@ -1,6 +1,6 @@
 package com.github.xerragnaroek.jikai.commands.dev;
 
-import java.util.LinkedList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -14,15 +14,12 @@ import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.anime.list.btn.AnimeListHandler;
 import com.github.xerragnaroek.jikai.commands.guild.GuildCommand;
 import com.github.xerragnaroek.jikai.commands.user.JUCommand;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
+import com.github.xerragnaroek.jikai.user.token.JikaiUserAniTokenManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
-import com.github.xerragnaroek.jikai.util.pagi.PaginationTmp;
 
-import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
-import net.dv8tion.jda.api.interactions.components.Button;
-import net.dv8tion.jda.api.interactions.components.ButtonStyle;
-import net.dv8tion.jda.api.interactions.components.Component;
 
 /**
  * 
@@ -43,18 +40,11 @@ public class TestCommand implements JUCommand, GuildCommand {
 
 	@Override
 	public void executeCommand(JikaiUser ju, String[] arguments) {
-		PaginationTmp test = new PaginationTmp("testPagi");
-		test.setArrowButtonStyle(ButtonStyle.DANGER);
-		for (int i = 0; i < 23; i++) {
-			MessageBuilder mb = new MessageBuilder("Page " + (i + 1));
-			List<Component> btns = new LinkedList<>();
-			for (int n = 0; n <= i; n++) {
-				btns.add(Button.primary("test" + n, "" + (n + 1)));
-			}
-			mb.setActionRows(BotUtils.makeActionRows(btns));
-			test.addPage(mb.build());
-		}
-		ju.getUser().openPrivateChannel().queue(pc -> test.sendPagination(pc));
+		// JikaiUserAniTokenManager.refreshToken(JikaiUserAniTokenManager.getAniToken(ju).getRefreshToken(),
+		// ju.getAniId());
+		JikaiLocale loc = ju.getLocale();
+		ju.sendPM(BotUtils.titledEmbed(loc.getString("ju_eb_ani_auth_title"), loc.getStringFormatted("ju_eb_ani_auth_rev_auto", Arrays.asList("link"), JikaiUserAniTokenManager.getOAuthUrl()))).thenAccept(b -> log.debug("Sent invalid token embed to user {} {}", ju.getAniId(), b));
+
 	}
 
 	@Override

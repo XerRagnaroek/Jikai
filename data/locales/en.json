@@ -346,5 +346,6 @@
 	"ju_eb_ani_auth_rev_title": "Authorization revoked!",
 	"ju_eb_ani_auth_rev_desc": "You have revoked your authorization. Jikai will no longer edit your profile.",
 	"ju_eb_ani_auth_rev_fail": "You never authorized Jikai so there's nothing to revoke!",
-	"ju_eb_ani_auth_rev_fail_user": "You don't have your Ani account linked so there's nothing to revoke!"
+	"ju_eb_ani_auth_rev_fail_user": "You don't have your Ani account linked so there's nothing to revoke!",
+	"ju_eb_ani_auth_rev_auto": "I had an invalid token of yours, so please [authorize me again!](%link%)"
 }

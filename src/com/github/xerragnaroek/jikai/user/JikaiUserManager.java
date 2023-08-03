@@ -111,6 +111,10 @@ public class JikaiUserManager {
 		return user.get(id);
 	}
 
+	public JikaiUser getUserViaAniId(int aniId) {
+		return user.values().stream().filter(ju -> ju.hasAniId() && ju.getAniId() == aniId).findFirst().orElseGet(() -> null);
+	}
+
 	public void handleSubscriptions(JikaiUser ju) {
 		ju.getSubscribedAnime().onAdd(sa -> {
 			subscriptionMap.compute(sa.id(), (t, s) -> {

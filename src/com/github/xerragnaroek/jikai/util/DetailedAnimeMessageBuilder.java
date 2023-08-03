@@ -79,7 +79,17 @@ public class DetailedAnimeMessageBuilder {
 		if (a.hasTitleNative() && !titlesIgnoreCase.contains((title = a.getTitleNative()).toLowerCase())) {
 			titles.add(title);
 		}
-		title = String.join("\n", titles);
+		for (String t : titles) {
+			if (title.isEmpty()) {
+				title = t;
+			} else if (title.length() + t.length() + "\n".length() <= 256) {
+				title += "\n" + t;
+			} else {
+				break;
+			}
+		}
+
+		// title = String.join("\n", titles);
 		return setTitle(title, a.getAniUrl());
 	}
 

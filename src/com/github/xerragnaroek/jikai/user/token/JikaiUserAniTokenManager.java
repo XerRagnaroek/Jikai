@@ -12,11 +12,15 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,6 +34,7 @@ import com.github.xerragnaroek.jikai.anime.ani.AniListSyncer;
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
 import com.github.xerragnaroek.jikai.core.Core;
 import com.github.xerragnaroek.jikai.core.Secrets;
+import com.github.xerragnaroek.jikai.jikai.locale.JikaiLocale;
 import com.github.xerragnaroek.jikai.user.JikaiUser;
 import com.github.xerragnaroek.jikai.user.JikaiUserManager;
 import com.github.xerragnaroek.jikai.util.BotUtils;
@@ -75,10 +80,12 @@ public class JikaiUserAniTokenManager {
 	}
 
 	public static int getTokenFromCode(String code) {
+		log.debug("testing code {}", code);
 		String codeExchangeJson = String.format("{\"grant_type\": \"authorization_code\",\"client_id\": %s, \"client_secret\" : \"%s\", \"redirect_uri\": \"%s\",\"code\":\"%s\"}", Secrets.ANI_CLIENT_ID, Secrets.ANI_SECRET, Secrets.ANI_REDIRECT_URL, code);
 		try {
 			JikaiUserAniToken juat = postToOAuthApi(codeExchangeJson);
 			if (juat != null) {
+				juat.setIssuedAt(Instant.now().getEpochSecond());
 				int aniId = AnimeDB.getJASA().getAniUserIdFromToken(juat.getAccessToken());
 				token.put(aniId, juat);
 				scheduleRefresh(juat, aniId);
@@ -90,14 +97,28 @@ public class JikaiUserAniTokenManager {
 		return -1;
 	}
 
-	private static void refreshToken(String refresh, int aniId) {
-		String refreshJson = String.format("{\"grant_type\": \"refresh_token\",\"client_id\": %s, \"client_secret\" : \"%s\", \"redirect_uri\": \"%s\",\"refresh_token\":\"%s\"}", Secrets.ANI_CLIENT_ID, Secrets.ANI_SECRET, Secrets.ANI_REDIRECT_URL, token);
+	public static void refreshToken(String refresh, int aniId) {
+		String refreshJson = String.format("{\"grant_type\": \"refresh_token\",\"client_id\": %s, \"client_secret\" : \"%s\", \"redirect_uri\": \"%s\",\"refresh_token\":\"%s\"}", Secrets.ANI_CLIENT_ID, Secrets.ANI_SECRET, Secrets.ANI_REDIRECT_URL, refresh);
 		try {
 			JikaiUserAniToken juat = postToOAuthApi(refreshJson);
-			token.put(aniId, juat);
-			log.debug("Refreshed a token for {}", aniId);
+			if (juat != null) {
+				token.put(aniId, juat);
+				log.debug("Refreshed a token for {}", aniId);
+			} else {
+				invalidToken(aniId);
+			}
 		} catch (IOException e) {
 			BotUtils.logAndSendToDev(log, "Failed refreshing token!", e);
+		}
+	}
+
+	private static void invalidToken(int aniId) {
+		log.debug("Encountered invalid token, notifying user and removing old token");
+		token.remove(aniId);
+		JikaiUser ju = JikaiUserManager.getInstance().getUserViaAniId(aniId);
+		if (ju != null) {
+			JikaiLocale loc = ju.getLocale();
+			ju.sendPM(BotUtils.titledEmbed(loc.getString("ju_eb_ani_auth_rev_title"), loc.getStringFormatted("ju_eb_ani_auth_rev_auto", Arrays.asList("link"), getOAuthUrl()))).thenAccept(b -> log.debug("Sent invalid token embed to user {} {}", aniId, b));
 		}
 	}
 
@@ -106,7 +127,8 @@ public class JikaiUserAniTokenManager {
 		Request request = new Request.Builder().url("https://anilist.co/api/v2/oauth/token").post(body).build();
 		Response response = AnimeDB.getJASA().getAniClient().newCall(request).execute();
 		ObjectMapper map = new ObjectMapper();
-		JsonNode node = map.readTree(response.body().string());
+		String bodyStr = response.body().string();
+		JsonNode node = map.readTree(bodyStr);
 		if (node.hasNonNull("error")) {
 			log.error("Error repsone: {}", node.toString());
 			return null;
@@ -136,7 +158,8 @@ public class JikaiUserAniTokenManager {
 	}
 
 	private static void watchForCodeChanges() throws IOException, InterruptedException {
-		Path path = Core.DATA_LOC;
+		// Path path = Core.DATA_LOC;
+		Path path = Path.of("/var/log/nginx/");
 		try (WatchService watchService = FileSystems.getDefault().newWatchService()) {
 			path.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
 			log.debug("Watching for code file changes...");
@@ -145,8 +168,8 @@ public class JikaiUserAniTokenManager {
 				for (WatchEvent<?> event : wk.pollEvents()) {
 					// we only register "ENTRY_MODIFY" so the context is always a Path.
 					Path changed = (Path) event.context();
-					if (changed.endsWith("codes.txt")) {
-						log.debug("codes.txt changed!");
+					if (changed.endsWith("jikai.log")) {
+						log.debug("jikai.log changed!");
 						readCodes();
 					}
 				}
@@ -160,7 +183,7 @@ public class JikaiUserAniTokenManager {
 	}
 
 	public static void readCodes() {
-		Path loc = Path.of(Core.DATA_LOC.toString(), "codes.txt");
+		Path loc = Path.of("/var/log/nginx/jikai.log");
 		if (Files.exists(loc)) {
 			String str = null;
 			try (FileChannel fc = FileChannel.open(loc, StandardOpenOption.READ, StandardOpenOption.WRITE); FileLock lock = fc.lock()) {
@@ -173,8 +196,9 @@ public class JikaiUserAniTokenManager {
 			}
 			if (str != null && !str.isEmpty()) {
 				String[] split = str.split("\\r?\\n");
+				Pattern codeRegex = Pattern.compile(".*code=(.+) H.*");
 				log.debug("Processing {} codes", split.length);
-				List<Integer> aniIds = Stream.of(split).parallel().distinct().map(JikaiUserAniTokenManager::getTokenFromCode).filter(i -> i > -1).collect(Collectors.toList());
+				List<Integer> aniIds = Stream.of(split).map(codeRegex::matcher).filter(Matcher::matches).map(m -> m.group(1)).parallel().distinct().map(JikaiUserAniTokenManager::getTokenFromCode).filter(i -> i > -1).collect(Collectors.toList());
 				log.info("Processed {} valid codes into tokens!", aniIds.size());
 				if (!aniIds.isEmpty()) {
 					syncLists(aniIds);
@@ -217,4 +241,5 @@ public class JikaiUserAniTokenManager {
 		log.debug("Scheduling refresh for {}, running in {}", id, secRef);
 		Core.EXEC.schedule(() -> refreshToken(token.getRefreshToken(), id), secRef, TimeUnit.SECONDS);
 	}
+
 }
