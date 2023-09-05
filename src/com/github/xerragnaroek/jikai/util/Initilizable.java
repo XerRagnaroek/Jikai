@@ -1,13 +1,13 @@
-
 package com.github.xerragnaroek.jikai.util;
 
 public interface Initilizable {
-	public void init();
+    void init();
 
-	public boolean isInitialized();
+    boolean isInitialized();
 
-	public default void waitForInitilization() {
-		while (!isInitialized()) {}
-	}
+    default void waitForInitilization() {
+        while (!isInitialized()) {
+        }
+    }
 
 }

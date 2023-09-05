@@ -1,7 +1,7 @@
 {
-  "prefix" : "!",
-  "timezone" : "Europe/Berlin",
-  "language" : "en",
-  "color" : -986896,
-  "jikai_img_url" : "https://cdn.discordapp.com/attachments/725017810186666066/725017816121475092/jikai.png"
+  "prefix": "!",
+  "timezone": "Europe/Berlin",
+  "language": "en",
+  "color": -986896,
+  "jikai_img_url": "https://cdn.discordapp.com/attachments/725017810186666066/725017816121475092/jikai.png"
 }

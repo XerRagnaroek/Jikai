@@ -1,19 +1,16 @@
 package com.github.xerragnaroek.jikai.core;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-
-import javax.annotation.Nonnull;
-
 import com.github.xerragnaroek.jikai.util.BotUtils;
-
 import net.dv8tion.jda.api.events.GenericEvent;
 import net.dv8tion.jda.api.hooks.EventListener;
 import net.dv8tion.jda.api.hooks.IEventManager;
 import net.dv8tion.jda.internal.JDAImpl;
 import net.dv8tion.jda.internal.utils.JDALogger;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /*
  * Apache License
@@ -192,44 +189,45 @@ import net.dv8tion.jda.internal.utils.JDALogger;
  * have just extended it but listeners is private s
  */
 public class JikaiInterfacedEventManager implements IEventManager {
-	private final CopyOnWriteArrayList<EventListener> listeners = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<EventListener> listeners = new CopyOnWriteArrayList<>();
 
-	public JikaiInterfacedEventManager() {}
+    public JikaiInterfacedEventManager() {
+    }
 
-	@Override
-	public void register(@Nonnull Object listener) {
-		if (!(listener instanceof EventListener)) {
-			throw new IllegalArgumentException("Listener must implement EventListener");
-		}
-		listeners.add((EventListener) listener);
-	}
+    @Override
+    public void register(Object listener) {
+        if (!(listener instanceof EventListener)) {
+            throw new IllegalArgumentException("Listener must implement EventListener");
+        }
+        listeners.add((EventListener) listener);
+    }
 
-	@Override
-	public void unregister(@Nonnull Object listener) {
-		if (!(listener instanceof EventListener)) {
-			JDALogger.getLog(getClass()).warn("Trying to remove a listener that does not implement EventListener: {}", listener == null ? "null" : listener.getClass().getName());
-		}
+    @Override
+    public void unregister(Object listener) {
+        if (!(listener instanceof EventListener)) {
+            JDALogger.getLog(getClass()).warn("Trying to remove a listener that does not implement EventListener: {}", listener == null ? "null" : listener.getClass().getName());
+        }
 
-		listeners.remove(listener);
-	}
+        listeners.remove(listener);
+    }
 
-	@Nonnull
-	@Override
-	public List<Object> getRegisteredListeners() {
-		return Collections.unmodifiableList(new ArrayList<>(listeners));
-	}
 
-	@Override
-	public void handle(@Nonnull GenericEvent event) {
-		for (EventListener listener : listeners) {
-			try {
-				listener.onEvent(event);
-			} catch (Throwable throwable) {
-				BotUtils.logAndSendToDev(JDAImpl.LOG, "One of the EventListeners had an uncaught exception", throwable);
-				if (throwable instanceof Error) {
-					throw (Error) throwable;
-				}
-			}
-		}
-	}
+    @Override
+    public List<Object> getRegisteredListeners() {
+        return Collections.unmodifiableList(new ArrayList<>(listeners));
+    }
+
+    @Override
+    public void handle(GenericEvent event) {
+        for (EventListener listener : listeners) {
+            try {
+                listener.onEvent(event);
+            } catch (Throwable throwable) {
+                BotUtils.logAndSendToDev(JDAImpl.LOG, "One of the EventListeners had an uncaught exception", throwable);
+                if (throwable instanceof Error) {
+                    throw (Error) throwable;
+                }
+            }
+        }
+    }
 }

@@ -1,13 +1,13 @@
 package com.github.xerragnaroek.jikai.util;
 
-import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 
 /**
- * 
+ *
  */
 public interface ButtonInteractor {
 
-	public String getIdentifier();
+    String getIdentifier();
 
-	public void handleButtonClick(String[] data, ButtonClickEvent event);
+    void handleButtonClick(String[] data, ButtonInteractionEvent event);
 }

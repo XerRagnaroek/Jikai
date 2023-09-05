@@ -1,4 +1,3 @@
-
 package com.github.xerragnaroek.jikai.commands.dev;
 
 import com.github.xerragnaroek.jikai.anime.db.AnimeDB;
@@ -11,28 +10,28 @@ import com.github.xerragnaroek.jikai.user.JikaiUser;
  */
 public class ForceDBUpdateCommand implements JUCommand {
 
-	@Override
-	public String getName() {
-		return "update";
-	}
+    @Override
+    public String getName() {
+        return "update";
+    }
 
-	@Override
-	public String getDescription(JikaiLocale loc) {
-		return "Forces an update of the anime db";
-	}
+    @Override
+    public String getDescription(JikaiLocale loc) {
+        return "Forces an update of the anime db";
+    }
 
-	@Override
-	public void executeCommand(JikaiUser ju, String[] arguments) {
-		AnimeDB.update();
-	}
+    @Override
+    public void executeCommand(JikaiUser ju, String[] arguments) {
+        AnimeDB.update();
+    }
 
-	@Override
-	public boolean isDevOnly() {
-		return true;
-	}
+    @Override
+    public boolean isDevOnly() {
+        return true;
+    }
 
-	@Override
-	public String getLocaleKey() {
-		return "";
-	}
+    @Override
+    public String getLocaleKey() {
+        return "";
+    }
 }
